@@ -1,0 +1,12 @@
+const fs = require('fs');
+let c = fs.readFileSync('src/PointsmanModule.jsx', 'utf-8');
+c = c.replace(/import PointsmanMyAssessment from '\.\/components\/PointsmanModule\/PointsmanMyAssessment';/, 'import MyAssessment from \'./components/MyAssessment\';');
+c = c.replace(/<PointsmanMyAssessment/g, '<MyAssessment\n      roleTitle="Pointsman"\n      assessedByTitle="Station Master"');
+c = c.replace(/pmMcqTest=\{pmMcqTest\}/, 'mcqTest={pmMcqTest}');
+c = c.replace(/pmActiveQIdx=\{pmActiveQIdx\}/, 'activeQIdx={pmActiveQIdx}');
+c = c.replace(/setPmActiveQIdx=\{setPmActiveQIdx\}/, 'setActiveQIdx={setPmActiveQIdx}');
+c = c.replace(/pmTestResponses=\{pmTestResponses\}/, 'testResponses={pmTestResponses}');
+c = c.replace(/setPmTestResponses=\{setPmTestResponses\}/, 'setTestResponses={setPmTestResponses}');
+c = c.replace(/pointsmanProfile=\{pointsmanProfile\}/, 'profileData={pointsmanProfile}');
+fs.writeFileSync('src/PointsmanModule.jsx', c);
+console.log('PointsmanModule updated.');
