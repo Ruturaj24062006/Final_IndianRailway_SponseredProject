@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Filter,
   Cog,
+  HeartHandshake,
   FileCheck,
   FileDown,
   FileText,
@@ -52,6 +53,10 @@ import {
   Gauge,
   UserCircle2
 } from "lucide-react";
+import CommonUserModal from "./components/CommonUserModal";
+import CommonPmePosition from "./components/CommonPmePosition";
+import CommonRefPosition from "./components/CommonRefPosition";
+import CommonCounselling from "./components/CommonCounselling";
 import {
   Bar,
   BarChart,
@@ -117,19 +122,19 @@ const generate96Stations = () => {
   const categories = ["A", "B", "C", "D"];
   const risks = ["Low", "Medium", "High"];
   const statuses = ["Approved", "Pending", "Completed"];
-  
+
   const baseNames = [
-    "Nagpur Main", "Wardha Junction", "Badnera Town", "Akola Junction", "Sewagram", "Ajni Central", 
-    "Pulgaon", "Dhamangaon", "Murtajapur", "Shegaon", "Malkapur", "Jalgaon Junction", "Chalisgaon", 
+    "Nagpur Main", "Wardha Junction", "Badnera Town", "Akola Junction", "Sewagram", "Ajni Central",
+    "Pulgaon", "Dhamangaon", "Murtajapur", "Shegaon", "Malkapur", "Jalgaon Junction", "Chalisgaon",
     "Itarsi Jn", "Bhopal Junction", "Dongargarh", "Gondia Jn", "Durg Jn", "Raipur Jn", "Bilaspur Jn",
-    "Pune Junction", "Lonavala", "Shivajinagar", "Khadki", "Dapodi", "Chinchwad", "Pimpri", 
-    "Taloja", "Dehu Road", "Khadala", "Daund Jn", "Ahmednagar", "Kopargaon", "Sainagar Shirdi", 
+    "Pune Junction", "Lonavala", "Shivajinagar", "Khadki", "Dapodi", "Chinchwad", "Pimpri",
+    "Taloja", "Dehu Road", "Khadala", "Daund Jn", "Ahmednagar", "Kopargaon", "Sainagar Shirdi",
     "Satara", "Kolhapur", "Sangli", "Miraj Jn", "Londa", "Ghatprabha",
-    "CSMT Terminal", "Byculla", "Dadar Central", "Kurla Jn", "Ghatkopar", "Thane Main", "Diva Jn", 
-    "Dombivli", "Kalyan Jn", "Shahad", "Ambivali", "Titwala", "Ulhasnagar", "Vithalwadi", "Badlapur", 
+    "CSMT Terminal", "Byculla", "Dadar Central", "Kurla Jn", "Ghatkopar", "Thane Main", "Diva Jn",
+    "Dombivli", "Kalyan Jn", "Shahad", "Ambivali", "Titwala", "Ulhasnagar", "Vithalwadi", "Badlapur",
     "Vashi", "Karjat Jn", "Igatpuri", "Bhandup", "Mulund",
     "Solapur Jn", "Kurduvadi Jn", "Pandharpur", "Latur Town", "Osmanabad", "Barsi Town",
-    "Bhusawal Jn", "Nashik Road", "Manmad Jn", "Burhanpur", "Khandwa Jn", "Harda", "Devlali", 
+    "Bhusawal Jn", "Nashik Road", "Manmad Jn", "Burhanpur", "Khandwa Jn", "Harda", "Devlali",
     "Khamgaon", "Pachora", "Nandurbar", "Amravati", "Chandrapur", "Ballarshah", "Wardha East",
     "Sindi Town", "Butibori", "Kalmeshwar", "Katol", "Narkher", "Pandhurna", "Multai", "Amla Jn",
     "Betul", "Ghoradongri", "Itarsi West", "Hoshangabad", "Budni", "Obaidullaganj", "Mandideep"
@@ -138,7 +143,7 @@ const generate96Stations = () => {
   for (let i = 0; i < 96; i++) {
     const division = divisions[i % divisions.length];
     const codeList = divisionMap[division];
-    const code = codeList[Math.floor(i / divisions.length) % codeList.length] + `_${10 + Math.floor(i/10)}`;
+    const code = codeList[Math.floor(i / divisions.length) % codeList.length] + `_${10 + Math.floor(i / 10)}`;
     const name = baseNames[i % baseNames.length];
     const completed = 200 + ((i * 17) % 600);
     const pending = 15 + ((i * 11) % 130);
@@ -146,7 +151,7 @@ const generate96Stations = () => {
     const category = categories[i % categories.length];
     const riskLevel = i % 7 === 0 ? "High" : i % 3 === 0 ? "Medium" : "Low";
     const assessmentStatus = statuses[i % statuses.length];
-    
+
     const day = 10 + (i % 45);
     const lastUpdatedDate = `2026-04-${day < 10 ? "0" + day : day}`;
 
@@ -205,6 +210,9 @@ const sidebarItems = [
   { icon: Building2, label: "Stations" },
   { icon: CheckCircle, label: "Approvals" },
   { icon: FileCheck, label: "Assessments" },
+  { icon: HeartHandshake, label: "Counselling" },
+  { icon: Activity, label: "PME Position" },
+  { icon: Award, label: "REF Position" },
   { icon: BarChart3, label: "Reports and Analytics" },
   { icon: UserCircle2, label: "My Profile" }
 ];
@@ -278,7 +286,7 @@ const initialUserFormData = {
   zone: "",
   division: "",
   stationName: "",
-  
+
   // Pointsman-specific
   reportingSm: "",
   shift: "",
@@ -635,7 +643,7 @@ function AOmModule({ user, onLogout }) {
         gender: "Male",
         age: 35,
         doj: new Date().toISOString().split('T')[0],
-        basePay: "₹25,000",
+        basePay: "â‚¹25,000",
         lastScore: 80,
         safetyScore: 90,
         totalAssessments: 1,
@@ -678,52 +686,17 @@ function AOmModule({ user, onLogout }) {
       return;
     }
     if (pmModal.mode === "shift") {
-      const newRole = pmModal.role || "pointsmen";
-      if (newRole !== "pointsmen") {
-        setAomPointsmen(p => p.filter(x => x.hrmsId !== pmModal.data.hrmsId));
-        const commonObj = {
-          employeeId: pmModal.data.hrmsId,
-          hrmsId: pmModal.data.hrmsId,
-          name: pmModal.data.name,
-          station: pmModal.data.stationName || "Nagpur Junction",
-          stationName: pmModal.data.stationName || "Nagpur Junction",
-          division: pmModal.data.division || "Nagpur",
-          zone: pmModal.data.zone || "Central Railway",
-          cat: pmModal.data.cat || "A",
-          risk: pmModal.data.risk || "Low",
-          score: pmModal.data.lastScore || 80,
-          contact: pmModal.data.contact || "",
-          email: pmModal.data.email || "",
-          lastDate: pmModal.data.doj || new Date().toISOString().split('T')[0],
-          status: "Approved",
-          reportingAom: "P. K. Verma (Sr. DOM)"
-        };
-        if (newRole === "ss") {
-          setAomSuperintendents(prev => [...prev, { ...commonObj, role: "ss", designation: "Station Superintendent" }]);
-        } else if (newRole === "tm") {
-          setAomTrainManagers(prev => [...prev, { ...commonObj, role: "tm", designation: "Train Manager" }]);
-        } else if (newRole === "ti") {
-          setTrafficInspectors(prev => [...prev, { ...commonObj, role: "ti", designation: "Traffic Inspector" }]);
-        } else if (newRole === "sm") {
-          setStations(prev => prev.map(s => {
-            if (s.stationName === pmModal.data.stationName) {
-              return { ...s, stationMasterName: pmModal.data.name, contactNumber: pmModal.data.contact };
-            }
-            return s;
-          }));
-          setAomStationMasters(prev => [...prev, {
-            ...commonObj,
-            role: "sm",
-            designation: "Station Master",
-            id: pmModal.data.hrmsId,
-            hrmsId: pmModal.data.hrmsId,
-            stationName: pmModal.data.stationName || "Nagpur Junction",
-            stationCode: pmModal.data.stationCode || "NGP",
-            division: pmModal.data.division || "Nagpur",
-            zone: pmModal.data.zone || "Central Railway"
-          }]);
-        }
-        alert(`${pmModal.data.name} shifted to ${newRole.toUpperCase()} successfully.`);
+      const targetStation = pmModal.data.targetStation || pmModal.data.station || pmModal.data.stationName;
+      if (targetStation) {
+        const stObj = stations.find(s => (s.name || s.stationName) === targetStation);
+        const code = stObj ? (stObj.code || stObj.stationCode) : "STN";
+        setAomPointsmen(prev => prev.map(u => u.hrmsId === pmModal.data.hrmsId ? {
+          ...u,
+          station: targetStation,
+          stationName: targetStation,
+          stationCode: code
+        } : u));
+        alert(`${pmModal.data.name} transferred to ${targetStation} station successfully.`);
         setPmModal(null);
         return;
       }
@@ -751,7 +724,7 @@ function AOmModule({ user, onLogout }) {
         gender: "Male",
         age: 38,
         doj: new Date().toISOString().split('T')[0],
-        basePay: "₹52,000",
+        basePay: "â‚¹52,000",
         lastScore: 80,
         safetyScore: 88,
         totalAssessments: 1,
@@ -794,51 +767,17 @@ function AOmModule({ user, onLogout }) {
       return;
     }
     if (smModal.mode === "shift") {
-      const newRole = smModal.role || "sm";
-      if (newRole !== "sm") {
-        setAomStationMasters(p => p.filter(x => (x.hrmsId || x.id) !== smModal.data.hrmsId));
-        const commonObj = {
-          employeeId: smModal.data.hrmsId,
-          hrmsId: smModal.data.hrmsId,
-          name: smModal.data.name,
-          station: smModal.data.stationName || "Nagpur Junction",
-          stationName: smModal.data.stationName || "Nagpur Junction",
-          division: smModal.data.division || "Nagpur",
-          zone: smModal.data.zone || "Central Railway",
-          cat: smModal.data.cat || "A",
-          risk: smModal.data.risk || "Low",
-          score: smModal.data.lastScore || 80,
-          contact: smModal.data.contact || "",
-          email: smModal.data.email || "",
-          lastDate: smModal.data.doj || new Date().toISOString().split('T')[0],
-          status: "Approved",
-          reportingAom: "P. K. Verma (Sr. DOM)"
-        };
-        if (newRole === "ss") {
-          setAomSuperintendents(prev => [...prev, { ...commonObj, role: "ss", designation: "Station Superintendent" }]);
-        } else if (newRole === "tm") {
-          setAomTrainManagers(prev => [...prev, { ...commonObj, role: "tm", designation: "Train Manager" }]);
-        } else if (newRole === "ti") {
-          setTrafficInspectors(prev => [...prev, { ...commonObj, role: "ti", designation: "Traffic Inspector" }]);
-        } else if (newRole === "pointsmen") {
-          setAomPointsmen(prev => [...prev, {
-            ...commonObj,
-            hrmsId: smModal.data.hrmsId,
-            id: Date.now(),
-            lastScore: smModal.data.lastScore || 80,
-            safetyScore: 85,
-            totalAssessments: 2,
-            pmeStatus: "Fit",
-            refStatus: "Cleared",
-            disciplinary: "None",
-            incidents: 0,
-            approvalStatus: "Approved",
-            monitoringStatus: "Active",
-            stationCode: smModal.data.stationCode || "NGP",
-            stationName: smModal.data.stationName || "Nagpur Junction"
-          }]);
-        }
-        alert(`${smModal.data.name} shifted to ${newRole.toUpperCase()} successfully.`);
+      const targetStation = smModal.data.targetStation || smModal.data.station || smModal.data.stationName;
+      if (targetStation) {
+        const stObj = stations.find(s => (s.name || s.stationName) === targetStation);
+        const code = stObj ? (stObj.code || stObj.stationCode) : "STN";
+        setAomStationMasters(prev => prev.map(u => (u.hrmsId || u.id) === smModal.data.hrmsId ? {
+          ...u,
+          station: targetStation,
+          stationName: targetStation,
+          stationCode: code
+        } : u));
+        alert(`${smModal.data.name} transferred to ${targetStation} station successfully.`);
         setSmModal(null);
         return;
       }
@@ -984,51 +923,17 @@ function AOmModule({ user, onLogout }) {
       return;
     }
     if (ssModal.mode === "shift") {
-      const newRole = ssModal.role || "ss";
-      if (newRole !== "ss") {
-        setAomSuperintendents(p => p.filter(x => x.employeeId !== ssModal.data.employeeId));
-        const commonObj = {
-          employeeId: ssModal.data.employeeId,
-          hrmsId: ssModal.data.employeeId,
-          name: ssModal.data.name,
-          station: ssModal.data.station || ssModal.data.smStation || "Nagpur Junction",
-          stationName: ssModal.data.station || ssModal.data.smStation || "Nagpur Junction",
-          division: ssModal.data.division || "Nagpur",
-          zone: ssModal.data.zone || "Central Railway",
-          cat: ssModal.data.cat || "A",
-          risk: ssModal.data.risk || "Low",
-          score: ssModal.data.score || 80,
-          contact: ssModal.data.contact || "",
-          email: ssModal.data.email || "",
-          lastDate: ssModal.data.lastDate || new Date().toISOString().split('T')[0],
-          status: "Approved",
-          reportingAom: "P. K. Verma (Sr. DOM)"
-        };
-        if (newRole === "sm") {
-          setAomStationMasters(prev => [{ ...commonObj, designation: "Station Master", role: "sm" }, ...prev]);
-        } else if (newRole === "tm") {
-          setAomTrainManagers(prev => [{ ...commonObj, designation: "Train Manager", role: "tm" }, ...prev]);
-        } else if (newRole === "ti") {
-          setTrafficInspectors(prev => [{ ...commonObj, designation: "Traffic Inspector", role: "ti" }, ...prev]);
-        } else if (newRole === "pointsmen") {
-          setAomPointsmen(prev => [{
-            ...commonObj,
-            hrmsId: ssModal.data.employeeId,
-            id: Date.now(),
-            lastScore: ssModal.data.score || 80,
-            safetyScore: 85,
-            totalAssessments: 2,
-            pmeStatus: "Fit",
-            refStatus: "Cleared",
-            disciplinary: "None",
-            incidents: 0,
-            approvalStatus: "Approved",
-            monitoringStatus: "Active",
-            stationCode: ssModal.data.stationCode || "NGP",
-            stationName: ssModal.data.station || "Nagpur Junction"
-          }, ...prev]);
-        }
-        alert(`${ssModal.data.name} shifted to ${newRole.toUpperCase()} successfully.`);
+      const targetStation = ssModal.data.targetStation || ssModal.data.station || ssModal.data.stationName;
+      if (targetStation) {
+        const stObj = stations.find(s => (s.name || s.stationName) === targetStation);
+        const code = stObj ? (stObj.code || stObj.stationCode) : "STN";
+        setAomSuperintendents(prev => prev.map(u => (u.employeeId || u.hrmsId) === ssModal.data.employeeId ? {
+          ...u,
+          station: targetStation,
+          stationName: targetStation,
+          stationCode: code
+        } : u));
+        alert(`${ssModal.data.name} transferred to ${targetStation} station successfully.`);
         setSsModal(null);
         return;
       }
@@ -1104,51 +1009,17 @@ function AOmModule({ user, onLogout }) {
       return;
     }
     if (tmModal.mode === "shift") {
-      const newRole = tmModal.role || "tm";
-      if (newRole !== "tm") {
-        setAomTrainManagers(p => p.filter(x => x.employeeId !== tmModal.data.employeeId));
-        const commonObj = {
-          employeeId: tmModal.data.employeeId,
-          hrmsId: tmModal.data.employeeId,
-          name: tmModal.data.name,
-          station: tmModal.data.station || tmModal.data.smStation || "Nagpur Junction",
-          stationName: tmModal.data.station || tmModal.data.smStation || "Nagpur Junction",
-          division: tmModal.data.division || "Nagpur",
-          zone: tmModal.data.zone || "Central Railway",
-          cat: tmModal.data.cat || "A",
-          risk: tmModal.data.risk || "Low",
-          score: tmModal.data.score || 80,
-          contact: tmModal.data.contact || "",
-          email: tmModal.data.email || "",
-          lastDate: tmModal.data.lastDate || new Date().toISOString().split('T')[0],
-          status: "Approved",
-          reportingAom: "P. K. Verma (Sr. DOM)"
-        };
-        if (newRole === "sm") {
-          setAomStationMasters(prev => [{ ...commonObj, designation: "Station Master", role: "sm" }, ...prev]);
-        } else if (newRole === "ss") {
-          setAomSuperintendents(prev => [{ ...commonObj, designation: "Station Superintendent", role: "ss" }, ...prev]);
-        } else if (newRole === "ti") {
-          setTrafficInspectors(prev => [{ ...commonObj, designation: "Traffic Inspector", role: "ti" }, ...prev]);
-        } else if (newRole === "pointsmen") {
-          setAomPointsmen(prev => [{
-            ...commonObj,
-            hrmsId: tmModal.data.employeeId,
-            id: Date.now(),
-            lastScore: tmModal.data.score || 80,
-            safetyScore: 85,
-            totalAssessments: 2,
-            pmeStatus: "Fit",
-            refStatus: "Cleared",
-            disciplinary: "None",
-            incidents: 0,
-            approvalStatus: "Approved",
-            monitoringStatus: "Active",
-            stationCode: tmModal.data.stationCode || "NGP",
-            stationName: tmModal.data.station || "Nagpur Junction"
-          }, ...prev]);
-        }
-        alert(`${tmModal.data.name} shifted to ${newRole.toUpperCase()} successfully.`);
+      const targetStation = tmModal.data.targetStation || tmModal.data.station || tmModal.data.stationName;
+      if (targetStation) {
+        const stObj = stations.find(s => (s.name || s.stationName) === targetStation);
+        const code = stObj ? (stObj.code || stObj.stationCode) : "STN";
+        setAomTrainManagers(prev => prev.map(u => (u.employeeId || u.hrmsId) === tmModal.data.employeeId ? {
+          ...u,
+          station: targetStation,
+          stationName: targetStation,
+          stationCode: code
+        } : u));
+        alert(`${tmModal.data.name} transferred to ${targetStation} station successfully.`);
         setTmModal(null);
         return;
       }
@@ -1178,43 +1049,43 @@ function AOmModule({ user, onLogout }) {
   const [showAddUserForm, setShowAddUserForm] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("FY 2025-26 - Q3");
 
-  // ── AOM Approvals Page State (mirrors TI's PM Review exactly) ──
-  const [aomApprovalTab, setAomApprovalTab]           = useState("SM"); // "SM" | "TM"
-  const [aomReviewTab, setAomReviewTab]               = useState("Pending"); // Pending/Approved/Rejected
-  const [aomReviewSearch, setAomReviewSearch]         = useState("");
-  const [aomReviewStation, setAomReviewStation]       = useState("All");
-  const [aomSelectedId, setAomSelectedId]             = useState(null);
-  const [aomEditSections, setAomEditSections]         = useState({});
-  const [aomAomRemarks, setAomAomRemarks]             = useState({});
-  const [aomShowAudit, setAomShowAudit]               = useState({});
-  const [aomRejectMode, setAomRejectMode]             = useState({});
-  const [aomApprovalNotice, setAomApprovalNotice]     = useState("");
-  const [aomSMList, setAomSMList]                     = useState(() => {
+  // â”€â”€ AOM Approvals Page State (mirrors TI's PM Review exactly) â”€â”€
+  const [aomApprovalTab, setAomApprovalTab] = useState("SM"); // "SM" | "TM"
+  const [aomReviewTab, setAomReviewTab] = useState("Pending"); // Pending/Approved/Rejected
+  const [aomReviewSearch, setAomReviewSearch] = useState("");
+  const [aomReviewStation, setAomReviewStation] = useState("All");
+  const [aomSelectedId, setAomSelectedId] = useState(null);
+  const [aomEditSections, setAomEditSections] = useState({});
+  const [aomAomRemarks, setAomAomRemarks] = useState({});
+  const [aomShowAudit, setAomShowAudit] = useState({});
+  const [aomRejectMode, setAomRejectMode] = useState({});
+  const [aomApprovalNotice, setAomApprovalNotice] = useState("");
+  const [aomSMList, setAomSMList] = useState(() => {
     try { const s = localStorage.getItem("ti_sm_list"); return s ? JSON.parse(s) : []; } catch { return []; }
   });
-  const [aomTMList, setAomTMList]                     = useState(() => {
+  const [aomTMList, setAomTMList] = useState(() => {
     try { const s = localStorage.getItem("ti_tm_list"); return s ? JSON.parse(s) : []; } catch { return []; }
   });
 
   // Refresh SM/TM lists from localStorage whenever Approvals page is active
   useEffect(() => {
     if (activePage === "Approvals") {
-      try { const s = localStorage.getItem("ti_sm_list"); if (s) setAomSMList(JSON.parse(s)); } catch {}
-      try { const s = localStorage.getItem("ti_tm_list"); if (s) setAomTMList(JSON.parse(s)); } catch {}
+      try { const s = localStorage.getItem("ti_sm_list"); if (s) setAomSMList(JSON.parse(s)); } catch { }
+      try { const s = localStorage.getItem("ti_tm_list"); if (s) setAomTMList(JSON.parse(s)); } catch { }
     }
   }, [activePage]);
 
   const aomCatColor = { A: "#16a34a", B: "#2563eb", C: "#d97706", D: "#dc2626" };
-  const aomCatBg    = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
-  const aomGetCat   = s => s >= 80 ? "A" : s >= 50 ? "B" : s >= 26 ? "C" : "D";
+  const aomCatBg = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
+  const aomGetCat = s => s >= 80 ? "A" : s >= 50 ? "B" : s >= 26 ? "C" : "D";
 
   const aomCurrentList = aomApprovalTab === "SM" ? aomSMList : aomTMList;
   const aomSelectedItem = aomSelectedId ? aomCurrentList.find(x => x.id === aomSelectedId) || null : null;
 
   const aomFilteredList = aomCurrentList.filter(item => {
     const st = aomReviewTab === "Pending" ? item.status === "Submitted" : item.status === aomReviewTab;
-    const s  = !aomReviewSearch || item.name.toLowerCase().includes(aomReviewSearch.toLowerCase()) || item.hrmsId.toLowerCase().includes(aomReviewSearch.toLowerCase());
-    const r  = aomReviewStation === "All" || item.station === aomReviewStation;
+    const s = !aomReviewSearch || item.name.toLowerCase().includes(aomReviewSearch.toLowerCase()) || item.hrmsId.toLowerCase().includes(aomReviewSearch.toLowerCase());
+    const r = aomReviewStation === "All" || item.station === aomReviewStation;
     return st && s && r;
   });
 
@@ -1310,7 +1181,7 @@ function AOmModule({ user, onLogout }) {
     setter(prev => {
       const updated = prev.map(item => {
         if (item.id !== id) return item;
-        const secs  = aomEditSections[id] || [];
+        const secs = aomEditSections[id] || [];
         const total = secs.reduce((s, x) => s + x.score, 0);
         const audit = [...(item.auditTrail || []), {
           action: mode === "reject" ? "Rejected" : (mode === "modify" ? "Modified & Approved" : "Approved without modification"),
@@ -1446,8 +1317,8 @@ function AOmModule({ user, onLogout }) {
   const [newStPlatforms, setNewStPlatforms] = useState(3);
   const [newStTracks, setNewStTracks] = useState(5);
   const [newStDailyFootfall, setNewStDailyFootfall] = useState(15000);
-  const [newStLatitude, setNewStLatitude] = useState("21.1500° N");
-  const [newStLongitude, setNewStLongitude] = useState("79.0900° E");
+  const [newStLatitude, setNewStLatitude] = useState("21.1500Â° N");
+  const [newStLongitude, setNewStLongitude] = useState("79.0900Â° E");
   const [newStContactNumber, setNewStContactNumber] = useState("+91-712-2560158");
   const [newStEmailId, setNewStEmailId] = useState("");
   const [newStLineConfig, setNewStLineConfig] = useState("Double Line");
@@ -1490,14 +1361,14 @@ function AOmModule({ user, onLogout }) {
   };
 
   const aomPointsmenSeed = [
-    { id: 1, hrmsId: "PM_1001", name: "Ravi Kumar", gender: "Male", age: 38, doj: "2012-04-10", basePay: "₹28,500", lastScore: 92, safetyScore: 95, totalAssessments: 12, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Approved", monitoringStatus: "Active", stationCode: "NGP", stationName: "Nagpur Junction" },
-    { id: 2, hrmsId: "PM_1102", name: "Sanjay Patil", gender: "Male", age: 34, doj: "2015-08-22", basePay: "₹26,200", lastScore: 78, safetyScore: 80, totalAssessments: 9, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Pending", monitoringStatus: "On Duty", stationCode: "NGP", stationName: "Nagpur Junction" },
-    { id: 3, hrmsId: "PM_1103", name: "Deepak Nair", gender: "Male", age: 41, doj: "2009-11-05", basePay: "₹31,000", lastScore: 48, safetyScore: 62, totalAssessments: 15, pmeStatus: "Fit", refStatus: "Pending", disciplinary: "Warning", incidents: 1, approvalStatus: "Approved", monitoringStatus: "Off Duty", stationCode: "PUNE", stationName: "Pune Junction" },
-    { id: 4, hrmsId: "PM_1104", name: "Ajay Sharma", gender: "Male", age: 29, doj: "2019-02-18", basePay: "₹23,400", lastScore: 84, safetyScore: 88, totalAssessments: 6, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Pending", monitoringStatus: "Active", stationCode: "PUNE", stationName: "Pune Junction" },
-    { id: 5, hrmsId: "PM_1105", name: "Kunal Verma", gender: "Male", age: 36, doj: "2013-07-30", basePay: "₹27,800", lastScore: 35, safetyScore: 55, totalAssessments: 11, pmeStatus: "Unfit", refStatus: "Pending", disciplinary: "Warning", incidents: 2, approvalStatus: "Rejected", monitoringStatus: "Absent", stationCode: "NGP", stationName: "Nagpur Junction" },
-    { id: 6, hrmsId: "PM_1106", name: "Priya Menon", gender: "Female", age: 31, doj: "2018-03-14", basePay: "₹25,100", lastScore: 67, safetyScore: 74, totalAssessments: 7, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Approved", monitoringStatus: "On Duty", stationCode: "NDLS", stationName: "New Delhi" },
-    { id: 7, hrmsId: "PM_1107", name: "Ramesh Yadav", gender: "Male", age: 45, doj: "2005-09-01", basePay: "₹34,600", lastScore: 82, safetyScore: 90, totalAssessments: 18, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Approved", monitoringStatus: "Off Duty", stationCode: "NDLS", stationName: "New Delhi" },
-    { id: 8, hrmsId: "PM_1108", name: "Sneha Iyer", gender: "Female", age: 28, doj: "2020-01-20", basePay: "₹22,000", lastScore: 19, safetyScore: 40, totalAssessments: 3, pmeStatus: "Unfit", refStatus: "Pending", disciplinary: "Serious", incidents: 3, approvalStatus: "Rejected", monitoringStatus: "Absent", stationCode: "NDLS", stationName: "New Delhi" }
+    { id: 1, hrmsId: "PM_1001", name: "Ravi Kumar", gender: "Male", age: 38, doj: "2012-04-10", basePay: "â‚¹28,500", lastScore: 92, safetyScore: 95, totalAssessments: 12, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Approved", monitoringStatus: "Active", stationCode: "NGP", stationName: "Nagpur Junction" },
+    { id: 2, hrmsId: "PM_1102", name: "Sanjay Patil", gender: "Male", age: 34, doj: "2015-08-22", basePay: "â‚¹26,200", lastScore: 78, safetyScore: 80, totalAssessments: 9, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Pending", monitoringStatus: "On Duty", stationCode: "NGP", stationName: "Nagpur Junction" },
+    { id: 3, hrmsId: "PM_1103", name: "Deepak Nair", gender: "Male", age: 41, doj: "2009-11-05", basePay: "â‚¹31,000", lastScore: 48, safetyScore: 62, totalAssessments: 15, pmeStatus: "Fit", refStatus: "Pending", disciplinary: "Warning", incidents: 1, approvalStatus: "Approved", monitoringStatus: "Off Duty", stationCode: "PUNE", stationName: "Pune Junction" },
+    { id: 4, hrmsId: "PM_1104", name: "Ajay Sharma", gender: "Male", age: 29, doj: "2019-02-18", basePay: "â‚¹23,400", lastScore: 84, safetyScore: 88, totalAssessments: 6, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Pending", monitoringStatus: "Active", stationCode: "PUNE", stationName: "Pune Junction" },
+    { id: 5, hrmsId: "PM_1105", name: "Kunal Verma", gender: "Male", age: 36, doj: "2013-07-30", basePay: "â‚¹27,800", lastScore: 35, safetyScore: 55, totalAssessments: 11, pmeStatus: "Unfit", refStatus: "Pending", disciplinary: "Warning", incidents: 2, approvalStatus: "Rejected", monitoringStatus: "Absent", stationCode: "NGP", stationName: "Nagpur Junction" },
+    { id: 6, hrmsId: "PM_1106", name: "Priya Menon", gender: "Female", age: 31, doj: "2018-03-14", basePay: "â‚¹25,100", lastScore: 67, safetyScore: 74, totalAssessments: 7, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Approved", monitoringStatus: "On Duty", stationCode: "NDLS", stationName: "New Delhi" },
+    { id: 7, hrmsId: "PM_1107", name: "Ramesh Yadav", gender: "Male", age: 45, doj: "2005-09-01", basePay: "â‚¹34,600", lastScore: 82, safetyScore: 90, totalAssessments: 18, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Approved", monitoringStatus: "Off Duty", stationCode: "NDLS", stationName: "New Delhi" },
+    { id: 8, hrmsId: "PM_1108", name: "Sneha Iyer", gender: "Female", age: 28, doj: "2020-01-20", basePay: "â‚¹22,000", lastScore: 19, safetyScore: 40, totalAssessments: 3, pmeStatus: "Unfit", refStatus: "Pending", disciplinary: "Serious", incidents: 3, approvalStatus: "Rejected", monitoringStatus: "Absent", stationCode: "NDLS", stationName: "New Delhi" }
   ];
 
   const [aomPointsmen, setAomPointsmen] = useState(aomPointsmenSeed);
@@ -1506,9 +1377,9 @@ function AOmModule({ user, onLogout }) {
     const saved = localStorage.getItem("aom_station_masters");
     if (saved) return JSON.parse(saved);
     return [
-      { id: "SM_1001", hrmsId: "SM_1001", name: "A. Patil", gender: "Male", age: 42, doj: "2010-05-15", basePay: "₹56,000", designation: "Station Master", role: "sm", stationName: "Nagpur Junction", stationCode: "NGP", division: "Nagpur", zone: "Central Railway", category: "A", contactNumber: "9890011122", emailId: "ngp.station@rail.in", lastAssessDate: "2026-03-20", score: 85, pmeStatus: "Fit", refStatus: "Cleared" },
-      { id: "SM_1002", hrmsId: "SM_1002", name: "R. Jadhav", gender: "Male", age: 39, doj: "2012-08-22", basePay: "₹54,000", designation: "Station Master", role: "sm", stationName: "Pune Junction", stationCode: "PUNE", division: "Pune", zone: "Central Railway", category: "A", contactNumber: "9880012233", emailId: "pune.station@rail.in", lastAssessDate: "2026-02-14", score: 72, pmeStatus: "Fit", refStatus: "Cleared" },
-      { id: "SM_1003", hrmsId: "SM_1003", name: "M. Sharma", gender: "Male", age: 45, doj: "2008-03-10", basePay: "₹62,000", designation: "Station Master", role: "sm", stationName: "New Delhi", stationCode: "NDLS", division: "Delhi", zone: "Northern Railway", category: "A", contactNumber: "9876543210", emailId: "ndls.station@rail.in", lastAssessDate: "2026-03-12", score: 84, pmeStatus: "Fit", refStatus: "Cleared" }
+      { id: "SM_1001", hrmsId: "SM_1001", name: "A. Patil", gender: "Male", age: 42, doj: "2010-05-15", basePay: "â‚¹56,000", designation: "Station Master", role: "sm", stationName: "Nagpur Junction", stationCode: "NGP", division: "Nagpur", zone: "Central Railway", category: "A", contactNumber: "9890011122", emailId: "ngp.station@rail.in", lastAssessDate: "2026-03-20", score: 85, pmeStatus: "Fit", refStatus: "Cleared" },
+      { id: "SM_1002", hrmsId: "SM_1002", name: "R. Jadhav", gender: "Male", age: 39, doj: "2012-08-22", basePay: "â‚¹54,000", designation: "Station Master", role: "sm", stationName: "Pune Junction", stationCode: "PUNE", division: "Pune", zone: "Central Railway", category: "A", contactNumber: "9880012233", emailId: "pune.station@rail.in", lastAssessDate: "2026-02-14", score: 72, pmeStatus: "Fit", refStatus: "Cleared" },
+      { id: "SM_1003", hrmsId: "SM_1003", name: "M. Sharma", gender: "Male", age: 45, doj: "2008-03-10", basePay: "â‚¹62,000", designation: "Station Master", role: "sm", stationName: "New Delhi", stationCode: "NDLS", division: "Delhi", zone: "Northern Railway", category: "A", contactNumber: "9876543210", emailId: "ndls.station@rail.in", lastAssessDate: "2026-03-12", score: 84, pmeStatus: "Fit", refStatus: "Cleared" }
     ];
   });
 
@@ -1547,77 +1418,77 @@ function AOmModule({ user, onLogout }) {
     setPointsmanStatusFilter("All");
     setActivePage("Pointsman Under Station Master");
   };
-  
-    const stationMastersDirectory = aomStationMasters;
-  
-    const filteredStationMasters = stationMastersDirectory.filter((row) => {
-      const q = stationMasterSearch.trim().toLowerCase();
-      if (!q) return true;
-      return (
-        row.name.toLowerCase().includes(q) ||
-        row.stationName.toLowerCase().includes(q) ||
-        row.stationCode.toLowerCase().includes(q) ||
-        row.division.toLowerCase().includes(q)
-      );
+
+  const stationMastersDirectory = aomStationMasters;
+
+  const filteredStationMasters = stationMastersDirectory.filter((row) => {
+    const q = stationMasterSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      row.name.toLowerCase().includes(q) ||
+      row.stationName.toLowerCase().includes(q) ||
+      row.stationCode.toLowerCase().includes(q) ||
+      row.division.toLowerCase().includes(q)
+    );
+  });
+
+  const handleShiftStationMaster = (smName, targetStationCode) => {
+    if (!targetStationCode) return;
+
+    const currentStation = stations.find(s => s.stationMasterName === smName);
+    if (!currentStation) return;
+
+    const targetStationObj = stations.find(s => s.stationCode === targetStationCode);
+    const targetStationName = targetStationObj ? targetStationObj.stationName : targetStationCode;
+
+    if (!window.confirm(`Are you sure you want to shift Station Master ${smName} from ${currentStation.stationName} to ${targetStationName}?`)) {
+      return;
+    }
+
+    setStations(prev => prev.map(s => {
+      if (s.stationCode === currentStation.stationCode) {
+        return {
+          ...s,
+          stationMasterName: "",
+          contactNumber: "",
+          emailId: ""
+        };
+      }
+      if (s.stationCode === targetStationCode) {
+        return {
+          ...s,
+          stationMasterName: smName,
+          contactNumber: currentStation.contactNumber,
+          emailId: currentStation.emailId
+        };
+      }
+      return s;
+    }));
+
+    setSmShiftDrafts(prev => {
+      const next = { ...prev };
+      delete next[smName];
+      return next;
     });
+  };
 
-    const handleShiftStationMaster = (smName, targetStationCode) => {
-      if (!targetStationCode) return;
-      
-      const currentStation = stations.find(s => s.stationMasterName === smName);
-      if (!currentStation) return;
-      
-      const targetStationObj = stations.find(s => s.stationCode === targetStationCode);
-      const targetStationName = targetStationObj ? targetStationObj.stationName : targetStationCode;
-      
-      if (!window.confirm(`Are you sure you want to shift Station Master ${smName} from ${currentStation.stationName} to ${targetStationName}?`)) {
-        return;
+  const handleDeleteStationMaster = (smName) => {
+    if (!window.confirm(`Are you sure you want to delete Station Master ${smName}?`)) {
+      return;
+    }
+
+    setStations(prev => prev.map(s => {
+      if (s.stationMasterName === smName) {
+        return {
+          ...s,
+          stationMasterName: "",
+          contactNumber: "",
+          emailId: ""
+        };
       }
-
-      setStations(prev => prev.map(s => {
-        if (s.stationCode === currentStation.stationCode) {
-          return {
-            ...s,
-            stationMasterName: "",
-            contactNumber: "",
-            emailId: ""
-          };
-        }
-        if (s.stationCode === targetStationCode) {
-          return {
-            ...s,
-            stationMasterName: smName,
-            contactNumber: currentStation.contactNumber,
-            emailId: currentStation.emailId
-          };
-        }
-        return s;
-      }));
-
-      setSmShiftDrafts(prev => {
-        const next = { ...prev };
-        delete next[smName];
-        return next;
-      });
-    };
-
-    const handleDeleteStationMaster = (smName) => {
-      if (!window.confirm(`Are you sure you want to delete Station Master ${smName}?`)) {
-        return;
-      }
-      
-      setStations(prev => prev.map(s => {
-        if (s.stationMasterName === smName) {
-          return {
-            ...s,
-            stationMasterName: "",
-            contactNumber: "",
-            emailId: ""
-          };
-        }
-        return s;
-      }));
-    };
+      return s;
+    }));
+  };
 
   const [stationDetailId, setStationDetailId] = useState(null);
   const [isStationEditMode, setIsStationEditMode] = useState(false);
@@ -1721,6 +1592,111 @@ function AOmModule({ user, onLogout }) {
   useEffect(() => {
     localStorage.setItem("aom_superintendents", JSON.stringify(aomSuperintendents));
   }, [aomSuperintendents]);
+  /* ─────────────── AOM SS ASSESSMENT CRITERIA ─────────────── */
+  const AOM_SS_CRITERIA = [
+    {
+      key: "stationOps", label: "Station Operations & Supervision", weight: 5, count: 5,
+      criteria: ["Train reception/dispatch procedures", "Station yard supervision during peak hours", "Platform safety compliance", "Crowd management protocols", "Block instrument operation"]
+    },
+    {
+      key: "staffMgmt", label: "Staff Management & Discipline", weight: 4, count: 5,
+      criteria: ["Duty roster maintenance", "Punctuality and attendance tracking", "Leave management compliance", "Uniform & conduct enforcement", "Safety briefing conduct"]
+    },
+    {
+      key: "records", label: "Records & Documentation", weight: 3, count: 5,
+      criteria: ["Station log book accuracy", "Accident/incident reporting", "Block register maintenance", "Cash and freight register audit", "Train delay reporting"]
+    },
+    {
+      key: "safety", label: "Safety Compliance & Emergency", weight: 5, count: 5,
+      criteria: ["Emergency evacuation drill conduct", "Fire equipment serviceability check", "Signal failure response protocol", "Fog signal deployment knowledge", "Coordination with control office"]
+    },
+    {
+      key: "infra", label: "Infrastructure & Asset Maintenance", weight: 3, count: 5,
+      criteria: ["Platform surface and lighting check", "Footover bridge safety assessment", "Washroom hygiene maintenance", "Waiting room orderliness", "Coach indication board accuracy"]
+    },
+  ];
+
+  const aomDefaultSsForm = () => ({
+    stationOps: Array(5).fill("No"), staffMgmt: Array(5).fill("No"),
+    records: Array(5).fill("No"), safety: Array(5).fill("No"),
+    infra: Array(5).fill("No"), knowledgeMarks: "", alcoholicStatus: "",
+    pmeStatus: "Fit", refStatus: "Cleared", counselling: "Not Required",
+    automaticTraining: "Not Required", remarks: ""
+  });
+
+  const calcAomSsLiveScore = (form) => {
+    let total = 0;
+    AOM_SS_CRITERIA.forEach(c => { (form[c.key] || []).forEach(v => { if (v === "Yes") total += c.weight; }); });
+    const km = Math.min(parseInt(form.knowledgeMarks) || 0, 25);
+    return { ynScore: Math.min(total, 75), knowledge: km, total: Math.min(total, 75) + km };
+  };
+
+  const [aomSsList, setAomSsList] = useState(() => {
+    const saved = localStorage.getItem("aom_ss_assess_list");
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: "ASSA_1001", name: "R. Desai", hrmsId: "SS_001", station: "Nagpur Junction", lastDate: "2026-04-18", status: "Pending" },
+      { id: "ASSA_1002", name: "M. Kulkarni", hrmsId: "SS_002", station: "Parbhani Junction", lastDate: "2026-04-10", status: "Pending" },
+    ];
+  });
+  useEffect(() => { localStorage.setItem("aom_ss_assess_list", JSON.stringify(aomSsList)); }, [aomSsList]);
+
+  const [aomSsForms, setAomSsForms] = useState(() => {
+    const saved = localStorage.getItem("aom_ss_forms");
+    return saved ? JSON.parse(saved) : {};
+  });
+  useEffect(() => { localStorage.setItem("aom_ss_forms", JSON.stringify(aomSsForms)); }, [aomSsForms]);
+
+  const [aomSsLocked, setAomSsLocked] = useState({});
+  const [activeAomSsId, setActiveAomSsId] = useState(null);
+
+  const openAomSsForm = (id) => {
+    setActiveAomSsId(id);
+    setAomSsForms(prev => ({ ...prev, [id]: prev[id] || aomDefaultSsForm() }));
+    setAomSsLocked(prev => {
+      const item = aomSsList.find(s => s.id === id);
+      return { ...prev, [id]: item?.status === "Approved" };
+    });
+  };
+
+  const toggleAomSsYN = (id, key, idx, val) => {
+    if (aomSsLocked[id]) return;
+    setAomSsForms(prev => {
+      const f = { ...(prev[id] || aomDefaultSsForm()) };
+      const arr = [...(f[key] || Array(5).fill("No"))];
+      arr[idx] = arr[idx] === val ? "No" : val;
+      return { ...prev, [id]: { ...f, [key]: arr } };
+    });
+  };
+
+  const setAomSsField = (id, key, val) => {
+    if (aomSsLocked[id]) return;
+    setAomSsForms(prev => ({ ...prev, [id]: { ...(prev[id] || aomDefaultSsForm()), [key]: val } }));
+  };
+
+  const AOM_CAT_BG = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
+  const AOM_CAT_CLR = { A: "#16a34a", B: "#2563eb", C: "#d97706", D: "#dc2626" };
+
+  const submitAomSsAssessment = (id) => {
+    const f = aomSsForms[id];
+    if (!f?.alcoholicStatus) { alert("Alcoholic/Non-Alcoholic status is mandatory."); return; }
+    const { total } = calcAomSsLiveScore(f);
+    const isAlcoholic = f.alcoholicStatus === "Alcoholic";
+    const getCatAomSs = s => s >= 80 ? "A" : s >= 50 ? "B" : s >= 26 ? "C" : "D";
+    const cat = isAlcoholic ? "D" : getCatAomSs(total);
+    setAomSsList(prev => prev.map(s => s.id === id ? { ...s, status: "Approved", score: total, category: cat, lastDate: new Date().toISOString().slice(0, 10) } : s));
+    setAomSsLocked(p => ({ ...p, [id]: true }));
+    const ssItem = aomSsList.find(s => s.id === id);
+    const ssHrmsId = ssItem?.hrmsId || id;
+    setApprovedAssessments(prev => [{
+      id: ssHrmsId, title: `Station Superintendent - ${ssHrmsId}`,
+      detail: `Approved by: AOM/G - on ${new Date().toISOString().slice(0, 10)}`,
+      score: `Score: ${total}/100 - Grade: ${cat}`
+    }, ...prev]);
+    setActiveAomSsId(null);
+    alert("SS assessment approved and locked.");
+  };
+
 
   const [aomTrainManagers, setAomTrainManagers] = useState(() => {
     const saved = localStorage.getItem("aom_train_managers");
@@ -1743,7 +1719,7 @@ function AOmModule({ user, onLogout }) {
         gender: p.gender || "Male",
         age: p.age || 35,
         doj: p.doj || "2018-06-15",
-        basePay: p.basePay || "₹28,500",
+        basePay: p.basePay || "â‚¹28,500",
         designation: "Pointsman",
         role: "pointsmen",
         stationName: p.stationName,
@@ -1769,7 +1745,7 @@ function AOmModule({ user, onLogout }) {
           gender: sm.gender || "Male",
           age: sm.age || 42,
           doj: sm.doj || "2010-05-15",
-          basePay: sm.basePay || "₹56,000",
+          basePay: sm.basePay || "â‚¹56,000",
           designation: "Station Master",
           role: "sm",
           stationName: sm.stationName,
@@ -1794,7 +1770,7 @@ function AOmModule({ user, onLogout }) {
         gender: "Male",
         age: 46,
         doj: "2008-03-12",
-        basePay: "₹62,000",
+        basePay: "â‚¹62,000",
         designation: "Station Superintendent",
         role: "ss",
         stationName: ss.station,
@@ -1818,7 +1794,7 @@ function AOmModule({ user, onLogout }) {
         gender: "Male",
         age: 39,
         doj: "2014-09-05",
-        basePay: "₹48,000",
+        basePay: "â‚¹48,000",
         designation: "Train Manager",
         role: "tm",
         stationName: tm.station,
@@ -1845,7 +1821,7 @@ function AOmModule({ user, onLogout }) {
         gender: "Male",
         age: 48,
         doj: "2006-11-20",
-        basePay: "₹68,000",
+        basePay: "â‚¹68,000",
         designation: "Traffic Inspector",
         role: "ti",
         stationName: ti.stationName || "Division HQ",
@@ -2043,12 +2019,12 @@ function AOmModule({ user, onLogout }) {
       prev.map((row) =>
         row.id === id
           ? {
-              ...row,
-              assessmentStatus: "Approved",
-              score: String(computedScore),
-              grade,
-              lastAssessed: todayIso()
-            }
+            ...row,
+            assessmentStatus: "Approved",
+            score: String(computedScore),
+            grade,
+            lastAssessed: todayIso()
+          }
           : row
       )
     );
@@ -2070,11 +2046,11 @@ function AOmModule({ user, onLogout }) {
       prev.map((item) =>
         item.id === id
           ? {
-              ...item,
-              statusLabel: "Pending Approval",
-              assessedByLine: `Assessed by: AOM/G - on ${todayIso()}`,
-              actionType: "approval"
-            }
+            ...item,
+            statusLabel: "Pending Approval",
+            assessedByLine: `Assessed by: AOM/G - on ${todayIso()}`,
+            actionType: "approval"
+          }
           : item
       )
     );
@@ -2082,10 +2058,10 @@ function AOmModule({ user, onLogout }) {
       prev.map((row) =>
         row.id === id
           ? {
-              ...row,
-              assessmentStatus: "In Progress",
-              lastAssessed: todayIso()
-            }
+            ...row,
+            assessmentStatus: "In Progress",
+            lastAssessed: todayIso()
+          }
           : row
       )
     );
@@ -2111,15 +2087,15 @@ function AOmModule({ user, onLogout }) {
     return trafficInspectors.map((ti) => {
       const pending = pendingAssessments.find(p => p.id === ti.employeeId);
       const approved = approvedAssessments.find(a => a.id === ti.employeeId);
-      
+
       let status = "Pending";
       let score = ti.lastScore || "";
       let lastAssessed = ti.lastAssessedDate || "2026-04-07";
-      
+
       if (pending) {
         const isExamAssigned = localStorage.getItem(`ti_exam_assigned_${ti.employeeId}`) === "true";
         const isExamTaken = localStorage.getItem(`ti_exam_taken_${ti.employeeId}`) === "true";
-        
+
         if (isExamTaken) {
           status = "Exam Taken";
         } else if (isExamAssigned) {
@@ -2138,7 +2114,7 @@ function AOmModule({ user, onLogout }) {
       } else {
         status = ti.assessmentStatus === "Completed" ? "Approved" : (ti.assessmentStatus || "Pending");
       }
-      
+
       return {
         ...ti,
         status,
@@ -2173,7 +2149,7 @@ function AOmModule({ user, onLogout }) {
         setPendingAssessments(prev => [pendingItem, ...prev]);
       }
     }
-    
+
     setOpenAssessmentId(pendingItem.id);
     setAnswersByAssessment((prev) => {
       if (prev[pendingItem.id]) {
@@ -2313,10 +2289,10 @@ function AOmModule({ user, onLogout }) {
       prev.map((row) =>
         row.id === id
           ? {
-              ...row,
-              assessmentStatus: "In Progress",
-              lastAssessed: todayIso()
-            }
+            ...row,
+            assessmentStatus: "In Progress",
+            lastAssessed: todayIso()
+          }
           : row
       )
     );
@@ -2456,9 +2432,9 @@ function AOmModule({ user, onLogout }) {
         prev.map((row) =>
           row.id === editingUserId
             ? {
-                ...row,
-                ...userFormData
-              }
+              ...row,
+              ...userFormData
+            }
             : row
         )
       );
@@ -2708,12 +2684,12 @@ function AOmModule({ user, onLogout }) {
       prev.map((station) =>
         station.id === stationDetailId
           ? {
-              ...station,
-              ...stationFormData,
-              stationCode: stationFormData.stationCode.trim().toUpperCase(),
-              platforms: Number(stationFormData.platforms),
-              tracks: Number(stationFormData.tracks)
-            }
+            ...station,
+            ...stationFormData,
+            stationCode: stationFormData.stationCode.trim().toUpperCase(),
+            platforms: Number(stationFormData.platforms),
+            tracks: Number(stationFormData.tracks)
+          }
           : station
       )
     );
@@ -2879,10 +2855,10 @@ function AOmModule({ user, onLogout }) {
       prev.map((row) =>
         row.id === tiLinkTargetId
           ? {
-              ...row,
-              linkedStations: tiLinkDraft.stations,
-              linkedSms: tiLinkDraft.sms
-            }
+            ...row,
+            linkedStations: tiLinkDraft.stations,
+            linkedSms: tiLinkDraft.sms
+          }
           : row
       )
     );
@@ -2902,10 +2878,10 @@ function AOmModule({ user, onLogout }) {
       prev.map((row) =>
         row.id === id
           ? {
-              ...row,
-              jurisdiction: targetDivision,
-              division: targetDivision
-            }
+            ...row,
+            jurisdiction: targetDivision,
+            division: targetDivision
+          }
           : row
       )
     );
@@ -3216,7 +3192,7 @@ function AOmModule({ user, onLogout }) {
   const renderPointsmanMonitoringDetail = (pm) => {
     const cat = getPmCat(pm.lastScore);
     const risk = getPmRisk(pm);
-    
+
     // Mock assessment history for pointsman
     const pmAssessmentHistoryMock = {
       PM_1001: [
@@ -3245,7 +3221,7 @@ function AOmModule({ user, onLogout }) {
         { date: "2026-02-01", testMarks: 12, addMarks: 7, total: 19, grade: "D", approvalStatus: "Rejected", remarks: "Severe safety oversight near point 4B. Re-training mandatory." }
       ]
     };
-    
+
     const hist = pmAssessmentHistoryMock[pm.hrmsId] || [];
 
     return (
@@ -3253,8 +3229,8 @@ function AOmModule({ user, onLogout }) {
         {/* TITLE AND BACK BUTTON HEADER */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#0f172a", margin: 0 }}>Pointsman Details</h2>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="sm2-monitor-btn"
             onClick={() => setSelectedPointsmanForMonitoring(null)}
             style={{
@@ -3308,7 +3284,7 @@ function AOmModule({ user, onLogout }) {
             <div>
               <h3 style={{ margin: "0 0 4px 0", fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>{pm.name}</h3>
               <p style={{ margin: "0 0 8px 0", fontSize: "12px", color: "#64748b", fontWeight: "500" }}>
-                {pm.hrmsId} · Pointsman · {pm.stationName}
+                {pm.hrmsId} Â· Pointsman Â· {pm.stationName}
               </p>
               <div style={{ display: "flex", gap: "8px" }}>
                 <span style={{
@@ -3382,7 +3358,7 @@ function AOmModule({ user, onLogout }) {
           </div>
           <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 16px" }}>
             <span style={{ fontSize: "9px", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px" }}>Base Pay</span>
-            <span style={{ fontSize: "14px", fontWeight: "600", color: "#0f172a", marginTop: "4px", display: "block" }}>₹28,500</span>
+            <span style={{ fontSize: "14px", fontWeight: "600", color: "#0f172a", marginTop: "4px", display: "block" }}>â‚¹28,500</span>
           </div>
         </div>
 
@@ -3408,45 +3384,45 @@ function AOmModule({ user, onLogout }) {
           }}>
             <Activity size={16} color="#0f172a" style={{ marginRight: "4px" }} /> Monitoring Status
           </h4>
-          
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" }}>
             {[
-              { 
-                status: "Active", 
-                color: "#16a34a", 
-                bg: "#dcfce7", 
+              {
+                status: "Active",
+                color: "#16a34a",
+                bg: "#dcfce7",
                 icon: (
-                  <span style={{ color: "#16a34a", marginRight: "4px", fontSize: "14px" }}>🟢</span>
+                  <span style={{ color: "#16a34a", marginRight: "4px", fontSize: "14px" }}>ðŸŸ¢</span>
                 ),
-                desc: "Available for yard operations" 
+                desc: "Available for yard operations"
               },
-              { 
-                status: "On Duty", 
-                color: "#d97706", 
-                bg: "#fef3c7", 
+              {
+                status: "On Duty",
+                color: "#d97706",
+                bg: "#fef3c7",
                 icon: (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}>
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                   </svg>
                 ),
-                desc: "Currently executing track tasks" 
+                desc: "Currently executing track tasks"
               },
-              { 
-                status: "Off Duty", 
-                color: "#64748b", 
-                bg: "#f1f5f9", 
+              {
+                status: "Off Duty",
+                color: "#64748b",
+                bg: "#f1f5f9",
                 icon: (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}>
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
                 ),
-                desc: "Resting / Shift ended" 
+                desc: "Resting / Shift ended"
               },
-              { 
-                status: "Absent", 
-                color: "#dc2626", 
-                bg: "#fee2e2", 
+              {
+                status: "Absent",
+                color: "#dc2626",
+                bg: "#fee2e2",
                 icon: (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}>
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
@@ -3454,7 +3430,7 @@ function AOmModule({ user, onLogout }) {
                     <line x1="12" y1="17" x2="12.01" y2="17" />
                   </svg>
                 ),
-                desc: "Unexcused leave of absence" 
+                desc: "Unexcused leave of absence"
               }
             ].map(item => {
               const isActive = (pm.monitoringStatus || "Active") === item.status;
@@ -3517,7 +3493,7 @@ function AOmModule({ user, onLogout }) {
         {/* SAFETY COMPLIANCE SECTION */}
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "20px", marginBottom: "24px" }}>
           <h4 style={{ margin: "0 0 16px 0", fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>Safety Compliance</h4>
-          
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "20px" }}>
             <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 16px" }}>
               <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>PME Status</span>
@@ -3536,7 +3512,7 @@ function AOmModule({ user, onLogout }) {
               <strong style={{ fontSize: "15px", fontWeight: "700", color: pm.incidents === 0 ? "#16a34a" : "#dc2626", marginTop: "4px", display: "block" }}>{pm.incidents === 0 ? "0 reported" : `${pm.incidents} reported`}</strong>
             </div>
           </div>
-          
+
           <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "16px" }}>
             <span style={{ fontSize: "12px", fontWeight: "700", color: "#475569", display: "block", marginBottom: "8px" }}>Overall Safety Compliance</span>
             <div style={{ display: "flex", alignItems: "center" }}>
@@ -3622,9 +3598,9 @@ function AOmModule({ user, onLogout }) {
             </div>
             <button type="button" onClick={() => setShowAddStation(false)} style={{ background: "none", border: "none", fontSize: "28px", cursor: "pointer", color: "#94a3b8", lineHeight: 1, padding: 0 }}>&times;</button>
           </div>
-          
+
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-            
+
             {/* SECTION 1: IDENTITY */}
             <div>
               <h4 style={{ margin: "0 0 12px 0", fontSize: "0.9rem", fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.05em", borderLeft: "3px solid #2563eb", paddingLeft: "8px" }}>1. Station Identity & Jurisdiction</h4>
@@ -3755,11 +3731,11 @@ function AOmModule({ user, onLogout }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div className="sdom-filter-field">
                   <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Latitude *</label>
-                  <input type="text" value={newStLatitude} onChange={e => setNewStLatitude(e.target.value)} placeholder="e.g. 21.1500° N" />
+                  <input type="text" value={newStLatitude} onChange={e => setNewStLatitude(e.target.value)} placeholder="e.g. 21.1500Â° N" />
                 </div>
                 <div className="sdom-filter-field">
                   <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Longitude *</label>
-                  <input type="text" value={newStLongitude} onChange={e => setNewStLongitude(e.target.value)} placeholder="e.g. 79.0900° E" />
+                  <input type="text" value={newStLongitude} onChange={e => setNewStLongitude(e.target.value)} placeholder="e.g. 79.0900Â° E" />
                 </div>
                 <div className="sdom-filter-field">
                   <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Official Station Contact *</label>
@@ -3789,9 +3765,9 @@ function AOmModule({ user, onLogout }) {
     if (!pmModal) return null;
     const isShift = pmModal.mode === "shift";
     return (
-      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e=>e.target===e.currentTarget&&setPmModal(null)}>
+      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e => e.target === e.currentTarget && setPmModal(null)}>
         <div className="sdom-modal" style={!isShift ? { width: "900px", maxWidth: "95vw" } : undefined}>
-          
+
           {!isShift ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
               {/* Header inside modal */}
@@ -3826,39 +3802,39 @@ function AOmModule({ user, onLogout }) {
                   1. General & Contact Information
                 </h4>
                 <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Full Name *</label>
-                    <input 
-                      value={pmModal.data.name || ""} 
-                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))} 
-                      placeholder="Enter full name (e.g. A. K. Sharma)" 
+                    <input
+                      value={pmModal.data.name || ""}
+                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))}
+                      placeholder="Enter full name (e.g. A. K. Sharma)"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Mobile Number *</label>
-                    <input 
-                      value={pmModal.data.contact || ""} 
-                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, contact: e.target.value } }))} 
-                      placeholder="Enter 10-digit mobile number" 
+                    <input
+                      value={pmModal.data.contact || ""}
+                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, contact: e.target.value } }))}
+                      placeholder="Enter 10-digit mobile number"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>HRMS ID / Employee ID *</label>
-                    <input 
-                      value={pmModal.data.hrmsId || ""} 
+                    <input
+                      value={pmModal.data.hrmsId || ""}
                       disabled={pmModal.mode === "edit"}
-                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, hrmsId: e.target.value } }))} 
-                      placeholder="Enter unique ID (e.g. PM_8820)" 
+                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, hrmsId: e.target.value } }))}
+                      placeholder="Enter unique ID (e.g. PM_8820)"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Email ID *</label>
-                    <input 
-                      value={pmModal.data.email || ""} 
-                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, email: e.target.value } }))} 
-                      placeholder="Enter email address (e.g. user@rail.in)" 
+                    <input
+                      value={pmModal.data.email || ""}
+                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, email: e.target.value } }))}
+                      placeholder="Enter email address (e.g. user@rail.in)"
                     />
                   </div>
                 </div>
@@ -3871,7 +3847,7 @@ function AOmModule({ user, onLogout }) {
                   2. Designation & Station Placement Setup
                 </h4>
                 <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Role / Designation *</label>
@@ -3881,8 +3857,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Division *</label>
-                    <select 
-                      value={pmModal.data.division || "Nagpur"} 
+                    <select
+                      value={pmModal.data.division || "Nagpur"}
                       onChange={e => {
                         const div = e.target.value;
                         setPmModal(p => ({ ...p, data: { ...p.data, division: div } }));
@@ -3893,8 +3869,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Railway Zone *</label>
-                    <select 
-                      value={pmModal.data.zone || "Central Railway"} 
+                    <select
+                      value={pmModal.data.zone || "Central Railway"}
                       onChange={e => {
                         const zone = e.target.value;
                         setPmModal(p => ({ ...p, data: { ...p.data, zone: zone } }));
@@ -3905,18 +3881,18 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Station Name *</label>
-                    <select 
-                      value={pmModal.data.stationName || ""} 
+                    <select
+                      value={pmModal.data.stationName || ""}
                       onChange={e => {
                         const stName = e.target.value;
                         const matchedSt = stations.find(s => s.stationName === stName);
-                        setPmModal(p => ({ 
-                          ...p, 
-                          data: { 
-                            ...p.data, 
-                            stationName: stName, 
-                            stationCode: matchedSt ? matchedSt.stationCode : p.data.stationCode 
-                          } 
+                        setPmModal(p => ({
+                          ...p,
+                          data: {
+                            ...p.data,
+                            stationName: stName,
+                            stationCode: matchedSt ? matchedSt.stationCode : p.data.stationCode
+                          }
                         }));
                       }}
                     >
@@ -3926,8 +3902,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Category *</label>
-                    <select 
-                      value={pmModal.data.cat || "A"} 
+                    <select
+                      value={pmModal.data.cat || "A"}
                       onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, cat: e.target.value } }))}
                     >
                       <option>A</option><option>B</option><option>C</option><option>D</option>
@@ -3945,16 +3921,16 @@ function AOmModule({ user, onLogout }) {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Reporting Station Master *</label>
-                    <input 
-                      value={pmModal.data.reportingSm || ""} 
-                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, reportingSm: e.target.value } }))} 
+                    <input
+                      value={pmModal.data.reportingSm || ""}
+                      onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, reportingSm: e.target.value } }))}
                       placeholder="Station Master Name"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Work Location Setup *</label>
-                    <select 
-                      value={pmModal.data.workLocation || ""} 
+                    <select
+                      value={pmModal.data.workLocation || ""}
                       onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, workLocation: e.target.value } }))}
                     >
                       <option value="">Select Location</option>
@@ -3967,8 +3943,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Assigned Shift *</label>
-                    <select 
-                      value={pmModal.data.shift || ""} 
+                    <select
+                      value={pmModal.data.shift || ""}
                       onChange={e => setPmModal(p => ({ ...p, data: { ...p.data, shift: e.target.value } }))}
                     >
                       <option value="">Select Shift</option>
@@ -3986,9 +3962,9 @@ function AOmModule({ user, onLogout }) {
               <div className="sdom-modal-title" style={{ marginBottom: 20 }}>Shift Staff Role</div>
               <div className="sdom-modal-field">
                 <label>Role (Shift to)</label>
-                <select 
-                  value={pmModal.role || "pointsmen"} 
-                  onChange={e=>setPmModal(p=>({...p, role: e.target.value}))}
+                <select
+                  value={pmModal.role || "pointsmen"}
+                  onChange={e => setPmModal(p => ({ ...p, role: e.target.value }))}
                 >
                   <option value="pointsmen">Pointsman</option>
                   <option value="sm">Station Master</option>
@@ -4002,9 +3978,9 @@ function AOmModule({ user, onLogout }) {
 
           <div className="sdom-modal-actions" style={{ marginTop: 24 }}>
             <button className="sdom-btn-primary" style={{ flex: 1 }} onClick={savePmModal}>
-              {pmModal.mode === "edit" ? "🔒 UPDATE POINTSMAN" : isShift ? "🔄 SHIFT POINTSMAN ROLE" : "👤 ADD POINTSMAN"}
+              {pmModal.mode === "edit" ? "ðŸ”’ UPDATE POINTSMAN" : isShift ? "ðŸ”„ SHIFT POINTSMAN ROLE" : "ðŸ‘¤ ADD POINTSMAN"}
             </button>
-            <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={()=>setPmModal(null)}>Cancel</button>
+            <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={() => setPmModal(null)}>Cancel</button>
           </div>
         </div>
       </div>
@@ -4015,9 +3991,9 @@ function AOmModule({ user, onLogout }) {
     if (!tiModal) return null;
     const isShift = tiModal.mode === "shift";
     return (
-      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e=>e.target===e.currentTarget&&setTiModal(null)}>
+      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e => e.target === e.currentTarget && setTiModal(null)}>
         <div className="sdom-modal" style={!isShift ? { width: "900px", maxWidth: "95vw" } : undefined}>
-          
+
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             {/* Header inside modal */}
             <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
@@ -4051,39 +4027,39 @@ function AOmModule({ user, onLogout }) {
                 1. General & Contact Information
               </h4>
               <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-              
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div className="sdom-modal-field">
                   <label>Full Name *</label>
-                  <input 
-                    value={tiModal.data.name || ""} 
-                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))} 
-                    placeholder="Enter full name (e.g. A. K. Kulkarni)" 
+                  <input
+                    value={tiModal.data.name || ""}
+                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))}
+                    placeholder="Enter full name (e.g. A. K. Kulkarni)"
                   />
                 </div>
                 <div className="sdom-modal-field">
                   <label>Mobile Number *</label>
-                  <input 
-                    value={tiModal.data.phone || ""} 
-                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, phone: e.target.value } }))} 
-                    placeholder="Enter 10-digit mobile number" 
+                  <input
+                    value={tiModal.data.phone || ""}
+                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, phone: e.target.value } }))}
+                    placeholder="Enter 10-digit mobile number"
                   />
                 </div>
                 <div className="sdom-modal-field">
                   <label>Employee ID *</label>
-                  <input 
-                    value={tiModal.data.employeeId || ""} 
+                  <input
+                    value={tiModal.data.employeeId || ""}
                     disabled={tiModal.mode === "edit"}
-                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, employeeId: e.target.value } }))} 
-                    placeholder="Enter unique ID (e.g. TI_1004)" 
+                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, employeeId: e.target.value } }))}
+                    placeholder="Enter unique ID (e.g. TI_1004)"
                   />
                 </div>
                 <div className="sdom-modal-field">
                   <label>Email ID *</label>
-                  <input 
-                    value={tiModal.data.email || ""} 
-                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, email: e.target.value } }))} 
-                    placeholder="Enter email address (e.g. user@rail.in)" 
+                  <input
+                    value={tiModal.data.email || ""}
+                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, email: e.target.value } }))}
+                    placeholder="Enter email address (e.g. user@rail.in)"
                   />
                 </div>
               </div>
@@ -4096,7 +4072,7 @@ function AOmModule({ user, onLogout }) {
                 2. Designation & Station Placement Setup
               </h4>
               <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-              
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div className="sdom-modal-field">
                   <label>Role / Designation *</label>
@@ -4106,8 +4082,8 @@ function AOmModule({ user, onLogout }) {
                 </div>
                 <div className="sdom-modal-field">
                   <label>TI Area *</label>
-                  <select 
-                    value={tiModal.data.tiArea || "TI NGP"} 
+                  <select
+                    value={tiModal.data.tiArea || "TI NGP"}
                     onChange={e => {
                       const area = e.target.value;
                       setTiModal(p => ({ ...p, data: { ...p.data, tiArea: area, division: area } }));
@@ -4118,8 +4094,8 @@ function AOmModule({ user, onLogout }) {
                 </div>
                 <div className="sdom-modal-field">
                   <label>Station Placement *</label>
-                  <select 
-                    value={tiModal.data.stationName || "Nagpur Junction"} 
+                  <select
+                    value={tiModal.data.stationName || "Nagpur Junction"}
                     onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, stationName: e.target.value } }))}
                   >
                     {["Nagpur Junction", "Pune Junction", "Parbhani Junction", "Amla", "New Delhi"].map(s => <option key={s} value={s}>{s}</option>)}
@@ -4127,8 +4103,8 @@ function AOmModule({ user, onLogout }) {
                 </div>
                 <div className="sdom-modal-field">
                   <label>Category *</label>
-                  <select 
-                    value={tiModal.data.category || "A"} 
+                  <select
+                    value={tiModal.data.category || "A"}
                     onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, category: e.target.value } }))}
                   >
                     {["A", "B", "C", "D"].map(c => <option key={c} value={c}>Category {c}</option>)}
@@ -4136,8 +4112,8 @@ function AOmModule({ user, onLogout }) {
                 </div>
                 <div className="sdom-modal-field">
                   <label>Risk Level *</label>
-                  <select 
-                    value={tiModal.data.riskLevel || "Low"} 
+                  <select
+                    value={tiModal.data.riskLevel || "Low"}
                     onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, riskLevel: e.target.value } }))}
                   >
                     {["Low", "Medium", "High"].map(r => <option key={r} value={r}>{r} Risk</option>)}
@@ -4145,17 +4121,17 @@ function AOmModule({ user, onLogout }) {
                 </div>
                 <div className="sdom-modal-field">
                   <label>Last Assessment Score *</label>
-                  <input 
+                  <input
                     type="number"
-                    value={tiModal.data.lastScore || ""} 
-                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, lastScore: e.target.value } }))} 
-                    placeholder="Enter last assessment score (e.g. 85)" 
+                    value={tiModal.data.lastScore || ""}
+                    onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, lastScore: e.target.value } }))}
+                    placeholder="Enter last assessment score (e.g. 85)"
                   />
                 </div>
                 <div className="sdom-modal-field">
                   <label>Assessment Status *</label>
-                  <select 
-                    value={tiModal.data.assessmentStatus || "Pending"} 
+                  <select
+                    value={tiModal.data.assessmentStatus || "Pending"}
                     onChange={e => setTiModal(p => ({ ...p, data: { ...p.data, assessmentStatus: e.target.value } }))}
                   >
                     <option value="Completed">Completed (Approved)</option>
@@ -4168,9 +4144,9 @@ function AOmModule({ user, onLogout }) {
             {/* Actions */}
             <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
               <button className="sdom-btn-primary" style={{ flex: 1 }} onClick={saveTiModal}>
-                {tiModal.mode === "edit" ? "🔒 UPDATE TRAFFIC INSPECTOR" : "👤 ADD TRAFFIC INSPECTOR"}
+                {tiModal.mode === "edit" ? "ðŸ”’ UPDATE TRAFFIC INSPECTOR" : "ðŸ‘¤ ADD TRAFFIC INSPECTOR"}
               </button>
-              <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={()=>setTiModal(null)}>Cancel</button>
+              <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={() => setTiModal(null)}>Cancel</button>
             </div>
           </div>
         </div>
@@ -4183,9 +4159,9 @@ function AOmModule({ user, onLogout }) {
     const isShift = smModal.mode === "shift";
     const ROLE_MAP = { pointsmen: "Pointsman", sm: "Station Master", ss: "Station Superintendent", tm: "Train Manager", ti: "Traffic Inspector" };
     return (
-      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e=>e.target===e.currentTarget&&setSmModal(null)}>
+      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e => e.target === e.currentTarget && setSmModal(null)}>
         <div className="sdom-modal" style={!isShift ? { width: "900px", maxWidth: "95vw" } : undefined}>
-          
+
           {!isShift ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
               {/* Header inside modal */}
@@ -4220,39 +4196,39 @@ function AOmModule({ user, onLogout }) {
                   1. General & Contact Information
                 </h4>
                 <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Full Name *</label>
-                    <input 
-                      value={smModal.data.name || ""} 
-                      onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))} 
-                      placeholder="Enter full name (e.g. A. K. Sharma)" 
+                    <input
+                      value={smModal.data.name || ""}
+                      onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))}
+                      placeholder="Enter full name (e.g. A. K. Sharma)"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Mobile Number *</label>
-                    <input 
-                      value={smModal.data.contact || smModal.data.contactNumber || ""} 
-                      onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, contact: e.target.value, contactNumber: e.target.value } }))} 
-                      placeholder="Enter 10-digit mobile number" 
+                    <input
+                      value={smModal.data.contact || smModal.data.contactNumber || ""}
+                      onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, contact: e.target.value, contactNumber: e.target.value } }))}
+                      placeholder="Enter 10-digit mobile number"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>HRMS ID / Employee ID *</label>
-                    <input 
-                      value={smModal.data.hrmsId || smModal.data.id || ""} 
+                    <input
+                      value={smModal.data.hrmsId || smModal.data.id || ""}
                       disabled={smModal.mode === "edit"}
-                      onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, hrmsId: e.target.value, id: e.target.value } }))} 
-                      placeholder="Enter unique ID (e.g. SM_8820)" 
+                      onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, hrmsId: e.target.value, id: e.target.value } }))}
+                      placeholder="Enter unique ID (e.g. SM_8820)"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Email ID *</label>
-                    <input 
-                      value={smModal.data.email || smModal.data.emailId || ""} 
-                      onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, email: e.target.value, emailId: e.target.value } }))} 
-                      placeholder="Enter email address (e.g. user@rail.in)" 
+                    <input
+                      value={smModal.data.email || smModal.data.emailId || ""}
+                      onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, email: e.target.value, emailId: e.target.value } }))}
+                      placeholder="Enter email address (e.g. user@rail.in)"
                     />
                   </div>
                 </div>
@@ -4265,7 +4241,7 @@ function AOmModule({ user, onLogout }) {
                   2. Designation & Station Placement Setup
                 </h4>
                 <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Role / Designation *</label>
@@ -4275,8 +4251,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Division *</label>
-                    <select 
-                      value={smModal.data.smDivision || "Nagpur"} 
+                    <select
+                      value={smModal.data.smDivision || "Nagpur"}
                       onChange={e => {
                         const div = e.target.value;
                         setSmModal(p => ({ ...p, data: { ...p.data, smDivision: div, division: div } }));
@@ -4287,8 +4263,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Railway Zone *</label>
-                    <select 
-                      value={smModal.data.smZone || "Central Railway"} 
+                    <select
+                      value={smModal.data.smZone || "Central Railway"}
                       onChange={e => {
                         const zone = e.target.value;
                         setSmModal(p => ({ ...p, data: { ...p.data, smZone: zone, zone } }));
@@ -4299,8 +4275,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Station Name *</label>
-                    <select 
-                      value={smModal.data.smStation || ""} 
+                    <select
+                      value={smModal.data.smStation || ""}
                       onChange={e => {
                         const stName = e.target.value;
                         setSmModal(p => ({ ...p, data: { ...p.data, smStation: stName, stationName: stName } }));
@@ -4311,8 +4287,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Category *</label>
-                    <select 
-                      value={smModal.data.cat || smModal.data.category || "A"} 
+                    <select
+                      value={smModal.data.cat || smModal.data.category || "A"}
                       onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, cat: e.target.value, category: e.target.value } }))}
                     >
                       <option>A</option><option>B</option><option>C</option><option>D</option>
@@ -4330,8 +4306,8 @@ function AOmModule({ user, onLogout }) {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Operational Station *</label>
-                    <select 
-                      value={smModal.data.smStation || ""} 
+                    <select
+                      value={smModal.data.smStation || ""}
                       onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, smStation: e.target.value, stationName: e.target.value } }))}
                     >
                       <option value="">Select Operational Station</option>
@@ -4340,8 +4316,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Operational Zone *</label>
-                    <select 
-                      value={smModal.data.smZone || ""} 
+                    <select
+                      value={smModal.data.smZone || ""}
                       onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, smZone: e.target.value, zone: e.target.value } }))}
                     >
                       <option value="">Select Zone</option>
@@ -4350,8 +4326,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Operational Division *</label>
-                    <select 
-                      value={smModal.data.smDivision || ""} 
+                    <select
+                      value={smModal.data.smDivision || ""}
                       onChange={e => setSmModal(p => ({ ...p, data: { ...p.data, smDivision: e.target.value, division: e.target.value } }))}
                     >
                       <option value="">Select Division</option>
@@ -4366,11 +4342,11 @@ function AOmModule({ user, onLogout }) {
               <div className="sdom-modal-title" style={{ marginBottom: 20 }}>Shift Station Master Role</div>
               <div className="sdom-modal-field">
                 <label>Role (Shift to)</label>
-                <select 
-                  value={smModal.role || "sm"} 
+                <select
+                  value={smModal.role || "sm"}
                   onChange={e => setSmModal(p => ({ ...p, role: e.target.value }))}
                 >
-                  {Object.entries(ROLE_MAP).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                  {Object.entries(ROLE_MAP).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
             </>
@@ -4378,9 +4354,9 @@ function AOmModule({ user, onLogout }) {
 
           <div className="sdom-modal-actions" style={{ marginTop: 24 }}>
             <button className="sdom-btn-primary" style={{ flex: 1 }} onClick={saveSmModal}>
-              {smModal.mode === "edit" ? "🔒 UPDATE STATION MASTER" : isShift ? "🔄 SHIFT STATION MASTER ROLE" : "👤 ADD STATION MASTER"}
+              {smModal.mode === "edit" ? "ðŸ”’ UPDATE STATION MASTER" : isShift ? "ðŸ”„ SHIFT STATION MASTER ROLE" : "ðŸ‘¤ ADD STATION MASTER"}
             </button>
-            <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={()=>setSmModal(null)}>Cancel</button>
+            <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={() => setSmModal(null)}>Cancel</button>
           </div>
         </div>
       </div>
@@ -4392,9 +4368,9 @@ function AOmModule({ user, onLogout }) {
     const isShift = ssModal.mode === "shift";
     const ROLE_MAP = { pointsmen: "Pointsman", sm: "Station Master", ss: "Station Superintendent", tm: "Train Manager", ti: "Traffic Inspector" };
     return (
-      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e=>e.target===e.currentTarget&&setSsModal(null)}>
+      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e => e.target === e.currentTarget && setSsModal(null)}>
         <div className="sdom-modal" style={!isShift ? { width: "900px", maxWidth: "95vw" } : undefined}>
-          
+
           {!isShift ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
               {/* Header inside modal */}
@@ -4429,39 +4405,39 @@ function AOmModule({ user, onLogout }) {
                   1. General & Contact Information
                 </h4>
                 <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Full Name *</label>
-                    <input 
-                      value={ssModal.data.name || ""} 
-                      onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))} 
-                      placeholder="Enter full name (e.g. A. K. Sharma)" 
+                    <input
+                      value={ssModal.data.name || ""}
+                      onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))}
+                      placeholder="Enter full name (e.g. A. K. Sharma)"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Mobile Number *</label>
-                    <input 
-                      value={ssModal.data.contact || ssModal.data.contactNumber || ""} 
-                      onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, contact: e.target.value, contactNumber: e.target.value } }))} 
-                      placeholder="Enter 10-digit mobile number" 
+                    <input
+                      value={ssModal.data.contact || ssModal.data.contactNumber || ""}
+                      onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, contact: e.target.value, contactNumber: e.target.value } }))}
+                      placeholder="Enter 10-digit mobile number"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>HRMS ID / Employee ID *</label>
-                    <input 
-                      value={ssModal.data.employeeId || ssModal.data.id || ""} 
+                    <input
+                      value={ssModal.data.employeeId || ssModal.data.id || ""}
                       disabled={ssModal.mode === "edit"}
-                      onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, employeeId: e.target.value, id: e.target.value } }))} 
-                      placeholder="Enter unique ID (e.g. SS_8820)" 
+                      onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, employeeId: e.target.value, id: e.target.value } }))}
+                      placeholder="Enter unique ID (e.g. SS_8820)"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Email ID *</label>
-                    <input 
-                      value={ssModal.data.email || ssModal.data.emailId || ""} 
-                      onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, email: e.target.value, emailId: e.target.value } }))} 
-                      placeholder="Enter email address (e.g. user@rail.in)" 
+                    <input
+                      value={ssModal.data.email || ssModal.data.emailId || ""}
+                      onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, email: e.target.value, emailId: e.target.value } }))}
+                      placeholder="Enter email address (e.g. user@rail.in)"
                     />
                   </div>
                 </div>
@@ -4474,7 +4450,7 @@ function AOmModule({ user, onLogout }) {
                   2. Designation & Station Placement Setup
                 </h4>
                 <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Role / Designation *</label>
@@ -4484,8 +4460,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Division *</label>
-                    <select 
-                      value={ssModal.data.smDivision || "Nagpur"} 
+                    <select
+                      value={ssModal.data.smDivision || "Nagpur"}
                       onChange={e => {
                         const div = e.target.value;
                         setSsModal(p => ({ ...p, data: { ...p.data, smDivision: div, division: div } }));
@@ -4496,8 +4472,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Railway Zone *</label>
-                    <select 
-                      value={ssModal.data.smZone || "Central Railway"} 
+                    <select
+                      value={ssModal.data.smZone || "Central Railway"}
                       onChange={e => {
                         const zone = e.target.value;
                         setSsModal(p => ({ ...p, data: { ...p.data, smZone: zone, zone } }));
@@ -4508,8 +4484,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Station Name *</label>
-                    <select 
-                      value={ssModal.data.smStation || ""} 
+                    <select
+                      value={ssModal.data.smStation || ""}
                       onChange={e => {
                         const stName = e.target.value;
                         setSsModal(p => ({ ...p, data: { ...p.data, smStation: stName, station: stName } }));
@@ -4520,8 +4496,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Category *</label>
-                    <select 
-                      value={ssModal.data.cat || ssModal.data.category || "A"} 
+                    <select
+                      value={ssModal.data.cat || ssModal.data.category || "A"}
                       onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, cat: e.target.value, category: e.target.value } }))}
                     >
                       <option>A</option><option>B</option><option>C</option><option>D</option>
@@ -4539,8 +4515,8 @@ function AOmModule({ user, onLogout }) {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Operational Station *</label>
-                    <select 
-                      value={ssModal.data.smStation || ""} 
+                    <select
+                      value={ssModal.data.smStation || ""}
                       onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, smStation: e.target.value, station: e.target.value } }))}
                     >
                       <option value="">Select Operational Station</option>
@@ -4549,8 +4525,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Operational Zone *</label>
-                    <select 
-                      value={ssModal.data.smZone || ""} 
+                    <select
+                      value={ssModal.data.smZone || ""}
                       onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, smZone: e.target.value, zone: e.target.value } }))}
                     >
                       <option value="">Select Zone</option>
@@ -4559,8 +4535,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Operational Division *</label>
-                    <select 
-                      value={ssModal.data.smDivision || ""} 
+                    <select
+                      value={ssModal.data.smDivision || ""}
                       onChange={e => setSsModal(p => ({ ...p, data: { ...p.data, smDivision: e.target.value, division: e.target.value } }))}
                     >
                       <option value="">Select Division</option>
@@ -4575,11 +4551,11 @@ function AOmModule({ user, onLogout }) {
               <div className="sdom-modal-title" style={{ marginBottom: 20 }}>Shift Station Superintendent Role</div>
               <div className="sdom-modal-field">
                 <label>Role (Shift to)</label>
-                <select 
-                  value={ssModal.role || "ss"} 
+                <select
+                  value={ssModal.role || "ss"}
                   onChange={e => setSsModal(p => ({ ...p, role: e.target.value }))}
                 >
-                  {Object.entries(ROLE_MAP).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                  {Object.entries(ROLE_MAP).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
             </>
@@ -4587,9 +4563,9 @@ function AOmModule({ user, onLogout }) {
 
           <div className="sdom-modal-actions" style={{ marginTop: 24 }}>
             <button className="sdom-btn-primary" style={{ flex: 1 }} onClick={saveSsModal}>
-              {ssModal.mode === "edit" ? "🔒 UPDATE STATION SUPERINTENDENT" : isShift ? "🔄 SHIFT STATION SUPERINTENDENT ROLE" : "👤 ADD STATION SUPERINTENDENT"}
+              {ssModal.mode === "edit" ? "ðŸ”’ UPDATE STATION SUPERINTENDENT" : isShift ? "ðŸ”„ SHIFT STATION SUPERINTENDENT ROLE" : "ðŸ‘¤ ADD STATION SUPERINTENDENT"}
             </button>
-            <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={()=>setSsModal(null)}>Cancel</button>
+            <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={() => setSsModal(null)}>Cancel</button>
           </div>
         </div>
       </div>
@@ -4601,9 +4577,9 @@ function AOmModule({ user, onLogout }) {
     const isShift = tmModal.mode === "shift";
     const ROLE_MAP = { pointsmen: "Pointsman", sm: "Station Master", ss: "Station Superintendent", tm: "Train Manager", ti: "Traffic Inspector" };
     return (
-      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e=>e.target===e.currentTarget&&setTmModal(null)}>
+      <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e => e.target === e.currentTarget && setTmModal(null)}>
         <div className="sdom-modal" style={!isShift ? { width: "900px", maxWidth: "95vw" } : undefined}>
-          
+
           {!isShift ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
               {/* Header inside modal */}
@@ -4638,39 +4614,39 @@ function AOmModule({ user, onLogout }) {
                   1. General & Contact Information
                 </h4>
                 <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Full Name *</label>
-                    <input 
-                      value={tmModal.data.name || ""} 
-                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))} 
-                      placeholder="Enter full name (e.g. A. K. Sharma)" 
+                    <input
+                      value={tmModal.data.name || ""}
+                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, name: e.target.value } }))}
+                      placeholder="Enter full name (e.g. A. K. Sharma)"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Mobile Number *</label>
-                    <input 
-                      value={tmModal.data.contact || ""} 
-                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, contact: e.target.value } }))} 
-                      placeholder="Enter 10-digit mobile number" 
+                    <input
+                      value={tmModal.data.contact || ""}
+                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, contact: e.target.value } }))}
+                      placeholder="Enter 10-digit mobile number"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>HRMS ID / Employee ID *</label>
-                    <input 
-                      value={tmModal.data.employeeId || ""} 
+                    <input
+                      value={tmModal.data.employeeId || ""}
                       disabled={tmModal.mode === "edit"}
-                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, employeeId: e.target.value } }))} 
-                      placeholder="Enter unique ID (e.g. TM_3001)" 
+                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, employeeId: e.target.value } }))}
+                      placeholder="Enter unique ID (e.g. TM_3001)"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Email ID *</label>
-                    <input 
-                      value={tmModal.data.email || ""} 
-                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, email: e.target.value } }))} 
-                      placeholder="Enter email address (e.g. user@rail.in)" 
+                    <input
+                      value={tmModal.data.email || ""}
+                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, email: e.target.value } }))}
+                      placeholder="Enter email address (e.g. user@rail.in)"
                     />
                   </div>
                 </div>
@@ -4683,7 +4659,7 @@ function AOmModule({ user, onLogout }) {
                   2. Designation & Station Placement Setup
                 </h4>
                 <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
-                
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Role / Designation *</label>
@@ -4693,8 +4669,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Division *</label>
-                    <select 
-                      value={tmModal.data.division || "Nagpur"} 
+                    <select
+                      value={tmModal.data.division || "Nagpur"}
                       onChange={e => {
                         const div = e.target.value;
                         setTmModal(p => ({ ...p, data: { ...p.data, division: div } }));
@@ -4705,8 +4681,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Railway Zone *</label>
-                    <select 
-                      value={tmModal.data.zone || "Central Railway"} 
+                    <select
+                      value={tmModal.data.zone || "Central Railway"}
                       onChange={e => {
                         const zone = e.target.value;
                         setTmModal(p => ({ ...p, data: { ...p.data, zone: zone } }));
@@ -4717,8 +4693,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Station Name *</label>
-                    <select 
-                      value={tmModal.data.station || ""} 
+                    <select
+                      value={tmModal.data.station || ""}
                       onChange={e => {
                         const stName = e.target.value;
                         setTmModal(p => ({ ...p, data: { ...p.data, station: stName } }));
@@ -4729,8 +4705,8 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Category *</label>
-                    <select 
-                      value={tmModal.data.cat || "A"} 
+                    <select
+                      value={tmModal.data.cat || "A"}
                       onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, cat: e.target.value } }))}
                     >
                       <option>A</option><option>B</option><option>C</option><option>D</option>
@@ -4748,8 +4724,8 @@ function AOmModule({ user, onLogout }) {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div className="sdom-modal-field">
                     <label>Crew Depot *</label>
-                    <select 
-                      value={tmModal.data.workLocation || "Nagpur Depot"} 
+                    <select
+                      value={tmModal.data.workLocation || "Nagpur Depot"}
                       onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, workLocation: e.target.value } }))}
                     >
                       <option value="Nagpur Depot">Nagpur Depot</option>
@@ -4761,16 +4737,16 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sdom-modal-field">
                     <label>Assigned Section Beats *</label>
-                    <input 
-                      value={tmModal.data.reportingSm || "NGP-BSL Section"} 
-                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, reportingSm: e.target.value } }))} 
+                    <input
+                      value={tmModal.data.reportingSm || "NGP-BSL Section"}
+                      onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, reportingSm: e.target.value } }))}
                       placeholder="E.g. NGP-BSL, NGP-DURG"
                     />
                   </div>
                   <div className="sdom-modal-field">
                     <label>Assigned Shift *</label>
-                    <select 
-                      value={tmModal.data.shift || "Goods Train Beat"} 
+                    <select
+                      value={tmModal.data.shift || "Goods Train Beat"}
                       onChange={e => setTmModal(p => ({ ...p, data: { ...p.data, shift: e.target.value } }))}
                     >
                       <option value="Mail/Express Beat">Mail/Express Beat</option>
@@ -4786,11 +4762,11 @@ function AOmModule({ user, onLogout }) {
               <div className="sdom-modal-title" style={{ marginBottom: 20 }}>Shift Train Manager Role</div>
               <div className="sdom-modal-field">
                 <label>Role (Shift to)</label>
-                <select 
-                  value={tmModal.role || "tm"} 
+                <select
+                  value={tmModal.role || "tm"}
                   onChange={e => setTmModal(p => ({ ...p, role: e.target.value }))}
                 >
-                  {Object.entries(ROLE_MAP).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                  {Object.entries(ROLE_MAP).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
             </>
@@ -4798,9 +4774,9 @@ function AOmModule({ user, onLogout }) {
 
           <div className="sdom-modal-actions" style={{ marginTop: 24 }}>
             <button className="sdom-btn-primary" style={{ flex: 1 }} onClick={saveTmModal}>
-              {tmModal.mode === "edit" ? "🔒 UPDATE TRAIN MANAGER" : isShift ? "🔄 SHIFT TRAIN MANAGER ROLE" : "👤 ADD TRAIN MANAGER"}
+              {tmModal.mode === "edit" ? "ðŸ”’ UPDATE TRAIN MANAGER" : isShift ? "ðŸ”„ SHIFT TRAIN MANAGER ROLE" : "ðŸ‘¤ ADD TRAIN MANAGER"}
             </button>
-            <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={()=>setTmModal(null)}>Cancel</button>
+            <button className="sdom-btn-ghost" style={{ flex: 1 }} onClick={() => setTmModal(null)}>Cancel</button>
           </div>
         </div>
       </div>
@@ -4814,13 +4790,13 @@ function AOmModule({ user, onLogout }) {
     const filtered = DASHBOARD_96_STATIONS.filter(st => {
       const q = zoomPopupSearch.trim().toLowerCase();
       const matchesSearch = !q || st.stationName.toLowerCase().includes(q) || st.stationCode.toLowerCase().includes(q);
-      
+
       const matchesZone = zoomPopupZone === "All" || st.zone === zoomPopupZone;
       const matchesDivision = zoomPopupDivision === "All" || st.division === zoomPopupDivision;
-      
+
       const matchesName = zoomPopupStationName === "All" || !zoomPopupStationName.trim() || st.stationName.toLowerCase().includes(zoomPopupStationName.toLowerCase());
       const matchesCode = zoomPopupStationCode === "All" || !zoomPopupStationCode.trim() || st.stationCode.toLowerCase().includes(zoomPopupStationCode.toLowerCase());
-      
+
       const matchesCategory = zoomPopupCategory === "All" || st.category === zoomPopupCategory;
       const matchesRisk = zoomPopupRisk === "All" || st.riskLevel === zoomPopupRisk;
       const matchesStatus = zoomPopupStatus === "All" || st.assessmentStatus === zoomPopupStatus;
@@ -4881,7 +4857,7 @@ function AOmModule({ user, onLogout }) {
     };
 
     return (
-      <div 
+      <div
         className="zoom-modal-overlay"
         style={{
           position: "fixed",
@@ -4908,7 +4884,7 @@ function AOmModule({ user, onLogout }) {
             to { transform: translateY(0); opacity: 1; }
           }
         `}</style>
-        <div 
+        <div
           className="zoom-modal-container"
           style={{
             backgroundColor: "#ffffff",
@@ -4924,7 +4900,7 @@ function AOmModule({ user, onLogout }) {
           }}
         >
           {/* Modal Header */}
-          <div 
+          <div
             style={{
               padding: "18px 24px",
               borderBottom: "1px solid #e2e8f0",
@@ -4939,17 +4915,17 @@ function AOmModule({ user, onLogout }) {
           >
             <div>
               <h3 style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>
-                {selectedChartType === "progress" 
-                  ? "Station-wise Evaluation Progress" 
-                  : selectedChartType === "score" 
-                  ? "Station-wise Average Score" 
-                  : "Category Distribution"}
+                {selectedChartType === "progress"
+                  ? "Station-wise Evaluation Progress"
+                  : selectedChartType === "score"
+                    ? "Station-wise Average Score"
+                    : "Category Distribution"}
               </h3>
               <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
                 Page {currentPage} of {totalPages} (Showing 10 stations per page out of {filtered.length} matching stations)
               </p>
             </div>
-            
+
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <button
                 type="button"
@@ -4972,9 +4948,9 @@ function AOmModule({ user, onLogout }) {
 
           {/* Modal Body Container */}
           <div style={{ flex: 1, padding: "24px", display: "flex", flexDirection: "column", gap: "20px", overflow: "visible" }}>
-            
+
             {/* 1. FILTER CONTROLS GRID */}
-            <div 
+            <div
               style={{
                 background: "#f8fafc",
                 border: "1px solid #e2e8f0",
@@ -5002,7 +4978,7 @@ function AOmModule({ user, onLogout }) {
                   Reset Diagnostics Filters
                 </button>
               </div>
-              <div 
+              <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
@@ -5146,7 +5122,7 @@ function AOmModule({ user, onLogout }) {
             </div>
 
             {/* 2. DYNAMIC REAL-TIME CHART BOX */}
-            <div 
+            <div
               style={{
                 background: "#ffffff",
                 border: "1px solid #e2e8f0",
@@ -5157,17 +5133,17 @@ function AOmModule({ user, onLogout }) {
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                 <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "750", color: "#0f172a" }}>
-                  {selectedChartType === "progress" 
-                    ? "Evaluation Progress Trends (Completed vs Pending)" 
-                    : selectedChartType === "score" 
-                    ? "Average Safety Evaluation Scores (/100)" 
-                    : "Category Distribution Breakdown"}
+                  {selectedChartType === "progress"
+                    ? "Evaluation Progress Trends (Completed vs Pending)"
+                    : selectedChartType === "score"
+                      ? "Average Safety Evaluation Scores (/100)"
+                      : "Category Distribution Breakdown"}
                 </h4>
                 <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
                   Showing 10 stations on this page
                 </span>
               </div>
-              
+
               <div style={{ height: "260px", width: "100%" }}>
                 {selectedChartType === "category" ? (
                   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%", gap: "60px" }}>
@@ -5214,7 +5190,7 @@ function AOmModule({ user, onLogout }) {
                         height={40}
                       />
                       <YAxis tick={{ fontSize: 10, fill: "#475569" }} domain={selectedChartType === "score" ? [0, 100] : undefined} />
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{ background: "#0f172a", color: "#ffffff", borderRadius: "8px", border: "none", fontSize: "12px" }}
                       />
                       <Legend iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
@@ -5233,7 +5209,7 @@ function AOmModule({ user, onLogout }) {
             </div>
 
             {/* 3. DETAILED STATION DATA TABLE */}
-            <div 
+            <div
               style={{
                 background: "#ffffff",
                 border: "1px solid #e2e8f0",
@@ -5302,7 +5278,7 @@ function AOmModule({ user, onLogout }) {
           </div>
 
           {/* Modal Footer (SLIDER / TABS PAGINATION) */}
-          <div 
+          <div
             style={{
               padding: "16px 24px",
               borderTop: "1px solid #e2e8f0",
@@ -5315,7 +5291,7 @@ function AOmModule({ user, onLogout }) {
             <div style={{ fontSize: "13px", color: "#475569", fontWeight: "600" }}>
               Showing {filtered.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} stations
             </div>
-            
+
             {/* Page tabs */}
             <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
               <button
@@ -5411,14 +5387,14 @@ function AOmModule({ user, onLogout }) {
         lastScore: p.lastScore,
         safetyScore: p.safetyScore,
         totalAssessments: p.totalAssessments,
-        lastAssessedDate: p.hrmsId === "PM_1001" ? "2026-03-28" : 
-                          p.hrmsId === "PM_1102" ? "2026-03-10" : 
-                          p.hrmsId === "PM_1103" ? "2026-02-15" : 
-                          p.hrmsId === "PM_1104" ? "2026-03-18" : 
-                          p.hrmsId === "PM_1105" ? "2026-01-20" : 
-                          p.hrmsId === "PM_1106" ? "2026-03-05" : 
-                          p.hrmsId === "PM_1107" ? "2026-03-20" : 
-                          p.hrmsId === "PM_1108" ? "2026-02-01" : "—",
+        lastAssessedDate: p.hrmsId === "PM_1001" ? "2026-03-28" :
+          p.hrmsId === "PM_1102" ? "2026-03-10" :
+            p.hrmsId === "PM_1103" ? "2026-02-15" :
+              p.hrmsId === "PM_1104" ? "2026-03-18" :
+                p.hrmsId === "PM_1105" ? "2026-01-20" :
+                  p.hrmsId === "PM_1106" ? "2026-03-05" :
+                    p.hrmsId === "PM_1107" ? "2026-03-20" :
+                      p.hrmsId === "PM_1108" ? "2026-02-01" : "—",
         monitoringStatus: deactivatedUserIds.has(p.hrmsId) ? "Deactivated" : (p.monitoringStatus || "Active")
       })),
       ...stationMastersDirectory.map((sm, idx) => {
@@ -5429,7 +5405,7 @@ function AOmModule({ user, onLogout }) {
           gender: "Male",
           age: 42,
           doj: "2010-05-15",
-          basePay: "₹56,000",
+          basePay: "â‚¹56,000",
           designation: "Station Master",
           stationName: sm.stationName,
           stationCode: sm.stationCode,
@@ -5451,7 +5427,7 @@ function AOmModule({ user, onLogout }) {
         gender: "Male",
         age: 48,
         doj: "2006-11-20",
-        basePay: "₹68,000",
+        basePay: "â‚¹68,000",
         designation: "Traffic Inspector",
         stationName: "Division HQ",
         stationCode: "HQ",
@@ -5482,7 +5458,7 @@ function AOmModule({ user, onLogout }) {
     const filteredEmployees = allEmployees.filter(emp => {
       const q = empSearchText.trim().toLowerCase();
       const matchesSearch = !q || emp.name.toLowerCase().includes(q) || emp.hrmsId.toLowerCase().includes(q);
-      
+
       const matchesDesignation = empDesignationFilter === "All" || emp.designation === empDesignationFilter;
       const matchesStation = empStationFilter === "All" || emp.stationName === empStationFilter;
       const matchesDivision = empDivisionFilter === "All" || emp.division === empDivisionFilter;
@@ -5541,7 +5517,7 @@ function AOmModule({ user, onLogout }) {
           gender: emp.gender || "Male",
           age: emp.age || 40,
           doj: emp.doj || "2015-01-01",
-          basePay: emp.basePay || "₹45,000",
+          basePay: emp.basePay || "â‚¹45,000",
           lastScore: emp.lastScore,
           safetyScore: emp.safetyScore || 90,
           totalAssessments: emp.totalAssessments || 10,
@@ -5606,10 +5582,10 @@ function AOmModule({ user, onLogout }) {
             prev.map((r) =>
               r.employeeId === row.hrmsId
                 ? {
-                    ...r,
-                    jurisdiction: target,
-                    division: target
-                  }
+                  ...r,
+                  jurisdiction: target,
+                  division: target
+                }
                 : r
             )
           );
@@ -5724,7 +5700,7 @@ function AOmModule({ user, onLogout }) {
             {/* ADVANCED FILTERS CARD */}
             <div className="chart-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px", marginBottom: "20px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
               <h4 style={{ margin: "0 0 12px 0", fontSize: "13px", fontWeight: "700", color: "#334155", display: "flex", alignItems: "center", gap: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                🔍 Advanced Intelligence Filters
+                ðŸ” Advanced Intelligence Filters
               </h4>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px" }}>
                 {/* Search */}
@@ -5859,38 +5835,38 @@ function AOmModule({ user, onLogout }) {
                       letterSpacing: "0.5px"
                     }}>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("name")}>
-                        Employee Name {empSortConfig.key === "name" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Employee Name {empSortConfig.key === "name" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("hrmsId")}>
-                        HRMS ID {empSortConfig.key === "hrmsId" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        HRMS ID {empSortConfig.key === "hrmsId" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("designation")}>
-                        Designation {empSortConfig.key === "designation" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Designation {empSortConfig.key === "designation" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("stationName")}>
-                        Station {empSortConfig.key === "stationName" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Station {empSortConfig.key === "stationName" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("division")}>
-                        Division {empSortConfig.key === "division" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Division {empSortConfig.key === "division" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("zone")}>
-                        Zone {empSortConfig.key === "zone" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Zone {empSortConfig.key === "zone" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("category")}>
-                        Category {empSortConfig.key === "category" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Category {empSortConfig.key === "category" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("riskLevel")}>
-                        Risk Level {empSortConfig.key === "riskLevel" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Risk Level {empSortConfig.key === "riskLevel" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("assessmentStatus")}>
-                        Assessment {empSortConfig.key === "assessmentStatus" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Assessment {empSortConfig.key === "assessmentStatus" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("lastScore")}>
-                        Score {empSortConfig.key === "lastScore" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Score {empSortConfig.key === "lastScore" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px" }}>Assessed Date</th>
                       <th style={{ padding: "14px 10px", cursor: "pointer" }} onClick={() => requestSort("monitoringStatus")}>
-                        Monitoring {empSortConfig.key === "monitoringStatus" && (empSortConfig.direction === "ascending" ? "▲" : "▼")}
+                        Monitoring {empSortConfig.key === "monitoringStatus" && (empSortConfig.direction === "ascending" ? "â–²" : "â–¼")}
                       </th>
                       <th style={{ padding: "14px 10px", textAlign: "right" }}>Actions</th>
                     </tr>
@@ -5906,21 +5882,21 @@ function AOmModule({ user, onLogout }) {
                       paginatedEmployees.map((row, idx) => {
                         const riskColor = row.riskLevel === "High" ? "#ef4444" : row.riskLevel === "Medium" ? "#ea580c" : "#16a34a";
                         const riskBg = row.riskLevel === "High" ? "#fef2f2" : row.riskLevel === "Medium" ? "#fff7ed" : "#dcfce7";
-                        
+
                         const statusColor = row.assessmentStatus === "Approved" ? "#16a34a" : row.assessmentStatus === "Pending" ? "#d97706" : "#ef4444";
                         const statusBg = row.assessmentStatus === "Approved" ? "#dcfce7" : row.assessmentStatus === "Pending" ? "#fef3c7" : "#fee2e2";
-                        
+
                         const isDeactivated = deactivatedUserIds.has(row.hrmsId);
                         const displayMonStatus = isDeactivated ? "Deactivated" : row.monitoringStatus;
 
-                        const monColor = displayMonStatus === "Active" ? "#16a34a" : 
-                                         displayMonStatus === "On Duty" ? "#d97706" : 
-                                         displayMonStatus === "Off Duty" ? "#475569" : 
-                                         displayMonStatus === "Deactivated" ? "#64748b" : "#dc2626";
-                        const monBg = displayMonStatus === "Active" ? "#dcfce7" : 
-                                      displayMonStatus === "On Duty" ? "#fef3c7" : 
-                                      displayMonStatus === "Off Duty" ? "#f1f5f9" : 
-                                      displayMonStatus === "Deactivated" ? "#f1f5f9" : "#fee2e2";
+                        const monColor = displayMonStatus === "Active" ? "#16a34a" :
+                          displayMonStatus === "On Duty" ? "#d97706" :
+                            displayMonStatus === "Off Duty" ? "#475569" :
+                              displayMonStatus === "Deactivated" ? "#64748b" : "#dc2626";
+                        const monBg = displayMonStatus === "Active" ? "#dcfce7" :
+                          displayMonStatus === "On Duty" ? "#fef3c7" :
+                            displayMonStatus === "Off Duty" ? "#f1f5f9" :
+                              displayMonStatus === "Deactivated" ? "#f1f5f9" : "#fee2e2";
 
                         const draftShift = empShiftDrafts[row.hrmsId] || "";
 
@@ -6125,7 +6101,7 @@ function AOmModule({ user, onLogout }) {
     document.body.removeChild(link);
   };
 
-  // ── Helper: reset role filters when switching roles
+  // â”€â”€ Helper: reset role filters when switching roles
   const resetRoleFilters = () => {
     setRoleFilterName("");
     setRoleFilterStation("All");
@@ -6136,7 +6112,7 @@ function AOmModule({ user, onLogout }) {
     setTiAssessmentFormOpen(null);
   };
 
-  // ── Reusable role directory renderer (SA-style)
+  // â”€â”€ Reusable role directory renderer (SA-style)
   const renderAomRole = (roleKey, title) => {
     // If a profile detail is being viewed
     if (selectedRoleEmployee && selectedRoleEmployee._roleKey === roleKey) {
@@ -6195,28 +6171,28 @@ function AOmModule({ user, onLogout }) {
                 <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: '#0f172a', fontWeight: '800', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px' }}>
                   Operational Profile Specifications
                 </h4>
-                
+
                 {s.role === "pointsmen" && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', fontSize: '13px' }}>
-                    <div><strong>Reporting Station Master:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.reportingSm || "S. Deshmukh (SM)"}</div></div>
-                    <div><strong>Assigned Shift:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.shift || "Morning Shift (06:00 - 14:00)"}</div></div>
-                    <div><strong>Work Location Setup:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.workLocation || "Yard Area"}</div></div>
+                    <div><strong>Reporting Station Master:</strong><div style={{ fontWeight: 700, color: "#1e3a5f", marginTop: 4 }}>{s.reportingSm || "S. Deshmukh (SM)"}</div></div>
+                    <div><strong>Assigned Shift:</strong><div style={{ fontWeight: 700, color: "#1e3a5f", marginTop: 4 }}>{s.shift || "Morning Shift (06:00 - 14:00)"}</div></div>
+                    <div><strong>Work Location Setup:</strong><div style={{ fontWeight: 700, color: "#1e3a5f", marginTop: 4 }}>{s.workLocation || "Yard Area"}</div></div>
                   </div>
                 )}
 
                 {(s.role === "sm" || s.role === "ss") && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', fontSize: '13px' }}>
-                    <div><strong>Operational Station:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{s.smStation || s.stationName || "N/A"}</div></div>
-                    <div><strong>Operational Division:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{s.smDivision || s.division || "Nagpur"}</div></div>
-                    <div><strong>Operational Zone:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{s.smZone || s.zone || "Central Railway"}</div></div>
+                    <div><strong>Operational Station:</strong><div style={{ fontWeight: 700, color: "#065f46", marginTop: 4 }}>{s.smStation || s.stationName || "N/A"}</div></div>
+                    <div><strong>Operational Division:</strong><div style={{ fontWeight: 700, color: "#065f46", marginTop: 4 }}>{s.smDivision || s.division || "Nagpur"}</div></div>
+                    <div><strong>Operational Zone:</strong><div style={{ fontWeight: 700, color: "#065f46", marginTop: 4 }}>{s.smZone || s.zone || "Central Railway"}</div></div>
                   </div>
                 )}
 
                 {s.role === "tm" && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', fontSize: '13px' }}>
-                    <div><strong>Crew Depot:</strong><div style={{fontWeight: 700, color: "#6b21a8", marginTop: 4}}>{s.workLocation || "Nagpur Depot"}</div></div>
-                    <div><strong>Assigned Shift:</strong><div style={{fontWeight: 700, color: "#6b21a8", marginTop: 4}}>{s.shift || "Goods Train Beat"}</div></div>
-                    <div><strong>Assigned Section Beats:</strong><div style={{fontWeight: 700, color: "#6b21a8", marginTop: 4}}>{s.reportingSm || "NGP-BSL Section"}</div></div>
+                    <div><strong>Crew Depot:</strong><div style={{ fontWeight: 700, color: "#6b21a8", marginTop: 4 }}>{s.workLocation || "Nagpur Depot"}</div></div>
+                    <div><strong>Assigned Shift:</strong><div style={{ fontWeight: 700, color: "#6b21a8", marginTop: 4 }}>{s.shift || "Goods Train Beat"}</div></div>
+                    <div><strong>Assigned Section Beats:</strong><div style={{ fontWeight: 700, color: "#6b21a8", marginTop: 4 }}>{s.reportingSm || "NGP-BSL Section"}</div></div>
                   </div>
                 )}
               </div>
@@ -6277,19 +6253,23 @@ function AOmModule({ user, onLogout }) {
                     <button
                       type="button"
                       onClick={() => setTiAssessmentAnswers(prev => ({ ...prev, [tiAssessmentFormOpen]: { ...prev[tiAssessmentFormOpen], [c.key]: "yes" } }))}
-                      style={{ padding: "8px 20px", borderRadius: 6, border: "2px solid", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
+                      style={{
+                        padding: "8px 20px", borderRadius: 6, border: "2px solid", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
                         borderColor: answers[c.key] === "yes" ? "#16a34a" : "#d1d5db",
                         background: answers[c.key] === "yes" ? "#dcfce7" : "#ffffff",
-                        color: answers[c.key] === "yes" ? "#15803d" : "#6b7280" }}
-                    >✓ Yes</button>
+                        color: answers[c.key] === "yes" ? "#15803d" : "#6b7280"
+                      }}
+                    >âœ“ Yes</button>
                     <button
                       type="button"
                       onClick={() => setTiAssessmentAnswers(prev => ({ ...prev, [tiAssessmentFormOpen]: { ...prev[tiAssessmentFormOpen], [c.key]: "no" } }))}
-                      style={{ padding: "8px 20px", borderRadius: 6, border: "2px solid", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
+                      style={{
+                        padding: "8px 20px", borderRadius: 6, border: "2px solid", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem",
                         borderColor: answers[c.key] === "no" ? "#dc2626" : "#d1d5db",
                         background: answers[c.key] === "no" ? "#fee2e2" : "#ffffff",
-                        color: answers[c.key] === "no" ? "#b91c1c" : "#6b7280" }}
-                    >✗ No</button>
+                        color: answers[c.key] === "no" ? "#b91c1c" : "#6b7280"
+                      }}
+                    >âœ— No</button>
                   </div>
                 </div>
               ))}
@@ -6333,9 +6313,9 @@ function AOmModule({ user, onLogout }) {
           {(roleKey === "pointsmen" || roleKey === "sm" || roleKey === "ss" || roleKey === "tm" || roleKey === "ti") && (
             <button className="sdom-btn-primary" onClick={
               roleKey === "pointsmen" ? openPmAdd :
-              roleKey === "sm" ? openSmAdd :
-              roleKey === "ss" ? openSsAdd :
-              roleKey === "tm" ? openTmAdd : openTiAdd
+                roleKey === "sm" ? openSmAdd :
+                  roleKey === "ss" ? openSsAdd :
+                    roleKey === "tm" ? openTmAdd : openTiAdd
             }>
               <Plus size={16} /> Add New {title}
             </button>
@@ -6404,7 +6384,7 @@ function AOmModule({ user, onLogout }) {
                   const renderCategoryBadge = (cat) => {
                     const bgMap = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
                     const fgMap = { A: "#15803d", B: "#1d4ed8", C: "#b45309", D: "#b91c1c" };
-                    
+
                     if (roleKey === "ti") {
                       return (
                         <span style={{
@@ -6498,7 +6478,7 @@ function AOmModule({ user, onLogout }) {
                             onClick={() => setSelectedRoleEmployee({ ...s, _roleKey: roleKey })}>
                             View
                           </button>
-                          
+
                           {/* Edit */}
                           {roleKey === "ti" ? (
                             <button className="sdom-icon-btn" title="Edit" onClick={() => openTiEdit(s)}>
@@ -6671,8 +6651,8 @@ function AOmModule({ user, onLogout }) {
         platforms: st.platforms || 3,
         tracks: st.tracks || 5,
         dailyFootfall: st.dailyFootfall || 15000,
-        latitude: st.latitude || "21.1500° N",
-        longitude: st.longitude || "79.0900° E",
+        latitude: st.latitude || "21.1500Â° N",
+        longitude: st.longitude || "79.0900Â° E",
         contactNumber: st.contactNumber || "+91-712-2560158",
         emailId: st.emailId || `station.${(st.stationCode || st.id || "NGP").toLowerCase().split('_')[0]}@cr.railnet.gov.in`,
         lineConfig: st.lineConfig || "Double Line",
@@ -6724,8 +6704,8 @@ function AOmModule({ user, onLogout }) {
       platforms: parseInt(newStPlatforms) || 1,
       tracks: parseInt(newStTracks) || 1,
       dailyFootfall: parseInt(newStDailyFootfall) || 5000,
-      latitude: newStLatitude || "21.1500° N",
-      longitude: newStLongitude || "79.0900° E",
+      latitude: newStLatitude || "21.1500Â° N",
+      longitude: newStLongitude || "79.0900Â° E",
       contactNumber: newStContactNumber || "+91-712-2560158",
       emailId: newStEmailId || `station.${newStCode.toLowerCase().trim()}@cr.railnet.gov.in`,
       lineConfig: newStLineConfig,
@@ -6781,7 +6761,7 @@ function AOmModule({ user, onLogout }) {
         <div className="sdom-row-2">
           <div className="sdom-chart-card">
             <div className="sdom-chart-title" style={{ marginBottom: "16px" }}>Personal & Professional Details</div>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', paddingBottom: '20px' }}>
               {[
                 ["Employee ID / HRMS ID", s.id],
@@ -6901,7 +6881,7 @@ function AOmModule({ user, onLogout }) {
           <div className="sdom-chart-subtitle" style={{ marginBottom: "18px", color: "#64748b", fontSize: "0.85rem" }}>
             Official configuration, signaling details, geographical references, and logistics profile of the station.
           </div>
-          
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
             {[
               { label: "Operating Division", val: st.division || "Nagpur", icon: <Layers size={16} /> },
@@ -6915,24 +6895,24 @@ function AOmModule({ user, onLogout }) {
               { label: "Line Configuration", val: st.lineConfig || "Double Line", icon: <AlignJustify size={16} /> },
               { label: "Electrification", val: st.electrified || "Electrified AC 25kV", icon: <Zap size={16} /> },
               { label: "Daily Avg Footfall", val: `${(st.dailyFootfall || 15000).toLocaleString()} Passengers`, icon: <Users size={16} /> },
-              { label: "Latitude & Longitude", val: `${st.latitude || "21.1500° N"} / ${st.longitude || "79.0900° E"}`, icon: <MapPin size={16} /> },
+              { label: "Latitude & Longitude", val: `${st.latitude || "21.1500Â° N"} / ${st.longitude || "79.0900Â° E"}`, icon: <MapPin size={16} /> },
               { label: "Official Contact", val: st.contactNumber || "+91-712-2560158", icon: <Phone size={16} /> },
               { label: "Official Email ID", val: st.emailId || `station.${(st.code || "NGP").toLowerCase().split('_')[0]}@cr.railnet.gov.in`, icon: <Mail size={16} /> },
             ].map((item, idx) => (
-              <div key={idx} style={{ 
-                background: "#f8fafc", 
-                border: "1px solid #e2e8f0", 
-                borderRadius: "8px", 
+              <div key={idx} style={{
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
                 padding: "12px 16px",
                 display: "flex",
                 alignItems: "center",
                 gap: "12px"
               }}>
-                <div style={{ 
-                  background: "#eff6ff", 
-                  color: "#2563eb", 
-                  borderRadius: "6px", 
-                  width: "36px", 
+                <div style={{
+                  background: "#eff6ff",
+                  color: "#2563eb",
+                  borderRadius: "6px",
+                  width: "36px",
                   height: "36px",
                   display: "flex",
                   alignItems: "center",
@@ -6981,9 +6961,9 @@ function AOmModule({ user, onLogout }) {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={riskCount} cx="50%" cy="50%" innerRadius={70} outerRadius={105}
-                       dataKey="value" paddingAngle={4}
-                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                       labelLine={false}>
+                    dataKey="value" paddingAngle={4}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}>
                     {riskCount.map((d, i) => <Cell key={i} fill={RISK_COLORS[d.name]} />)}
                   </Pie>
                   <Legend wrapperStyle={{ fontSize: "0.82rem" }} />
@@ -7074,8 +7054,8 @@ function AOmModule({ user, onLogout }) {
             setNewStPlatforms(3);
             setNewStTracks(5);
             setNewStDailyFootfall(15000);
-            setNewStLatitude("21.1500° N");
-            setNewStLongitude("79.0900° E");
+            setNewStLatitude("21.1500Â° N");
+            setNewStLongitude("79.0900Â° E");
             setNewStContactNumber("+91-712-2560158");
             setNewStEmailId("");
             setNewStLineConfig("Double Line");
@@ -7141,13 +7121,13 @@ function AOmModule({ user, onLogout }) {
                   Detailed operational card for Station Master <strong>{selectedSMProfile.name}</strong>
                 </p>
               </div>
-              <button 
-                type="button" 
-                className="action-btn" 
+              <button
+                type="button"
+                className="action-btn"
                 onClick={() => setActivePage("Station Masters")}
                 style={{ background: "#64748b", color: "#fff", display: "flex", alignItems: "center", gap: "6px" }}
               >
-                ← Back to List
+                â† Back to List
               </button>
             </div>
 
@@ -7171,7 +7151,7 @@ function AOmModule({ user, onLogout }) {
                 <div><strong>Mobile No:</strong> {selectedSMProfile.contactNumber}</div>
                 <div><strong>Email ID:</strong> {selectedSMProfile.emailId}</div>
                 <div><strong>Account Status:</strong> <span style={{ color: '#10b981', fontWeight: '700' }}>Active</span></div>
-                
+
                 <div><strong>Current Zone:</strong> {selectedSMProfile.zone}</div>
                 <div><strong>Current Division:</strong> {selectedSMProfile.division}</div>
                 <div><strong>Station Name:</strong> {selectedSMProfile.stationName}</div>
@@ -7203,13 +7183,13 @@ function AOmModule({ user, onLogout }) {
                   Detailed operational card for Traffic Inspector <strong>{selectedTiProfile.name}</strong>
                 </p>
               </div>
-              <button 
-                type="button" 
-                className="action-btn" 
+              <button
+                type="button"
+                className="action-btn"
                 onClick={() => setActivePage("Traffic Inspector")}
                 style={{ background: "#64748b", color: "#fff", display: "flex", alignItems: "center", gap: "6px" }}
               >
-                ← Back to List
+                â† Back to List
               </button>
             </div>
 
@@ -7233,7 +7213,7 @@ function AOmModule({ user, onLogout }) {
                 <div><strong>Employee ID:</strong> {selectedTiProfile.employeeId}</div>
                 <div><strong>Jurisdiction:</strong> {selectedTiProfile.jurisdiction} Division</div>
                 <div><strong>Account Status:</strong> <span style={{ color: '#10b981', fontWeight: '700' }}>Active</span></div>
-                
+
                 <div><strong>Mobile No:</strong> {selectedTiProfile.phone || "+91 98900 12211"}</div>
                 <div><strong>Email ID:</strong> {selectedTiProfile.email || "ti.officer@rail.in"}</div>
                 <div><strong>Assessment Status:</strong> <span style={{ color: selectedTiProfile.assessmentStatus === "Completed" ? '#10b981' : '#f59e0b', fontWeight: '700' }}>{selectedTiProfile.assessmentStatus}</span></div>
@@ -7485,14 +7465,14 @@ function AOmModule({ user, onLogout }) {
 
       case "Station Masters Under TI": {
         if (!selectedTIForStationMasters) return null;
-        
+
         const tiSmsNames = selectedTIForStationMasters.linkedSms || [];
         const smsForTI = stationMastersDirectory.filter(sm => tiSmsNames.includes(sm.name));
-        
+
         // Find total pointsmen under these SMs
         const smStationCodes = smsForTI.map(sm => sm.stationCode);
         const pmForTI = aomPointsmen.filter(pm => smStationCodes.includes(pm.stationCode));
-        
+
         const approvedCount = pmForTI.filter(p => p.approvalStatus === "Approved").length;
         const highRiskCount = pmForTI.filter(p => getPmRisk(p) === "High").length;
 
@@ -7525,7 +7505,7 @@ function AOmModule({ user, onLogout }) {
                   cursor: "pointer"
                 }}
               >
-                ← Back to Traffic Inspectors
+                â† Back to Traffic Inspectors
               </button>
             </div>
 
@@ -7606,7 +7586,7 @@ function AOmModule({ user, onLogout }) {
                       const smRisk = idx % 3 === 0 ? "Medium" : "Low";
                       const smRiskColor = smRisk === "High" ? "#ef4444" : smRisk === "Medium" ? "#ea580c" : "#16a34a";
                       const smRiskBg = smRisk === "High" ? "#fef2f2" : smRisk === "Medium" ? "#fff7ed" : "#dcfce7";
-                      
+
                       const smAss = idx % 2 === 0 ? "Completed" : "Pending";
                       const smAssColor = smAss === "Completed" ? "#16a34a" : "#ca8a04";
                       const smAssBg = smAss === "Completed" ? "#dcfce7" : "#fef08a";
@@ -7621,8 +7601,8 @@ function AOmModule({ user, onLogout }) {
                           transition: "background 0.2s",
                           cursor: "default"
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = "#f8fafc"}
-                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                          onMouseEnter={(e) => e.currentTarget.style.background = "#f8fafc"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                         >
                           <div>
                             <div style={{ fontWeight: "700", color: "#0f172a", fontSize: "14px" }}>{row.name}</div>
@@ -7670,7 +7650,7 @@ function AOmModule({ user, onLogout }) {
                               alignItems: "center",
                               gap: "4px"
                             }}>
-                              <span style={{ fontSize: "10px" }}>●</span> {smRisk}
+                              <span style={{ fontSize: "10px" }}>â—</span> {smRisk}
                             </span>
                           </div>
                           <div style={{ textAlign: "right" }}>
@@ -7713,7 +7693,7 @@ function AOmModule({ user, onLogout }) {
 
       case "Pointsman Under Station Master":
         if (!selectedSMForPointsmen) return null;
-        
+
         // Find pointsmen under this station
         const stationPointsmen = aomPointsmen.filter(
           (pm) => pm.stationCode === selectedSMForPointsmen.stationCode
@@ -7732,10 +7712,10 @@ function AOmModule({ user, onLogout }) {
             searchText.length === 0 ||
             pm.name.toLowerCase().includes(searchText) ||
             pm.hrmsId.toLowerCase().includes(searchText);
-            
+
           const matchesRisk = pointsmanRiskFilter === "All" || risk === pointsmanRiskFilter;
           const matchesStatus = pointsmanStatusFilter === "All" || pm.approvalStatus === pointsmanStatusFilter;
-          
+
           return matchesSearch && matchesRisk && matchesStatus;
         });
 
@@ -7772,7 +7752,7 @@ function AOmModule({ user, onLogout }) {
                       cursor: "pointer"
                     }}
                   >
-                    ← Back to Station Masters
+                    â† Back to Station Masters
                   </button>
                 </div>
 
@@ -7829,10 +7809,10 @@ function AOmModule({ user, onLogout }) {
                       style={{ flex: 1, border: "none", outline: "none", fontSize: "14px", background: "transparent" }}
                     />
                   </div>
-                  
+
                   <div style={{ display: "flex", gap: "12px" }}>
-                    <select 
-                      value={pointsmanRiskFilter} 
+                    <select
+                      value={pointsmanRiskFilter}
                       onChange={(e) => setPointsmanRiskFilter(e.target.value)}
                       style={{
                         border: "1px solid #cbd5e1",
@@ -7849,8 +7829,8 @@ function AOmModule({ user, onLogout }) {
                       <option value="Medium">Medium Risk</option>
                       <option value="High">High Risk</option>
                     </select>
-                    <select 
-                      value={pointsmanStatusFilter} 
+                    <select
+                      value={pointsmanStatusFilter}
                       onChange={(e) => setPointsmanStatusFilter(e.target.value)}
                       style={{
                         border: "1px solid #cbd5e1",
@@ -7894,10 +7874,10 @@ function AOmModule({ user, onLogout }) {
                           const risk = getPmRisk(pm);
                           const isHighRisk = risk === "High";
                           const isMedRisk = risk === "Medium";
-                          
+
                           return (
-                            <div 
-                              key={pm.id} 
+                            <div
+                              key={pm.id}
                               className="table-row pointsman-list-table-cols"
                               style={{ cursor: "default" }}
                             >
@@ -7916,14 +7896,14 @@ function AOmModule({ user, onLogout }) {
                               </div>
                               <div><strong>{pm.lastScore}/100</strong></div>
                               <div>
-                                {pm.hrmsId === "PM_1001" ? "2026-03-28" : 
-                                 pm.hrmsId === "PM_1102" ? "2026-03-10" : 
-                                 pm.hrmsId === "PM_1103" ? "2026-02-15" : 
-                                 pm.hrmsId === "PM_1104" ? "2026-03-18" : 
-                                 pm.hrmsId === "PM_1105" ? "2026-01-20" : 
-                                 pm.hrmsId === "PM_1106" ? "2026-03-05" : 
-                                 pm.hrmsId === "PM_1107" ? "2026-03-20" : 
-                                 pm.hrmsId === "PM_1108" ? "2026-02-01" : "—"}
+                                {pm.hrmsId === "PM_1001" ? "2026-03-28" :
+                                  pm.hrmsId === "PM_1102" ? "2026-03-10" :
+                                    pm.hrmsId === "PM_1103" ? "2026-02-15" :
+                                      pm.hrmsId === "PM_1104" ? "2026-03-18" :
+                                        pm.hrmsId === "PM_1105" ? "2026-01-20" :
+                                          pm.hrmsId === "PM_1106" ? "2026-03-05" :
+                                            pm.hrmsId === "PM_1107" ? "2026-03-20" :
+                                              pm.hrmsId === "PM_1108" ? "2026-02-01" : "—"}
                               </div>
                               <div>
                                 <span className={`sm2-status-pill sm2-status-${pm.approvalStatus.toLowerCase()}`} style={{ display: "inline-block" }}>
@@ -8118,7 +8098,7 @@ function AOmModule({ user, onLogout }) {
                               window.dispatchEvent(new Event("storage"));
                             }}
                           >
-                            {localStorage.getItem("ti_exam_assigned") === "true" ? "Exam Sent ✓" : "Send Exam"}
+                            {localStorage.getItem("ti_exam_assigned") === "true" ? "Exam Sent âœ“" : "Send Exam"}
                           </button>
                           <button type="button" className="action-btn action-edit" onClick={() => handleOpenLinkTi(row.id)}>
                             Link Stations & SMs
@@ -8213,10 +8193,10 @@ function AOmModule({ user, onLogout }) {
             )}
           </div>
         );
-      
+
       case "User Management": {
         const uniqueStationsList = Array.from(new Set(DASHBOARD_96_STATIONS.map(s => s.stationName))).sort();
-        
+
         return (
           <div className="user-management-page">
             <div className="add-user-title-wrap" style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px" }}>
@@ -8243,7 +8223,7 @@ function AOmModule({ user, onLogout }) {
 
             <div className="form-container structured-form-card">
               <form onSubmit={handleSubmitUser} className="user-form">
-                
+
                 {/* Field Group 1: General & Contact Info */}
                 <div className="form-section-header">
                   <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0d2c4d', margin: '0 0 10px', fontSize: '15px', fontWeight: '800' }}>
@@ -8252,7 +8232,7 @@ function AOmModule({ user, onLogout }) {
                   </h4>
                   <div className="section-divider" style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
                 </div>
-                
+
                 <div className="add-user-grid">
                   <div className="add-user-col">
                     <div className="form-group">
@@ -8588,7 +8568,7 @@ function AOmModule({ user, onLogout }) {
 
                 <div className="add-user-actions" style={{ marginTop: '24px' }}>
                   <button type="submit" className="submit-btn" style={{ padding: '12px 36px', fontSize: '14px' }}>
-                    {editingUserId ? "🔒 UPDATE USER ACCOUNT" : "👤 ADD USER ACCOUNT"}
+                    {editingUserId ? "ðŸ”’ UPDATE USER ACCOUNT" : "ðŸ‘¤ ADD USER ACCOUNT"}
                   </button>
                 </div>
               </form>
@@ -8734,7 +8714,7 @@ function AOmModule({ user, onLogout }) {
                           <button type="button" className="action-btn" onClick={() => setSelectedUserProfile(row)}>
                             Profile
                           </button>
-                          
+
                           <button type="button" className="action-btn action-edit" onClick={() => handleEditUser(row.id)}>
                             Edit
                           </button>
@@ -8770,11 +8750,11 @@ function AOmModule({ user, onLogout }) {
                                   prev.map((u) =>
                                     u.id === row.id
                                       ? {
-                                          ...u,
-                                          division: newDiv,
-                                          smDivision: newDiv,
-                                          jurisdiction: newDiv + " Division"
-                                        }
+                                        ...u,
+                                        division: newDiv,
+                                        smDivision: newDiv,
+                                        jurisdiction: newDiv + " Division"
+                                      }
                                       : u
                                   )
                                 );
@@ -8835,7 +8815,7 @@ function AOmModule({ user, onLogout }) {
                   <div><strong>Mobile No:</strong> {selectedUserProfile.mobileNo}</div>
                   <div><strong>Email ID:</strong> {selectedUserProfile.emailId || "N/A"}</div>
                   <div><strong>Account Status:</strong> <span style={{ color: selectedUserProfile.status === "Inactive" ? '#ef4444' : '#10b981', fontWeight: '700' }}>{selectedUserProfile.status || "Active"}</span></div>
-                  
+
                   <div><strong>Current Zone:</strong> {selectedUserProfile.zone || "N/A"}</div>
                   <div><strong>Current Division:</strong> {selectedUserProfile.division || "N/A"}</div>
                   <div><strong>Current Station:</strong> {selectedUserProfile.stationName || "N/A"}</div>
@@ -8845,7 +8825,7 @@ function AOmModule({ user, onLogout }) {
                 {/* Role Specific details */}
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '10px' }}>
                   <h4 style={{ margin: '0 0 8px', fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>Operational Profile Specifications</h4>
-                  
+
                   {selectedUserProfile.designation === "Pointsman" && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '13px' }}>
                       <div><strong>Reporting Station Master:</strong> {selectedUserProfile.reportingSm || "N/A"}</div>
@@ -8879,7 +8859,7 @@ function AOmModule({ user, onLogout }) {
           </div>
         );
       }
-      
+
       case "Pending Approvals": {
         const getEmployeeName = (empLine) => {
           if (!empLine) return "—";
@@ -8905,7 +8885,7 @@ function AOmModule({ user, onLogout }) {
           if (!title) return "—";
           return title.split(" - ")[0] || "Employee";
         };
-        
+
         const handleViewDetails = (item) => {
           const tab = resolveAssessmentTab(item.title);
           setAssessmentRoleTab(tab);
@@ -8922,14 +8902,14 @@ function AOmModule({ user, onLogout }) {
 
             {assessmentActionNotice && (
               <div className="notice-card success" style={{ marginBottom: "16px", padding: "12px 16px" }}>
-                <span>✓</span>
+                <span>âœ“</span>
                 <p><strong>System Action:</strong> {assessmentActionNotice}</p>
-                <button 
-                  type="button" 
-                  onClick={() => setAssessmentActionNotice("")} 
+                <button
+                  type="button"
+                  onClick={() => setAssessmentActionNotice("")}
                   style={{ marginLeft: "auto", background: "none", border: "none", color: "#16a34a", cursor: "pointer", fontWeight: "bold" }}
                 >
-                  ✕
+                  âœ•
                 </button>
               </div>
             )}
@@ -9062,27 +9042,27 @@ function AOmModule({ user, onLogout }) {
           </div>
         );
       }
-      
+
       case "Assessments": {
         // We resolve if there's an active assessment open (Level 3 - Form View)
         // If openAssessmentId is NOT null, activeAssessment is the item in pendingAssessments (or approvedAssessments)
-        const activeAssessment = pendingAssessments.find((item) => item.id === openAssessmentId) || 
-                                 approvedAssessments.find((item) => item.id === openAssessmentId) || null;
-        
+        const activeAssessment = pendingAssessments.find((item) => item.id === openAssessmentId) ||
+          approvedAssessments.find((item) => item.id === openAssessmentId) || null;
+
         if (activeAssessment) {
           // Render Level 3: Structured Evaluation Form View!
           const activeAnswers = answersByAssessment[activeAssessment.id] || buildPrefilledAnswers(activeAssessment.title);
           const liveScore = calculateAssessmentScore(activeAnswers, true);
-          
+
           // Map to TI employee info
           const tiEmployee = trafficInspectors.find(t => t.employeeId === activeAssessment.id);
           const name = tiEmployee ? tiEmployee.name : (activeAssessment.employeeLine?.match(/Employee:\s*([^|]+)/i)?.[1]?.trim() || "Traffic Inspector");
           const hrmsId = activeAssessment.id;
           const division = tiEmployee ? tiEmployee.division : (activeAssessment.employeeLine?.match(/Division:\s*(.+)/i)?.[1]?.trim() || "Nagpur");
-          
+
           const isApproved = approvedAssessments.some(a => a.id === activeAssessment.id);
           const locked = isApproved;
-          
+
           let ynScore = 0;
           assessmentCriteria.forEach(sec => {
             if (sec.key !== "knowledgeOfRules") {
@@ -9091,7 +9071,7 @@ function AOmModule({ user, onLogout }) {
           });
           const isAlcoholic = activeAnswers.alcoholicStatus === "Alcoholic";
           const liveCat = isAlcoholic ? "D" : (liveScore >= 90 ? "A" : liveScore >= 80 ? "B" : "C");
-          
+
           const CAT_B = { A: "#dcfce7", B: "#eff6ff", C: "#fff7ed", D: "#fef2f2" };
           const CAT_C = { A: "#16a34a", B: "#2563eb", C: "#ea580c", D: "#dc2626" };
 
@@ -9132,7 +9112,7 @@ function AOmModule({ user, onLogout }) {
                     Assessment — {name}
                   </h2>
                   <p style={{ margin: "4px 0 0 0", fontSize: "12.5px", color: "#64748b" }}>
-                    {hrmsId} · {division} Division
+                    {hrmsId} Â· {division} Division
                   </p>
                 </div>
                 <button
@@ -9140,7 +9120,7 @@ function AOmModule({ user, onLogout }) {
                   style={{ display: "flex", alignItems: "center", gap: "6px", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", padding: "8px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", color: "#475569" }}
                   onClick={() => setOpenAssessmentId(null)}
                 >
-                  ← Back
+                  â† Back
                 </button>
               </div>
 
@@ -9150,7 +9130,7 @@ function AOmModule({ user, onLogout }) {
                 </div>
               )}
 
-              {/* ── Section 1: Knowledge of Rules ── */}
+              {/* â”€â”€ Section 1: Knowledge of Rules â”€â”€ */}
               <div className="sm2-assess-section">
                 <div className="sm2-assess-sec-hdr">
                   <span className="sm2-assess-sec-num">01</span>
@@ -9294,7 +9274,7 @@ function AOmModule({ user, onLogout }) {
                 </div>
               </div>
 
-              {/* ── Sections 02-06: Yes/No blocks ── */}
+              {/* â”€â”€ Sections 02-06: Yes/No blocks â”€â”€ */}
               {assessmentCriteria.filter(x => x.key !== "knowledgeOfRules").map((sec, si) => {
                 const checklist = checklistDetails[sec.key] || [];
                 const count = checklist.length;
@@ -9308,7 +9288,7 @@ function AOmModule({ user, onLogout }) {
                       <span className="sm2-assess-sec-num">{String(si + 2).padStart(2, "0")}</span>
                       <div>
                         <strong>{sec.label}</strong>
-                        <span className="sm2-assess-sec-meta">{count} criteria · {weight} marks each · Total {sectionMax}</span>
+                        <span className="sm2-assess-sec-meta">{count} criteria Â· {weight} marks each Â· Total {sectionMax}</span>
                       </div>
                       <span className="sm2-assess-live-marks">{sectionScore} / {sectionMax}</span>
                     </div>
@@ -9346,7 +9326,7 @@ function AOmModule({ user, onLogout }) {
                 );
               })}
 
-              {/* ── Section 07: Additional Details ── */}
+              {/* â”€â”€ Section 07: Additional Details â”€â”€ */}
               <div className="sm2-assess-section" style={{ opacity: 1 }}>
                 <div className="sm2-assess-sec-hdr">
                   <span className="sm2-assess-sec-num">07</span>
@@ -9360,7 +9340,7 @@ function AOmModule({ user, onLogout }) {
                   <div className="sm2-form-field">
                     <label>Alcoholic Status <span style={{ color: "#dc2626" }}>*</span></label>
                     <select disabled={locked} value={activeAnswers.alcoholicStatus || "Non-Alcoholic"} onChange={e => handleAnswerChange(activeAssessment.id, "alcoholicStatus", e.target.value)}>
-                      <option value="">Select…</option>
+                      <option value="">Selectâ€¦</option>
                       <option>Non-Alcoholic</option>
                       <option>Alcoholic</option>
                     </select>
@@ -9391,12 +9371,12 @@ function AOmModule({ user, onLogout }) {
                   </div>
                   <div className="sm2-form-field sm2-form-full" style={{ gridColumn: "1/-1" }}>
                     <label>Remarks for Officer / AOM</label>
-                    <textarea rows={3} disabled={locked} value={activeAnswers.remarks || ""} onChange={e => handleAnswerChange(activeAssessment.id, "remarks", e.target.value)} placeholder="Enter observations, recommendations…" />
+                    <textarea rows={3} disabled={locked} value={activeAnswers.remarks || ""} onChange={e => handleAnswerChange(activeAssessment.id, "remarks", e.target.value)} placeholder="Enter observations, recommendationsâ€¦" />
                   </div>
                 </div>
               </div>
 
-              {/* ── Live Score Bar ── */}
+              {/* â”€â”€ Live Score Bar â”€â”€ */}
               <div className="sm2-live-score" style={{ opacity: 1 }}>
                 <div><label>Knowledge (MCQ)</label><strong>{knowledge}/25</strong></div>
                 <div><label>Yes/No Score</label><strong>{ynScore}/75</strong></div>
@@ -9407,7 +9387,7 @@ function AOmModule({ user, onLogout }) {
               {locked ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "16px" }}>
                   <div style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "12px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", textAlign: "center" }}>
-                    ✓ Assessment Approved and Locked (AOM Approved)
+                    âœ“ Assessment Approved and Locked (AOM Approved)
                   </div>
                 </div>
               ) : (
@@ -9443,31 +9423,113 @@ function AOmModule({ user, onLogout }) {
           );
         }
 
+
+        // --- SS Form View ---
+        if (activeAomSsId) {
+          const ssItem = aomSsList.find(s => s.id === activeAomSsId);
+          const ssForm = aomSsForms[activeAomSsId] || aomDefaultSsForm();
+          const ssIsLocked = aomSsLocked[activeAomSsId] || ssItem?.status === "Approved";
+          const { ynScore: ssYn, knowledge: ssKm, total: ssTotal } = calcAomSsLiveScore(ssForm);
+          const isSSAlco = ssForm.alcoholicStatus === "Alcoholic";
+          const ssCatRaw = ssTotal >= 80 ? "A" : ssTotal >= 50 ? "B" : ssTotal >= 26 ? "C" : "D";
+          const ssCat = isSSAlco ? "D" : ssCatRaw;
+          const SS_CAT_BG = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
+          const SS_CAT_CLR = { A: "#16a34a", B: "#2563eb", C: "#d97706", D: "#dc2626" };
+          return (
+            <section className="sm2-card animate-fade-in" style={{ padding: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                <div>
+                  <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: 0 }}>Assessment — {ssItem?.name}</h2>
+                  <p style={{ margin: "4px 0 0 0", fontSize: "12.5px", color: "#64748b" }}>{ssItem?.hrmsId} · Station Superintendent · {ssItem?.station}</p>
+                </div>
+                <button style={{ border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", padding: "8px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", color: "#475569" }} onClick={() => setActiveAomSsId(null)}>Back</button>
+              </div>
+              {AOM_SS_CRITERIA.map((sec, si) => {
+                const secArr = ssForm[sec.key] || Array(sec.count).fill("No");
+                const secScore = secArr.filter(v => v === "Yes").length * sec.weight;
+                const secMax = sec.count * sec.weight;
+                return (
+                  <div key={sec.key} className="sm2-assess-section">
+                    <div className="sm2-assess-sec-hdr">
+                      <span className="sm2-assess-sec-num">{String(si + 1).padStart(2, "0")}</span>
+                      <div><strong>{sec.label}</strong><span className="sm2-assess-sec-meta">{sec.count} criteria · {sec.weight} marks each · Total {secMax}</span></div>
+                      <span className="sm2-assess-live-marks">{secScore} / {secMax}</span>
+                    </div>
+                    <div className="sm2-yn-grid">
+                      {sec.criteria.map((itemText, idx) => {
+                        const val = secArr[idx] || "No";
+                        return (
+                          <div key={idx} className="sm2-yn-row">
+                            <span style={{ fontSize: "13.5px" }} className="sm2-yn-label">{idx + 1}. {itemText}</span>
+                            <div className="sm2-yn-btns">
+                              <button type="button" disabled={ssIsLocked} className={val === "Yes" ? "sm2-yn-btn sm2-yn-yes active" : "sm2-yn-btn sm2-yn-yes"} style={{ cursor: ssIsLocked ? "not-allowed" : "pointer" }} onClick={() => toggleAomSsYN(activeAomSsId, sec.key, idx, "Yes")}>Yes</button>
+                              <button type="button" disabled={ssIsLocked} className={val === "No" ? "sm2-yn-btn sm2-yn-no active" : "sm2-yn-btn sm2-yn-no"} style={{ cursor: ssIsLocked ? "not-allowed" : "pointer" }} onClick={() => toggleAomSsYN(activeAomSsId, sec.key, idx, "No")}>No</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="sm2-assess-section" style={{ opacity: 1 }}>
+                <div className="sm2-assess-sec-hdr">
+                  <span className="sm2-assess-sec-num">06</span>
+                  <div><strong>Additional Details</strong><span className="sm2-assess-sec-meta">Mandatory fields</span></div>
+                </div>
+                <div className="sm2-assess-form" style={{ marginTop: 12 }}>
+                  <div className="sm2-form-field"><label>Knowledge Marks (out of 25)</label><input type="number" min={0} max={25} disabled={ssIsLocked} value={ssForm.knowledgeMarks} onChange={e => setAomSsField(activeAomSsId, "knowledgeMarks", e.target.value)} placeholder="0-25" /></div>
+                  <div className="sm2-form-field"><label>Alcoholic Status <span style={{ color: "#dc2626" }}>*</span></label><select disabled={ssIsLocked} value={ssForm.alcoholicStatus || ""} onChange={e => setAomSsField(activeAomSsId, "alcoholicStatus", e.target.value)}><option value="">Select...</option><option>Non-Alcoholic</option><option>Alcoholic</option></select></div>
+                  <div className="sm2-form-field"><label>PME Status</label><select disabled={ssIsLocked} value={ssForm.pmeStatus} onChange={e => setAomSsField(activeAomSsId, "pmeStatus", e.target.value)}><option>Fit</option><option>Unfit</option><option>Pending</option></select></div>
+                  <div className="sm2-form-field"><label>REF Status</label><select disabled={ssIsLocked} value={ssForm.refStatus} onChange={e => setAomSsField(activeAomSsId, "refStatus", e.target.value)}><option>Cleared</option><option>Pending</option><option>Failed</option></select></div>
+                  <div className="sm2-form-field"><label>Counselling</label><select disabled={ssIsLocked} value={ssForm.counselling} onChange={e => setAomSsField(activeAomSsId, "counselling", e.target.value)}><option>Not Required</option><option>Recommended</option><option>Mandatory</option></select></div>
+                  <div className="sm2-form-field"><label>Automatic Training</label><select disabled={ssIsLocked} value={ssForm.automaticTraining} onChange={e => setAomSsField(activeAomSsId, "automaticTraining", e.target.value)}><option>Not Required</option><option>Recommended</option><option>Mandatory</option></select></div>
+                  <div className="sm2-form-field sm2-form-full" style={{ gridColumn: "1/-1" }}><label>Remarks</label><textarea rows={3} disabled={ssIsLocked} value={ssForm.remarks} onChange={e => setAomSsField(activeAomSsId, "remarks", e.target.value)} placeholder="Enter observations, recommendations..." /></div>
+                </div>
+              </div>
+              <div className="sm2-live-score" style={{ opacity: 1 }}>
+                <div><label>Knowledge (Written)</label><strong>{ssKm}/25</strong></div>
+                <div><label>Yes/No Score</label><strong>{ssYn}/75</strong></div>
+                <div><label>Grand Total</label><strong style={{ color: SS_CAT_CLR[ssCat], fontSize: 22 }}>{ssTotal}/100</strong></div>
+                <div><label>Category</label><span className="sm2-badge" style={{ background: SS_CAT_BG[ssCat], color: SS_CAT_CLR[ssCat], fontSize: 13, padding: "4px 14px" }}>Category {ssCat}</span></div>
+              </div>
+              {ssIsLocked ? (
+                <div style={{ marginTop: "16px", background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "12px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", textAlign: "center" }}>Assessment Approved and Locked</div>
+              ) : (
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
+                  <button style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", color: "#334155" }} onClick={() => alert("Saved as draft!")}>Save as Draft</button>
+                  <button style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "none", background: "#2563eb", color: "#fff", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }} onClick={() => submitAomSsAssessment(activeAomSsId)}>Approve &amp; Lock Assessment</button>
+                </div>
+              )}
+            </section>
+          );
+        }
+
         // --- LEVEL 2: Roster View ---
         const rosterList = getTiRosterList();
-        
+
         // Roster totals
         const totalTIs = rosterList.length;
         const pendingCount = rosterList.filter(x => x.status === "Pending" || x.status === "Exam Sent").length;
         const completedCount = rosterList.filter(x => x.status === "Approved" || x.status === "Exam Taken" || x.status === "Submitted").length;
         const rejectedCount = rosterList.filter(x => x.status === "Rejected").length;
         const lastUpdatedDate = "30 May 2026";
-        
+
         // Filter elements
         const uniqueStationsList = ["All", ...new Set(stations.map(s => s.name || s.stationName).filter(Boolean))];
-        
+
         const filteredTiList = rosterList.filter((ti) => {
           const matchesSearch = assessSearch === "" ||
             ti.name.toLowerCase().includes(assessSearch.toLowerCase()) ||
             ti.employeeId.toLowerCase().includes(assessSearch.toLowerCase());
-          
+
           const matchesStation = assessStation === "All" ||
             ti.stationName === assessStation ||
             ti.division === assessStation;
-            
+
           const matchesStatus = assessStatus === "All" || ti.status === assessStatus;
           const matchesDate = assessDate === "" || ti.lastAssessed === assessDate;
-          
+
           return matchesSearch && matchesStation && matchesStatus && matchesDate;
         });
 
@@ -9488,532 +9550,603 @@ function AOmModule({ user, onLogout }) {
                   Assessments — Traffic Inspectors
                 </h1>
                 <p style={{ margin: 0, fontSize: "14px", color: "#64748b", fontWeight: "500" }}>
-                  Traffic Inspectors pending assessment are listed below. Open the form to conduct a structured evaluation.
+                  Traffic Inspectors pending assessment. Open the form to conduct a structured evaluation.
                 </p>
               </div>
             </div>
 
-            {/* KPI Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px", marginBottom: "24px" }}>
-              {[
-                { label: `Total Traffic Inspectors`, value: totalTIs, subtitle: "In your jurisdiction", icon: Users, bg: "#ffffff", color: "#475569", valColor: "#0f172a" },
-                { label: "Pending Assessments", value: pendingCount, subtitle: "Awaiting completion", icon: ClipboardCheck, bg: "#ffffff", color: "#ea580c", valColor: "#ea580c" },
-                { label: "Completed This Month", value: completedCount, subtitle: "Assessments done", icon: CheckCircle, bg: "#ffffff", color: "#16a34a", valColor: "#16a34a" },
-                { label: "Rejected", value: rejectedCount, subtitle: "Needs review", icon: AlertTriangle, bg: "#ffffff", color: "#dc2626", valColor: "#dc2626" },
-                { label: "Last Updated", value: lastUpdatedDate, subtitle: "Recent activity", icon: Calendar, bg: "#ffffff", color: "#64748b", valColor: "#0f172a" }
-              ].map((stat, idx) => (
+            {/* Role Tab Switcher */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+              {[{ key: "TI", label: "Traffic Inspectors" }, { key: "SS", label: "Station Superintendents" }].map(tab => (
+                <button key={tab.key}
+                  onClick={() => { setAssessmentRoleTab(tab.key); setActiveAomSsId(null); setOpenAssessmentId(null); }}
+                  style={{
+                    padding: "8px 20px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", cursor: "pointer",
+                    border: assessmentRoleTab === tab.key ? "none" : "1px solid #cbd5e1",
+                    background: assessmentRoleTab === tab.key ? "#0f172a" : "#ffffff",
+                    color: assessmentRoleTab === tab.key ? "#ffffff" : "#475569"
+                  }}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* SS Roster Table */}
+            {assessmentRoleTab === "SS" && (
+              <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1.5px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
+                      {["STATION SUPERINTENDENT", "HRMS ID", "STATION", "LAST ASSESSED", "SCORE", "STATUS", "ACTION"].map(h => (
+                        <th key={h} style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: h === "ACTION" ? "right" : "left" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aomSsList.map(ss => {
+                      const catBg = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
+                      const catClr = { A: "#16a34a", B: "#2563eb", C: "#d97706", D: "#dc2626" };
+                      return (
+                        <tr key={ss.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "14px 16px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                              <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#1e3a8a", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>{ss.name.charAt(0)}</div>
+                              <div>
+                                <div style={{ fontWeight: "700", color: "#0f172a", fontSize: "14px" }}>{ss.name}</div>
+                                <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "2px" }}>Station Superintendent</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: "14px 16px", color: "#475569", fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>{ss.hrmsId}</td>
+                          <td style={{ padding: "14px 16px", color: "#334155", fontSize: "13px", fontWeight: "500" }}>{ss.station}</td>
+                          <td style={{ padding: "14px 16px", color: "#64748b", fontSize: "13px", fontWeight: "500" }}>{ss.lastDate || "—"}</td>
+                          <td style={{ padding: "14px 16px", color: "#0f172a", fontWeight: "800", fontSize: "14px" }}>
+                            {ss.score != null ? <span>{ss.score}/100 {ss.category && <span style={{ marginLeft: "6px", background: catBg[ss.category], color: catClr[ss.category], borderRadius: "4px", padding: "2px 6px", fontSize: "11px", fontWeight: "700" }}>Cat {ss.category}</span>}</span> : "—"}
+                          </td>
+                          <td style={{ padding: "14px 16px" }}>
+                            <span style={{ background: ss.status === "Approved" ? "#dcfce7" : "#f1f5f9", color: ss.status === "Approved" ? "#166534" : "#475569", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700" }}>{ss.status}</span>
+                          </td>
+                          <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                            <button onClick={() => openAomSsForm(ss.id)} style={{ background: ss.status === "Approved" ? "#2563eb" : "#16a34a", border: "none", color: "#fff", padding: "6px 14px", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px" }}>
+                              {ss.status === "Approved" ? "View Form" : "Open Form"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {aomSsList.length === 0 && (
+                      <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>No Station Superintendents found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {assessmentRoleTab === "TI" && (
+              <>
+                {/* KPI Cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px", marginBottom: "24px" }}>
+                  {[
+                    { label: `Total Traffic Inspectors`, value: totalTIs, subtitle: "In your jurisdiction", icon: Users, bg: "#ffffff", color: "#475569", valColor: "#0f172a" },
+                    { label: "Pending Assessments", value: pendingCount, subtitle: "Awaiting completion", icon: ClipboardCheck, bg: "#ffffff", color: "#ea580c", valColor: "#ea580c" },
+                    { label: "Completed This Month", value: completedCount, subtitle: "Assessments done", icon: CheckCircle, bg: "#ffffff", color: "#16a34a", valColor: "#16a34a" },
+                    { label: "Rejected", value: rejectedCount, subtitle: "Needs review", icon: AlertTriangle, bg: "#ffffff", color: "#dc2626", valColor: "#dc2626" },
+                    { label: "Last Updated", value: lastUpdatedDate, subtitle: "Recent activity", icon: Calendar, bg: "#ffffff", color: "#64748b", valColor: "#0f172a" }
+                  ].map((stat, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "16px",
+                        padding: "20px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "16px"
+                      }}
+                    >
+                      <div style={{ width: "40px", height: "40px", borderRadius: "8px", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: stat.color, flexShrink: 0 }}>
+                        <stat.icon size={20} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                          <span style={{ fontSize: "22px", fontWeight: "800", color: stat.valColor }}>{stat.value}</span>
+                        </div>
+                        <div style={{ fontSize: "12px", fontWeight: "700", color: "#334155", marginTop: "2px" }}>{stat.label}</div>
+                        <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "1px" }}>{stat.subtitle}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Filters Section */}
                 <div
-                  key={idx}
                   style={{
                     background: "#ffffff",
                     border: "1px solid #e2e8f0",
                     borderRadius: "16px",
                     padding: "20px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "16px"
+                    marginBottom: "24px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
                   }}
                 >
-                  <div style={{ width: "40px", height: "40px", borderRadius: "8px", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: stat.color, flexShrink: 0 }}>
-                    <stat.icon size={20} />
-                  </div>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-                      <span style={{ fontSize: "22px", fontWeight: "800", color: stat.valColor }}>{stat.value}</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr auto", gap: "16px", alignItems: "end" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
+                        Search Traffic Inspector
+                      </label>
+                      <div style={{ position: "relative" }}>
+                        <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+                        <input
+                          type="text"
+                          placeholder="Name or HRMS ID..."
+                          value={assessSearch}
+                          onChange={(e) => setAssessSearch(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px 10px 36px",
+                            borderRadius: "8px",
+                            border: "1px solid #cbd5e1",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                            color: "#0f172a",
+                            boxSizing: "border-box"
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div style={{ fontSize: "12px", fontWeight: "700", color: "#334155", marginTop: "2px" }}>{stat.label}</div>
-                    <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "1px" }}>{stat.subtitle}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
 
-            {/* Filters Section */}
-            <div
-              style={{
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "16px",
-                padding: "20px",
-                marginBottom: "24px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
-              }}
-            >
-              <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr auto", gap: "16px", alignItems: "end" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
-                    Search Traffic Inspector
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
-                    <input
-                      type="text"
-                      placeholder="Name or HRMS ID..."
-                      value={assessSearch}
-                      onChange={(e) => setAssessSearch(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px 10px 36px",
-                        borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
-                        fontSize: "13px",
-                        fontWeight: "500",
-                        color: "#0f172a",
-                        boxSizing: "border-box"
-                      }}
-                    />
-                  </div>
-                </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Station</label>
+                      <select
+                        value={assessStation}
+                        onChange={(e) => setAssessStation(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid #cbd5e1",
+                          fontSize: "13px",
+                          fontWeight: "500",
+                          color: "#0f172a",
+                          boxSizing: "border-box"
+                        }}
+                      >
+                        <option value="All">All Stations</option>
+                        {uniqueStationsList.filter(x => x !== "All").map(st => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Station</label>
-                  <select
-                    value={assessStation}
-                    onChange={(e) => setAssessStation(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
-                      fontSize: "13px",
-                      fontWeight: "500",
-                      color: "#0f172a",
-                      boxSizing: "border-box"
-                    }}
-                  >
-                    <option value="All">All Stations</option>
-                    {uniqueStationsList.filter(x => x !== "All").map(st => (
-                      <option key={st} value={st}>{st}</option>
-                    ))}
-                  </select>
-                </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Exam Status</label>
+                      <select
+                        value={assessStatus}
+                        onChange={(e) => setAssessStatus(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid #cbd5e1",
+                          fontSize: "13px",
+                          fontWeight: "500",
+                          color: "#0f172a",
+                          boxSizing: "border-box"
+                        }}
+                      >
+                        <option value="All">All Status</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Exam Sent">Exam Sent</option>
+                        <option value="Exam Taken">Exam Taken</option>
+                        <option value="Submitted">Submitted</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
+                    </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Exam Status</label>
-                  <select
-                    value={assessStatus}
-                    onChange={(e) => setAssessStatus(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid #cbd5e1",
-                      fontSize: "13px",
-                      fontWeight: "500",
-                      color: "#0f172a",
-                      boxSizing: "border-box"
-                    }}
-                  >
-                    <option value="All">All Status</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Exam Sent">Exam Sent</option>
-                    <option value="Exam Taken">Exam Taken</option>
-                    <option value="Submitted">Submitted</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
-                </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Last Assessed</label>
+                      <div style={{ position: "relative" }}>
+                        <Calendar size={14} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+                        <input
+                          type="date"
+                          value={assessDate}
+                          onChange={(e) => setAssessDate(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "10px 36px 10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid #cbd5e1",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                            color: "#0f172a",
+                            boxSizing: "border-box"
+                          }}
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Last Assessed</label>
-                  <div style={{ position: "relative" }}>
-                    <Calendar size={14} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
-                    <input
-                      type="date"
-                      value={assessDate}
-                      onChange={(e) => setAssessDate(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px 36px 10px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid #cbd5e1",
-                        fontSize: "13px",
-                        fontWeight: "500",
-                        color: "#0f172a",
-                        boxSizing: "border-box"
-                      }}
-                    />
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      <button
+                        onClick={() => { setAssessSearch(""); setAssessStation("All"); setAssessStatus("All"); setAssessDate(""); }}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          padding: "10px 16px",
+                          borderRadius: "8px",
+                          fontSize: "13px",
+                          fontWeight: "700",
+                          color: "#475569",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Reset
+                      </button>
+                      <button
+                        style={{
+                          background: "#0f172a",
+                          border: "none",
+                          padding: "10px 20px",
+                          borderRadius: "8px",
+                          fontSize: "13px",
+                          fontWeight: "700",
+                          color: "#ffffff",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          cursor: "pointer"
+                        }}
+                      >
+                        <Filter size={14} /> Apply Filters
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button
-                    onClick={() => { setAssessSearch(""); setAssessStation("All"); setAssessStatus("All"); setAssessDate(""); }}
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #cbd5e1",
-                      padding: "10px 16px",
-                      borderRadius: "8px",
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      color: "#475569",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Reset
-                  </button>
-                  <button
-                    style={{
-                      background: "#0f172a",
-                      border: "none",
-                      padding: "10px 20px",
-                      borderRadius: "8px",
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      color: "#ffffff",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      cursor: "pointer"
-                    }}
-                  >
-                    <Filter size={14} /> Apply Filters
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Roster Table */}
-            <div
-              style={{
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "16px",
-                padding: "24px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
-              }}
-            >
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1.5px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
-                      <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                        TRAFFIC INSPECTOR
-                      </th>
-                      <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>HRMS ID</th>
-                      <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>STATION</th>
-                      <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>LAST ASSESSED</th>
-                      <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>SCORE</th>
-                      <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>EXAM STATUS</th>
-                      <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "right" }}>ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTiList.map((item) => {
-                      const stationCode = stationCodeMap[item.stationName] || "STN";
-
-                      const examStatusBadgeStyle = (status) => {
-                        if (status === "Exam Sent") return { bg: "#f3e8ff", color: "#6b21a8" };
-                        if (status === "Exam Taken") return { bg: "#dcfce7", color: "#166534" };
-                        if (status === "Submitted") return { bg: "#dbeafe", color: "#2563eb" };
-                        if (status === "Rejected") return { bg: "#fee2e2", color: "#dc2626" };
-                        if (status === "Approved") return { bg: "#dcfce7", color: "#166534" };
-                        return { bg: "#f1f5f9", color: "#475569" };
-                      };
-
-                      const statusColors = examStatusBadgeStyle(item.status);
-
-                      return (
-                        <tr key={item.id || item.employeeId} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                          <td style={{ padding: "14px 16px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                              <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#1e3a8a", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>
-                                {item.name.charAt(0)}
-                              </div>
-                              <div>
-                                <div style={{ fontWeight: "700", color: "#0f172a", fontSize: "14px" }}>{item.name}</div>
-                                <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "2px" }}>Senior Scale</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ padding: "14px 16px", color: "#475569", fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>
-                            {item.employeeId}
-                          </td>
-                          <td style={{ padding: "14px 16px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span style={{ color: "#334155", fontSize: "13px", fontWeight: "500" }}>{item.stationName}</span>
-                              <span style={{ background: "#eff6ff", color: "#2563eb", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: "700" }}>
-                                {stationCode}
-                              </span>
-                            </div>
-                          </td>
-                          <td style={{ padding: "14px 16px", color: "#64748b", fontSize: "13px", fontWeight: "500" }}>
-                            {item.lastAssessed || "—"}
-                          </td>
-                          <td style={{ padding: "14px 16px", color: "#0f172a", fontWeight: "800", fontSize: "14px" }}>
-                            {item.score ? `${item.score}/100` : "—"}
-                          </td>
-                          <td style={{ padding: "14px 16px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <span style={{ background: statusColors.bg, color: statusColors.color, padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700" }}>
-                                {item.status}
-                              </span>
-                              {item.status === "Exam Sent" && (
-                                <span style={{ background: "#f3e8ff", color: "#6b21a8", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
-                                  <Clock size={12} /> Waiting for Response
-                                </span>
-                              )}
-                              {item.status === "Rejected" && (
-                                <span style={{ background: "#fee2e2", color: "#dc2626", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
-                                  <AlertTriangle size={12} /> Needs Review
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                            <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "flex-end" }}>
-                              {(item.status === "Pending" || item.status === "Rejected") && (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      localStorage.setItem(`ti_exam_assigned_${item.employeeId}`, "true");
-                                      // Add an item to pendingAssessments if it doesn't exist
-                                      const exists = pendingAssessments.some(p => p.id === item.employeeId);
-                                      if (!exists) {
-                                        setPendingAssessments(prev => [{
-                                          id: item.employeeId,
-                                          title: `Traffic Inspector - ${item.employeeId}`,
-                                          statusLabel: "Pending Assessment",
-                                          assessedByLine: `Awaiting: Your Assessment - on ${todayIso()}`,
-                                          employeeLine: `Employee: ${item.name} | Division: ${item.division || "Nagpur"}`,
-                                          actionType: "assessment"
-                                        }, ...prev]);
-                                      }
-                                      alert(`Exam assigned and sent to Traffic Inspector ${item.name || ""}.`);
-                                      setAssessmentActionNotice(`Exam assigned to ${item.name}.`);
-                                    }}
-                                    style={{
-                                      background: "#7c3aed",
-                                      border: "none",
-                                      color: "#ffffff",
-                                      padding: "6px 12px",
-                                      borderRadius: "8px",
-                                      cursor: "pointer",
-                                      fontWeight: "700",
-                                      fontSize: "12px"
-                                    }}
-                                  >
-                                    Send Access
-                                  </button>
-                                  <button
-                                    onClick={() => openTiForm(item)}
-                                    style={{
-                                      background: "#ffffff",
-                                      border: "1px solid #cbd5e1",
-                                      padding: "5px 12px",
-                                      borderRadius: "8px",
-                                      fontSize: "12px",
-                                      fontWeight: "700",
-                                      color: "#475569",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "4px",
-                                      cursor: "pointer"
-                                    }}
-                                  >
-                                    Open Form <ExternalLink size={12} />
-                                  </button>
-                                </>
-                              )}
-                              {item.status === "Exam Sent" && (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      localStorage.setItem(`ti_exam_taken_${item.employeeId}`, "true");
-                                      alert(`Mock sync: Traffic Inspector ${item.name} completed the online exam.`);
-                                      setAssessmentActionNotice(`Online exam completed by ${item.name}.`);
-                                    }}
-                                    style={{
-                                      background: "#2563eb",
-                                      border: "none",
-                                      color: "#ffffff",
-                                      padding: "6px 12px",
-                                      borderRadius: "8px",
-                                      cursor: "pointer",
-                                      fontWeight: "700",
-                                      fontSize: "12px"
-                                    }}
-                                  >
-                                    Simulate Exam Taken
-                                  </button>
-                                  <button
-                                    onClick={() => openTiForm(item)}
-                                    style={{
-                                      background: "#ffffff",
-                                      border: "1px solid #cbd5e1",
-                                      padding: "5px 12px",
-                                      borderRadius: "8px",
-                                      fontSize: "12px",
-                                      fontWeight: "700",
-                                      color: "#475569",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "4px",
-                                      cursor: "pointer"
-                                    }}
-                                  >
-                                    Open Form <ExternalLink size={12} />
-                                  </button>
-                                </>
-                              )}
-                              {item.status === "Exam Taken" && (
-                                <button
-                                  onClick={() => openTiForm(item)}
-                                  style={{
-                                    background: "#16a34a",
-                                    border: "none",
-                                    color: "#ffffff",
-                                    padding: "6px 16px",
-                                    borderRadius: "8px",
-                                    cursor: "pointer",
-                                    fontWeight: "700",
-                                    fontSize: "12px"
-                                  }}
-                                >
-                                  Start Assessment
-                                </button>
-                              )}
-                              {item.status === "Submitted" && (
-                                <>
-                                  <button
-                                    onClick={() => openTiForm(item)}
-                                    style={{
-                                      background: "#2563eb",
-                                      border: "none",
-                                      color: "#ffffff",
-                                      padding: "6px 12px",
-                                      borderRadius: "8px",
-                                      cursor: "pointer",
-                                      fontWeight: "700",
-                                      fontSize: "12px"
-                                    }}
-                                  >
-                                    View Form
-                                  </button>
-                                  <button
-                                    onClick={() => openTiForm(item)}
-                                    style={{
-                                      background: "#ea580c",
-                                      border: "none",
-                                      color: "#ffffff",
-                                      padding: "6px 12px",
-                                      borderRadius: "8px",
-                                      cursor: "pointer",
-                                      fontWeight: "700",
-                                      fontSize: "12px"
-                                    }}
-                                  >
-                                    Edit
-                                  </button>
-                                </>
-                              )}
-                              {item.status === "Approved" && (
-                                <button
-                                  onClick={() => openTiForm(item)}
-                                  style={{
-                                    background: "#2563eb",
-                                    border: "none",
-                                    color: "#ffffff",
-                                    padding: "6px 12px",
-                                    borderRadius: "8px",
-                                    cursor: "pointer",
-                                    fontWeight: "700",
-                                    fontSize: "12px"
-                                  }}
-                                >
-                                  View Form
-                                </button>
-                              )}
-                            </div>
-                          </td>
+                {/* Roster Table */}
+                <div
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "16px",
+                    padding: "24px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
+                  }}
+                >
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1.5px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
+                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            TRAFFIC INSPECTOR
+                          </th>
+                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>HRMS ID</th>
+                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>STATION</th>
+                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>LAST ASSESSED</th>
+                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>SCORE</th>
+                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>EXAM STATUS</th>
+                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "right" }}>ACTION</th>
                         </tr>
-                      );
-                    })}
-                    {filteredTiList.length === 0 && (
-                      <tr>
-                        <td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#64748b", fontSize: "14px", fontWeight: "500" }}>
-                          No Traffic Inspectors match your current filters.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody>
+                        {filteredTiList.map((item) => {
+                          const stationCode = stationCodeMap[item.stationName] || "STN";
 
-              {/* Pagination Info */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px", borderTop: "1px solid #f1f5f9", paddingTop: "16px" }}>
-                <div style={{ fontSize: "13px", color: "#64748b", fontWeight: "500" }}>
-                  Showing 1 to {filteredTiList.length} of {filteredTiList.length} entries
+                          const examStatusBadgeStyle = (status) => {
+                            if (status === "Exam Sent") return { bg: "#f3e8ff", color: "#6b21a8" };
+                            if (status === "Exam Taken") return { bg: "#dcfce7", color: "#166534" };
+                            if (status === "Submitted") return { bg: "#dbeafe", color: "#2563eb" };
+                            if (status === "Rejected") return { bg: "#fee2e2", color: "#dc2626" };
+                            if (status === "Approved") return { bg: "#dcfce7", color: "#166534" };
+                            return { bg: "#f1f5f9", color: "#475569" };
+                          };
+
+                          const statusColors = examStatusBadgeStyle(item.status);
+
+                          return (
+                            <tr key={item.id || item.employeeId} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                              <td style={{ padding: "14px 16px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                  <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#1e3a8a", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>
+                                    {item.name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: "700", color: "#0f172a", fontSize: "14px" }}>{item.name}</div>
+                                    <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "2px" }}>Senior Scale</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: "14px 16px", color: "#475569", fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>
+                                {item.employeeId}
+                              </td>
+                              <td style={{ padding: "14px 16px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span style={{ color: "#334155", fontSize: "13px", fontWeight: "500" }}>{item.stationName}</span>
+                                  <span style={{ background: "#eff6ff", color: "#2563eb", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: "700" }}>
+                                    {stationCode}
+                                  </span>
+                                </div>
+                              </td>
+                              <td style={{ padding: "14px 16px", color: "#64748b", fontSize: "13px", fontWeight: "500" }}>
+                                {item.lastAssessed || "—"}
+                              </td>
+                              <td style={{ padding: "14px 16px", color: "#0f172a", fontWeight: "800", fontSize: "14px" }}>
+                                {item.score ? `${item.score}/100` : "—"}
+                              </td>
+                              <td style={{ padding: "14px 16px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <span style={{ background: statusColors.bg, color: statusColors.color, padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700" }}>
+                                    {item.status}
+                                  </span>
+                                  {item.status === "Exam Sent" && (
+                                    <span style={{ background: "#f3e8ff", color: "#6b21a8", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
+                                      <Clock size={12} /> Waiting for Response
+                                    </span>
+                                  )}
+                                  {item.status === "Rejected" && (
+                                    <span style={{ background: "#fee2e2", color: "#dc2626", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
+                                      <AlertTriangle size={12} /> Needs Review
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "flex-end" }}>
+                                  {(item.status === "Pending" || item.status === "Rejected") && (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          localStorage.setItem(`ti_exam_assigned_${item.employeeId}`, "true");
+                                          // Add an item to pendingAssessments if it doesn't exist
+                                          const exists = pendingAssessments.some(p => p.id === item.employeeId);
+                                          if (!exists) {
+                                            setPendingAssessments(prev => [{
+                                              id: item.employeeId,
+                                              title: `Traffic Inspector - ${item.employeeId}`,
+                                              statusLabel: "Pending Assessment",
+                                              assessedByLine: `Awaiting: Your Assessment - on ${todayIso()}`,
+                                              employeeLine: `Employee: ${item.name} | Division: ${item.division || "Nagpur"}`,
+                                              actionType: "assessment"
+                                            }, ...prev]);
+                                          }
+                                          alert(`Exam assigned and sent to Traffic Inspector ${item.name || ""}.`);
+                                          setAssessmentActionNotice(`Exam assigned to ${item.name}.`);
+                                        }}
+                                        style={{
+                                          background: "#7c3aed",
+                                          border: "none",
+                                          color: "#ffffff",
+                                          padding: "6px 12px",
+                                          borderRadius: "8px",
+                                          cursor: "pointer",
+                                          fontWeight: "700",
+                                          fontSize: "12px"
+                                        }}
+                                      >
+                                        Send Access
+                                      </button>
+                                      <button
+                                        onClick={() => openTiForm(item)}
+                                        style={{
+                                          background: "#ffffff",
+                                          border: "1px solid #cbd5e1",
+                                          padding: "5px 12px",
+                                          borderRadius: "8px",
+                                          fontSize: "12px",
+                                          fontWeight: "700",
+                                          color: "#475569",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "4px",
+                                          cursor: "pointer"
+                                        }}
+                                      >
+                                        Open Form <ExternalLink size={12} />
+                                      </button>
+                                    </>
+                                  )}
+                                  {item.status === "Exam Sent" && (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          localStorage.setItem(`ti_exam_taken_${item.employeeId}`, "true");
+                                          alert(`Mock sync: Traffic Inspector ${item.name} completed the online exam.`);
+                                          setAssessmentActionNotice(`Online exam completed by ${item.name}.`);
+                                        }}
+                                        style={{
+                                          background: "#2563eb",
+                                          border: "none",
+                                          color: "#ffffff",
+                                          padding: "6px 12px",
+                                          borderRadius: "8px",
+                                          cursor: "pointer",
+                                          fontWeight: "700",
+                                          fontSize: "12px"
+                                        }}
+                                      >
+                                        Simulate Exam Taken
+                                      </button>
+                                      <button
+                                        onClick={() => openTiForm(item)}
+                                        style={{
+                                          background: "#ffffff",
+                                          border: "1px solid #cbd5e1",
+                                          padding: "5px 12px",
+                                          borderRadius: "8px",
+                                          fontSize: "12px",
+                                          fontWeight: "700",
+                                          color: "#475569",
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "4px",
+                                          cursor: "pointer"
+                                        }}
+                                      >
+                                        Open Form <ExternalLink size={12} />
+                                      </button>
+                                    </>
+                                  )}
+                                  {item.status === "Exam Taken" && (
+                                    <button
+                                      onClick={() => openTiForm(item)}
+                                      style={{
+                                        background: "#16a34a",
+                                        border: "none",
+                                        color: "#ffffff",
+                                        padding: "6px 16px",
+                                        borderRadius: "8px",
+                                        cursor: "pointer",
+                                        fontWeight: "700",
+                                        fontSize: "12px"
+                                      }}
+                                    >
+                                      Start Assessment
+                                    </button>
+                                  )}
+                                  {item.status === "Submitted" && (
+                                    <>
+                                      <button
+                                        onClick={() => openTiForm(item)}
+                                        style={{
+                                          background: "#2563eb",
+                                          border: "none",
+                                          color: "#ffffff",
+                                          padding: "6px 12px",
+                                          borderRadius: "8px",
+                                          cursor: "pointer",
+                                          fontWeight: "700",
+                                          fontSize: "12px"
+                                        }}
+                                      >
+                                        View Form
+                                      </button>
+                                      <button
+                                        onClick={() => openTiForm(item)}
+                                        style={{
+                                          background: "#ea580c",
+                                          border: "none",
+                                          color: "#ffffff",
+                                          padding: "6px 12px",
+                                          borderRadius: "8px",
+                                          cursor: "pointer",
+                                          fontWeight: "700",
+                                          fontSize: "12px"
+                                        }}
+                                      >
+                                        Edit
+                                      </button>
+                                    </>
+                                  )}
+                                  {item.status === "Approved" && (
+                                    <button
+                                      onClick={() => openTiForm(item)}
+                                      style={{
+                                        background: "#2563eb",
+                                        border: "none",
+                                        color: "#ffffff",
+                                        padding: "6px 12px",
+                                        borderRadius: "8px",
+                                        cursor: "pointer",
+                                        fontWeight: "700",
+                                        fontSize: "12px"
+                                      }}
+                                    >
+                                      View Form
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {filteredTiList.length === 0 && (
+                          <tr>
+                            <td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#64748b", fontSize: "14px", fontWeight: "500" }}>
+                              No Traffic Inspectors match your current filters.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Info */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px", borderTop: "1px solid #f1f5f9", paddingTop: "16px" }}>
+                    <div style={{ fontSize: "13px", color: "#64748b", fontWeight: "500" }}>
+                      Showing 1 to {filteredTiList.length} of {filteredTiList.length} entries
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <button
+                        disabled
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "6px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#cbd5e1",
+                          cursor: "not-allowed"
+                        }}
+                      >
+                        &lt;
+                      </button>
+                      <button
+                        style={{
+                          background: "#0f172a",
+                          border: "none",
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "6px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#ffffff",
+                          fontWeight: "700",
+                          fontSize: "13px"
+                        }}
+                      >
+                        1
+                      </button>
+                      <button
+                        disabled
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "6px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#cbd5e1",
+                          cursor: "not-allowed"
+                        }}
+                      >
+                        &gt;
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <button
-                    disabled
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #cbd5e1",
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "6px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#cbd5e1",
-                      cursor: "not-allowed"
-                    }}
-                  >
-                    &lt;
-                  </button>
-                  <button
-                    style={{
-                      background: "#0f172a",
-                      border: "none",
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "6px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#ffffff",
-                      fontWeight: "700",
-                      fontSize: "13px"
-                    }}
-                  >
-                    1
-                  </button>
-                  <button
-                    disabled
-                    style={{
-                      background: "#ffffff",
-                      border: "1px solid #cbd5e1",
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "6px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#cbd5e1",
-                      cursor: "not-allowed"
-                    }}
-                  >
-                    &gt;
-                  </button>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         );
       }
-      
+
       case "Reports and Analytics": {
         return (
           <CommonReports
             aomPointsmen={aomPointsmen}
             stationMastersDirectory={stationMastersDirectory}
-            aomSSs={aomSSs}
-            aomTMs={aomTMs}
-            aomTIs={aomTIs}
-            stations={stationsDirectory}
+            aomSSs={aomSuperintendents}
+            aomTMs={aomTrainManagers}
+            aomTIs={trafficInspectors}
+            stations={stations}
             selectedReportUserId={selectedReportUserId}
             setSelectedReportUserId={setSelectedReportUserId}
             repF={repF}
@@ -10156,32 +10289,32 @@ function AOmModule({ user, onLogout }) {
         const aomCAT_B = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
         const tabs = ["Pending", "Approved", "Rejected"];
 
-        /* ─── DETAIL VIEW ─── */
+        /* â”€â”€â”€ DETAIL VIEW â”€â”€â”€ */
         if (aomSelectedItem) {
-          const secs      = aomEditSections[aomSelectedItem.id] || [];
+          const secs = aomEditSections[aomSelectedItem.id] || [];
           const liveTotal = secs.reduce((s, x) => s + x.score, 0);
-          const liveCat   = aomGetCat(liveTotal);
-          const locked    = aomSelectedItem.status !== "Submitted" && aomSelectedItem.status !== "Pending";
-          const reject    = aomRejectMode[aomSelectedItem.id] || false;
+          const liveCat = aomGetCat(liveTotal);
+          const locked = aomSelectedItem.status !== "Submitted" && aomSelectedItem.status !== "Pending";
+          const reject = aomRejectMode[aomSelectedItem.id] || false;
 
           const savedForms = aomApprovalTab === "SM"
             ? (localStorage.getItem("ti_sm_forms") ? JSON.parse(localStorage.getItem("ti_sm_forms")) : {})
             : (localStorage.getItem("ti_tm_forms") ? JSON.parse(localStorage.getItem("ti_tm_forms")) : {});
           const form = savedForms[aomSelectedItem.id] || {};
-          const pme  = form.pmeStatus || aomSelectedItem.pmeStatus || (aomSelectedItem.meta?.pmeStatus) || "Fit";
-          const ref  = form.refStatus || aomSelectedItem.refStatus || (aomSelectedItem.meta?.refStatus) || "Cleared";
-          const alc  = form.alcoholicStatus || aomSelectedItem.alcoholicStatus || (aomSelectedItem.meta?.alcoholicStatus) || "Non-Alcoholic";
+          const pme = form.pmeStatus || aomSelectedItem.pmeStatus || (aomSelectedItem.meta?.pmeStatus) || "Fit";
+          const ref = form.refStatus || aomSelectedItem.refStatus || (aomSelectedItem.meta?.refStatus) || "Cleared";
+          const alc = form.alcoholicStatus || aomSelectedItem.alcoholicStatus || (aomSelectedItem.meta?.alcoholicStatus) || "Non-Alcoholic";
 
           return (
             <div className="ti2-card animate-fade-in">
               <div className="ti2-card-hdr">
                 <div>
                   <h2>Review — {aomSelectedItem.name} ({aomSelectedItem.hrmsId})</h2>
-                  <p style={{margin:"2px 0 0",fontSize:12,color:"#64748b"}}>
-                    {aomSelectedItem.station} · {aomApprovalTab === "SM" ? "Station Master" : "Train Manager"} · Assessed on {aomSelectedItem.lastDate}
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>
+                    {aomSelectedItem.station} Â· {aomApprovalTab === "SM" ? "Station Master" : "Train Manager"} Â· Assessed on {aomSelectedItem.lastDate}
                   </p>
                 </div>
-                <button className="ti2-link-btn" onClick={() => setAomSelectedId(null)}>← Back</button>
+                <button className="ti2-link-btn" onClick={() => setAomSelectedId(null)}>â† Back</button>
               </div>
 
               {/* Info meta — same ti2-review-meta grid as TI */}
@@ -10189,8 +10322,8 @@ function AOmModule({ user, onLogout }) {
                 <div><label>{aomApprovalTab === "SM" ? "Station Master" : "Train Manager"}</label><strong>{aomSelectedItem.name}</strong></div>
                 <div><label>HRMS ID</label><strong>{aomSelectedItem.hrmsId}</strong></div>
                 <div><label>Station</label><strong>{aomSelectedItem.station}</strong></div>
-                <div><label>PME Status</label><strong className={pme==="Fit"?"ti2-green":"ti2-red"}>{pme}</strong></div>
-                <div><label>REF Status</label><strong className={ref==="Cleared"?"ti2-green":"ti2-amber"}>{ref}</strong></div>
+                <div><label>PME Status</label><strong className={pme === "Fit" ? "ti2-green" : "ti2-red"}>{pme}</strong></div>
+                <div><label>REF Status</label><strong className={ref === "Cleared" ? "ti2-green" : "ti2-amber"}>{ref}</strong></div>
                 <div><label>Alcoholic Status</label><strong>{alc}</strong></div>
               </div>
 
@@ -10203,14 +10336,14 @@ function AOmModule({ user, onLogout }) {
                     <div key={sec.title} className="ti2-review-sec-row">
                       <span className="ti2-review-sec-name">{sec.title}</span>
                       <div className="ti2-review-bar-wrap">
-                        <div className="ti2-review-bar" style={{width:`${pct}%`,background:pct>=80?"#16a34a":pct>=50?"#2563eb":"#dc2626"}}/>
+                        <div className="ti2-review-bar" style={{ width: `${pct}%`, background: pct >= 80 ? "#16a34a" : pct >= 50 ? "#2563eb" : "#dc2626" }} />
                       </div>
                       {locked ? (
                         <span className="ti2-review-score-static">{sec.score}/{sec.max}</span>
                       ) : (
                         <div className="ti2-review-score-input">
                           <input type="number" min={0} max={sec.max} value={sec.score}
-                            onChange={e => aomUpdateSec(aomSelectedItem.id, idx, e.target.value)}/>
+                            onChange={e => aomUpdateSec(aomSelectedItem.id, idx, e.target.value)} />
                           <span className="ti2-sec-max">/ {sec.max}</span>
                         </div>
                       )}
@@ -10221,8 +10354,8 @@ function AOmModule({ user, onLogout }) {
 
               {/* Live score — same ti2-live-score as TI */}
               <div className="ti2-live-score">
-                <div><label>Grand Total</label><strong style={{color:aomCAT_C[liveCat],fontSize:22}}>{liveTotal}/100</strong></div>
-                <div><label>Category</label><span className="ti2-badge" style={{background:aomCAT_B[liveCat],color:aomCAT_C[liveCat],fontSize:13,padding:"4px 14px"}}>Category {liveCat}</span></div>
+                <div><label>Grand Total</label><strong style={{ color: aomCAT_C[liveCat], fontSize: 22 }}>{liveTotal}/100</strong></div>
+                <div><label>Category</label><span className="ti2-badge" style={{ background: aomCAT_B[liveCat], color: aomCAT_C[liveCat], fontSize: 13, padding: "4px 14px" }}>Category {liveCat}</span></div>
               </div>
 
               {/* AOM remarks — mirrors TI Remarks */}
@@ -10231,32 +10364,32 @@ function AOmModule({ user, onLogout }) {
                   <label>AOM Remarks</label>
                   <textarea rows={3}
                     value={aomAomRemarks[aomSelectedItem.id] || ""}
-                    onChange={e => setAomAomRemarks(p => ({...p,[aomSelectedItem.id]:e.target.value}))}
-                    placeholder="Add remarks…"/>
+                    onChange={e => setAomAomRemarks(p => ({ ...p, [aomSelectedItem.id]: e.target.value }))}
+                    placeholder="Add remarksâ€¦" />
                 </div>
               )}
 
               {/* Reject reason input */}
               {reject && !locked && (
-                <div className="ti2-form-field" style={{marginTop:10}}>
-                  <label style={{color:"#dc2626"}}>Rejection Reason (mandatory)</label>
-                  <textarea rows={2} placeholder="Enter rejection reason…" id={`aom-reject-${aomSelectedItem.id}`}/>
+                <div className="ti2-form-field" style={{ marginTop: 10 }}>
+                  <label style={{ color: "#dc2626" }}>Rejection Reason (mandatory)</label>
+                  <textarea rows={2} placeholder="Enter rejection reasonâ€¦" id={`aom-reject-${aomSelectedItem.id}`} />
                 </div>
               )}
 
               {/* Audit trail */}
               {aomSelectedItem.auditTrail?.length > 0 && (
                 <div>
-                  <button className="ti2-link-btn-sm" style={{marginTop:12}}
-                    onClick={() => setAomShowAudit(p => ({...p,[aomSelectedItem.id]:!p[aomSelectedItem.id]}))}>
+                  <button className="ti2-link-btn-sm" style={{ marginTop: 12 }}
+                    onClick={() => setAomShowAudit(p => ({ ...p, [aomSelectedItem.id]: !p[aomSelectedItem.id] }))}>
                     {aomShowAudit[aomSelectedItem.id] ? "Hide" : "View"} Audit Trail
                   </button>
                   {aomShowAudit[aomSelectedItem.id] && (
                     <div className="ti2-audit-trail">
                       {aomSelectedItem.auditTrail.map((a, i) => (
                         <div key={i} className="ti2-audit-row">
-                          <strong>{a.action}</strong> · {a.by} · {a.date}
-                          {a.remark && <div style={{fontSize:11,color:"#64748b",marginTop:2}}>"{a.remark}"</div>}
+                          <strong>{a.action}</strong> Â· {a.by} Â· {a.date}
+                          {a.remark && <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>"{a.remark}"</div>}
                         </div>
                       ))}
                     </div>
@@ -10267,28 +10400,28 @@ function AOmModule({ user, onLogout }) {
               {/* Locked banner */}
               {locked && (
                 <div className="ti2-locked-banner">
-                  {aomSelectedItem.status === "Approved" ? "✓ Assessment Approved and Locked" : "✗ Assessment Rejected"}
-                  {aomSelectedItem.aomRemarks && <div style={{marginTop:4,fontSize:12}}>Remarks: {aomSelectedItem.aomRemarks}</div>}
+                  {aomSelectedItem.status === "Approved" ? "âœ“ Assessment Approved and Locked" : "âœ— Assessment Rejected"}
+                  {aomSelectedItem.aomRemarks && <div style={{ marginTop: 4, fontSize: 12 }}>Remarks: {aomSelectedItem.aomRemarks}</div>}
                 </div>
               )}
 
               {/* Action buttons — exact same as TI: Reject / Approve as Submitted / Modify & Approve */}
               {!locked && !reject && (
                 <div className="ti2-review-actions">
-                  <button className="ti2-danger-btn" onClick={() => setAomRejectMode(p => ({...p,[aomSelectedItem.id]:true}))}>
-                    <XCircle size={14}/> Reject
+                  <button className="ti2-danger-btn" onClick={() => setAomRejectMode(p => ({ ...p, [aomSelectedItem.id]: true }))}>
+                    <XCircle size={14} /> Reject
                   </button>
                   <button className="ti2-ghost-btn" onClick={() => aomFinalize(aomSelectedItem.id, "approve")}>
-                    <CheckCircle size={14}/> Approve as Submitted
+                    <CheckCircle size={14} /> Approve as Submitted
                   </button>
                   <button className="ti2-primary-btn" onClick={() => aomFinalize(aomSelectedItem.id, "modify")}>
-                    <CheckCircle size={14}/> Modify &amp; Approve
+                    <CheckCircle size={14} /> Modify &amp; Approve
                   </button>
                 </div>
               )}
               {reject && !locked && (
                 <div className="ti2-review-actions">
-                  <button className="ti2-ghost-btn" onClick={() => setAomRejectMode(p => ({...p,[aomSelectedItem.id]:false}))}>Cancel</button>
+                  <button className="ti2-ghost-btn" onClick={() => setAomRejectMode(p => ({ ...p, [aomSelectedItem.id]: false }))}>Cancel</button>
                   <button className="ti2-danger-btn" onClick={() => {
                     const note = document.getElementById(`aom-reject-${aomSelectedItem.id}`)?.value || "No reason provided";
                     aomFinalize(aomSelectedItem.id, "reject", note);
@@ -10299,7 +10432,7 @@ function AOmModule({ user, onLogout }) {
           );
         }
 
-        /* ─── LIST VIEW ─── */
+        /* â”€â”€â”€ LIST VIEW â”€â”€â”€ */
         return (
           <div className="ti2-card animate-fade-in">
             <div className="ti2-card-hdr">
@@ -10308,8 +10441,8 @@ function AOmModule({ user, onLogout }) {
             <p className="ti2-subtitle">Review and approve {aomApprovalTab === "SM" ? "Station Master" : "Train Manager"} assessments submitted by Traffic Inspectors.</p>
 
             {/* Role switch — mirrors TI's ti2-tabs style */}
-            <div className="ti2-tabs" style={{marginBottom:4}}>
-              {["SM","TM"].map(role => (
+            <div className="ti2-tabs" style={{ marginBottom: 4 }}>
+              {["SM", "TM"].map(role => (
                 <button key={role}
                   className={`ti2-tab ${aomApprovalTab === role ? "active" : ""}`}
                   onClick={() => { setAomApprovalTab(role); setAomSelectedId(null); setAomReviewTab("Pending"); setAomReviewSearch(""); setAomReviewStation("All"); }}>
@@ -10335,9 +10468,9 @@ function AOmModule({ user, onLogout }) {
             {/* Filters — exact same as TI */}
             <div className="ti2-filter-row">
               <div className="ti2-search-box">
-                <Search size={13}/>
-                <input placeholder={`Search ${aomApprovalTab === "SM" ? "station master" : "train manager"}…`}
-                  value={aomReviewSearch} onChange={e => setAomReviewSearch(e.target.value)}/>
+                <Search size={13} />
+                <input placeholder={`Search ${aomApprovalTab === "SM" ? "station master" : "train manager"}â€¦`}
+                  value={aomReviewSearch} onChange={e => setAomReviewSearch(e.target.value)} />
               </div>
               <select className="ti2-select" value={aomReviewStation} onChange={e => setAomReviewStation(e.target.value)}>
                 <option value="All">All Stations</option>
@@ -10346,7 +10479,7 @@ function AOmModule({ user, onLogout }) {
             </div>
 
             {aomApprovalNotice && (
-              <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",color:"#15803d",padding:"10px 14px",borderRadius:"8px",marginBottom:"12px",fontWeight:700,fontSize:"13px"}}>
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#15803d", padding: "10px 14px", borderRadius: "8px", marginBottom: "12px", fontWeight: 700, fontSize: "13px" }}>
                 {aomApprovalNotice}
               </div>
             )}
@@ -10354,12 +10487,12 @@ function AOmModule({ user, onLogout }) {
             {/* Table — exact same structure as TI */}
             <div className="ti2-table-wrap">
               <div className="ti2-pm-head ti2-pm-row">
-                {["Name","HRMS ID","Station","Submitted By","Date","Score","Status","Action"].map(h => <span key={h}>{h}</span>)}
+                {["Name", "HRMS ID", "Station", "Submitted By", "Date", "Score", "Status", "Action"].map(h => <span key={h}>{h}</span>)}
               </div>
               {aomFilteredList.length === 0 && <p className="ti2-empty">No records in this category.</p>}
               {aomFilteredList.map(item => {
                 const score = item.score || 0;
-                const cat   = item.category || aomGetCat(score);
+                const cat = item.category || aomGetCat(score);
                 return (
                   <div key={item.id} className="ti2-pm-row ti2-pm-data-row">
                     <span><strong>{item.name}</strong></span>
@@ -10367,7 +10500,7 @@ function AOmModule({ user, onLogout }) {
                     <span>{item.station}</span>
                     <span>Traffic Inspector</span>
                     <span>{item.lastDate}</span>
-                    <span><strong style={{color:aomCAT_C[cat]}}>{score}/100</strong></span>
+                    <span><strong style={{ color: aomCAT_C[cat] }}>{score}/100</strong></span>
                     <span>
                       <span className={`ti2-status-pill ti2-status-${item.status.toLowerCase() === "submitted" ? "pending" : item.status.toLowerCase()}`}>
                         {item.status === "Submitted" ? "Pending" : item.status}
@@ -10375,7 +10508,7 @@ function AOmModule({ user, onLogout }) {
                     </span>
                     <span>
                       <button className="ti2-link-btn-sm" onClick={() => aomOpenReview(item.id)}>
-                        {item.status === "Submitted" ? <><ClipboardCheck size={12}/> Review</> : <><Eye size={12}/> View</>}
+                        {item.status === "Submitted" ? <><ClipboardCheck size={12} /> Review</> : <><Eye size={12} /> View</>}
                       </button>
                     </span>
                   </div>
@@ -10385,6 +10518,31 @@ function AOmModule({ user, onLogout }) {
           </div>
         );
       }
+
+      case "Counselling":
+        return (
+          <CommonCounselling
+            users={allEmployees}
+            isAom={true}
+            addAuditLog={() => { }}
+          />
+        );
+
+      case "PME Position":
+        return (
+          <CommonPmePosition
+            users={allEmployees}
+            exportAlert={(format, name) => alert(`Exporting PME Report in ${format} format...`)}
+          />
+        );
+
+      case "REF Position":
+        return (
+          <CommonRefPosition
+            users={allEmployees}
+            exportAlert={(format, name) => alert(`Exporting REF Report in ${format} format...`)}
+          />
+        );
 
       default:
         return (
@@ -10429,12 +10587,12 @@ function AOmModule({ user, onLogout }) {
             const stationPageActive = ["Station Management", "All Stations", "Add Station", "View / Edit Station"].includes(activePage);
             const assessmentsPageActive = ["Assessments", "Pending Approvals"].includes(activePage);
             const stationMastersActive = ["Station Masters", "Pointsman Under Station Master"].includes(activePage);
-            const isActive = 
-              item.label === "Station Management" ? stationPageActive : 
-              item.label === "Assessments" ? assessmentsPageActive : 
-              item.label === "Station Masters" ? stationMastersActive : 
-              item.label === "Approvals" ? activePage === "Approvals" :
-              activePage === item.label;
+            const isActive =
+              item.label === "Station Management" ? stationPageActive :
+                item.label === "Assessments" ? assessmentsPageActive :
+                  item.label === "Station Masters" ? stationMastersActive :
+                    item.label === "Approvals" ? activePage === "Approvals" :
+                      activePage === item.label;
 
             return (
               <button
@@ -10470,10 +10628,42 @@ function AOmModule({ user, onLogout }) {
         </main>
       </div>
       {renderChartZoomModal()}
-      {renderPmModal()}
-      {renderSmModal()}
-      {renderSsModal()}
-      {renderTmModal()}
+      <CommonUserModal
+        isOpen={!!pmModal}
+        onClose={() => setPmModal(null)}
+        mode={pmModal?.mode}
+        userData={pmModal?.data}
+        setUserData={(data) => setPmModal(p => ({ ...p, data }))}
+        onSubmit={savePmModal}
+        stations={stations}
+      />
+      <CommonUserModal
+        isOpen={!!smModal}
+        onClose={() => setSmModal(null)}
+        mode={smModal?.mode}
+        userData={smModal?.data}
+        setUserData={(data) => setSmModal(p => ({ ...p, data }))}
+        onSubmit={saveSmModal}
+        stations={stations}
+      />
+      <CommonUserModal
+        isOpen={!!ssModal}
+        onClose={() => setSsModal(null)}
+        mode={ssModal?.mode}
+        userData={ssModal?.data}
+        setUserData={(data) => setSsModal(p => ({ ...p, data }))}
+        onSubmit={saveSsModal}
+        stations={stations}
+      />
+      <CommonUserModal
+        isOpen={!!tmModal}
+        onClose={() => setTmModal(null)}
+        mode={tmModal?.mode}
+        userData={tmModal?.data}
+        setUserData={(data) => setTmModal(p => ({ ...p, data }))}
+        onSubmit={saveTmModal}
+        stations={stations}
+      />
       {renderTiModal()}
       {renderAddStationModal()}
     </div>

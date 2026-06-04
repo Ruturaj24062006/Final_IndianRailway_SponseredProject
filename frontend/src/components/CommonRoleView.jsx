@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, Plus, Trash2, Edit, RefreshCw, ChevronLeft, ChevronRight, Star, HeartHandshake, Eye, Award, Clock, FileCheck, CheckCircle2, Lock, Paperclip, ArrowLeft, UserPlus } from "lucide-react";
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from "recharts";
+import CommonUserModal from "./CommonUserModal";
 
 const DEFAULT_STATION_TI_MAP = {
   "Parbhani Junction": "TI PAR",
@@ -1005,9 +1006,42 @@ export default function CommonRoleView({
       </div>
 
       {/* Modals rendered inside the page for visual safety */}
-      {editingUser && renderEditUserModal()}
-      {transferringUser && renderTransferUserModal()}
-      {showAddUserModal && renderAddUserModal()}
+      {editingUser && (
+        <CommonUserModal
+          isOpen={!!editingUser}
+          onClose={() => setEditingUser(null)}
+          mode="edit"
+          userData={editingUser}
+          setUserData={setEditingUser}
+          onSubmit={saveEditedUser}
+          stations={stations}
+          myStations={myStations}
+        />
+      )}
+      {transferringUser && (
+        <CommonUserModal
+          isOpen={!!transferringUser}
+          onClose={() => setTransferringUser(null)}
+          mode="shift"
+          userData={transferringUser}
+          setUserData={setTransferringUser}
+          onSubmit={confirmTransfer}
+          stations={stations}
+          myStations={myStations}
+        />
+      )}
+      {showAddUserModal && (
+        <CommonUserModal
+          isOpen={showAddUserModal}
+          onClose={() => setShowAddUserModal(false)}
+          mode="add"
+          userData={newUserData}
+          setUserData={setNewUserData}
+          onSubmit={handleAddUserSubmit}
+          stations={stations}
+          myStations={myStations}
+        />
+      )}
     </div>
   );
 }

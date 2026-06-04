@@ -768,7 +768,7 @@ export default function TrafficInspectorModule({ user, onLogout }) {
   }, [stations]);
 
   const [showAddStationModal, setShowAddStationModal] = useState(false);
-  const [newStationData, setNewStationData] = useState({ name: "", code: "" });
+  const [newStationData, setNewStationData] = useState({ name: "", code: "", division: "", zone: "", category: "B", smCount: "", pmCount: "" });
 
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newUserData, setNewUserData] = useState({
@@ -982,10 +982,11 @@ export default function TrafficInspectorModule({ user, onLogout }) {
 
   // Unified Assessments page sub-state
   const [assessRole, setAssessRole]       = useState(null); // "SM" | "SS" | "TM"
-  const [rosterSearch, setRosterSearch]   = useState("");
-  const [rosterStation, setRosterStation] = useState("All");
-  const [rosterStatus, setRosterStatus]   = useState("All");
-  const [rosterDate, setRosterDate]       = useState("");
+  const [assessSearch, setAssessSearch]   = useState("");
+  const [assessStation, setAssessStation] = useState("All");
+  const [assessStatus, setAssessStatus]   = useState("All");
+  const [assessCat, setAssessCat]         = useState("All");
+  const [myAssessSelected, setMyAssessSelected] = useState(null);
 
   const [repF, setRepF] = useState({ search: "", role: "All", station: "All", cat: "All", risk: "All" });
   const [repApplied, setRepApplied] = useState(false);
@@ -1039,6 +1040,12 @@ export default function TrafficInspectorModule({ user, onLogout }) {
     return stations.filter(st => !st.assignedTi || st.assignedTi === tiId);
   }, [stations, tiId]);
 
+  const performanceSummaryText = useMemo(() => {
+    const rec = myAssessSelected || selectedRecord || (tiAssessments && tiAssessments[0]);
+    if (!rec) return "";
+    return getPerformanceSummaryText(rec.totalScore || rec.total || 0, rec.sections);
+  }, [myAssessSelected, selectedRecord, tiAssessments]);
+
   const handleAddStationSubmit = (e) => {
     e.preventDefault();
     if (!newStationData.name.trim() || !newStationData.code.trim()) {
@@ -1054,15 +1061,20 @@ export default function TrafficInspectorModule({ user, onLogout }) {
       id: "ST_" + Date.now(),
       name: newStationData.name.trim(),
       code: codeUpper,
+      division: newStationData.division?.trim() || "Nagpur Division",
+      zone: newStationData.zone?.trim() || "Central Railway",
+      category: newStationData.category || "B",
+      smCount: parseInt(newStationData.smCount) || 0,
+      pmCount: parseInt(newStationData.pmCount) || 0,
+      pointsmenCount: parseInt(newStationData.pmCount) || 0,
       avgScore: 80,
       safetyPct: 100,
       highRisk: 0,
-      pointsmenCount: 0,
       assignedTi: tiId
     };
     setStations(prev => [...prev, newStation]);
     setShowAddStationModal(false);
-    setNewStationData({ name: "", code: "" });
+    setNewStationData({ name: "", code: "", division: "", zone: "", category: "B", smCount: "", pmCount: "" });
     setStatusMsg(`Station "${newStation.name}" successfully added under your jurisdiction.`);
     addAuditLog("Added New Station", `Station: ${newStation.name} (${newStation.code})`);
     triggerNotification("success", `Added Station: ${newStation.name} (${newStation.code})`);
@@ -2114,13 +2126,26 @@ export default function TrafficInspectorModule({ user, onLogout }) {
         />;
       case "myAssessment":
         return <MyAssessment
-      roleTitle="Traffic Inspector"
-      assessedByTitle="Senior DOM"
-          tiAssessments={tiAssessments} getCat={getCat} catBadge={catBadge} statusBadge={statusBadge}
-          selectedRecord={selectedRecord} setSelectedRecord={setSelectedRecord}
-          isExamAssigned={isExamAssigned} quizState={quizState} startQuiz={startQuiz}
-          currentQuestion={currentQuestion} quizAnswers={quizAnswers} handleSelectQuizOpt={handleSelectQuizOpt}
-          submitQuiz={submitQuiz} latestQuizScore={latestQuizScore} TI_QUIZ={TI_QUIZ}
+          roleTitle="Traffic Inspector"
+          assessedByTitle="Senior DOM"
+          history={tiAssessments}
+          myAssessSelected={myAssessSelected}
+          setMyAssessSelected={setMyAssessSelected}
+          performanceSummaryText={performanceSummaryText}
+          getCat={getCat}
+          catBadge={catBadge}
+          statusBadge={statusBadge}
+          selectedRecord={selectedRecord}
+          setSelectedRecord={setSelectedRecord}
+          isExamAssigned={isExamAssigned}
+          quizState={quizState}
+          startQuiz={startQuiz}
+          currentQuestion={currentQuestion}
+          quizAnswers={quizAnswers}
+          handleSelectQuizOpt={handleSelectQuizOpt}
+          submitQuiz={submitQuiz}
+          latestQuizScore={latestQuizScore}
+          TI_QUIZ={TI_QUIZ}
         />;
       case "reports":
         return <CommonReports

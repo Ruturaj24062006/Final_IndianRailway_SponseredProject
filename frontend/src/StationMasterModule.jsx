@@ -30,7 +30,8 @@ import {
   Trash2,
   UserPlus,
   ArrowRightLeft,
-  Clock
+  Clock,
+  HeartHandshake
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -45,12 +46,34 @@ import SMPointsmen from "./components/StationMasterModule/SMPointsmen";
 import SMAssess from "./components/StationMasterModule/SMAssess";
 import MyAssessment from './components/MyAssessment';
 import CommonReports from "./components/CommonReports";
+import CommonUserModal from "./components/CommonUserModal";
+import CommonPmePosition from "./components/CommonPmePosition";
+import CommonRefPosition from "./components/CommonRefPosition";
+import CommonCounselling from "./components/CommonCounselling";
+
+const DIVISION_STATIONS = [
+  { id: "ST01", name: "Parbhani Junction", code: "PBN" },
+  { id: "ST02", name: "Amla Junction", code: "AMLA" },
+  { id: "ST03", name: "Badnera Junction", code: "BD" },
+  { id: "ST04", name: "Nagpur Junction", code: "NGP" },
+  { id: "ST05", name: "Akola Junction", code: "AK" },
+  { id: "ST06", name: "Wardha Junction", code: "WR" },
+  { id: "ST07", name: "Betul Station", code: "BYT" },
+  { id: "ST08", name: "Itarsi Junction", code: "ET" },
+  { id: "ST09", name: "Chandrapur Station", code: "CD" },
+  { id: "ST10", name: "Gondia Junction", code: "G" },
+  { id: "ST11", name: "Dhamangaon Station", code: "DMN" },
+  { id: "ST12", name: "Pulgaon Junction", code: "PLO" }
+];
 
 /* ─── NAV ─── */
 const navItems = [
   { key: "dashboard", label: "Dashboard", icon: Gauge },
   { key: "pointsmen", label: "Pointsmen", icon: Users },
   { key: "assess", label: "Assess Pointsmen", icon: ClipboardCheck },
+  { key: "counselling", label: "Counselling", icon: HeartHandshake },
+  { key: "pmePosition", label: "PME Position", icon: Activity },
+  { key: "refPosition", label: "REF Position", icon: Award },
   { key: "myAssessment", label: "My Assessment", icon: FileBarChart2 },
   { key: "reports", label: "Reports and Analytics", icon: BarChart3 },
   { key: "profile", label: "My Profile", icon: UserCircle2 }
@@ -591,10 +614,10 @@ function StationMasterModule({ user, onLogout }) {
       return;
     }
     if (pmModal.mode === "shift") {
-      const newRole = pmModal.role || "Pointsman";
-      if (newRole !== "Pointsman") {
+      const targetStation = pmModal.data.targetStation || pmModal.data.station;
+      if (targetStation) {
         setPointsmen(prev => prev.filter(u => u.hrmsId !== pmModal.data.hrmsId));
-        alert(`${pmModal.data.name} shifted to ${newRole} successfully.`);
+        alert(`${pmModal.data.name} transferred to ${targetStation} station successfully.`);
         setPmModal(null);
         return;
       }
@@ -1041,6 +1064,7 @@ function StationMasterModule({ user, onLogout }) {
             removePm={removePm}
             pmF={pmF}
             setPmF={setPmF}
+            stations={DIVISION_STATIONS}
             filteredPm={filteredPm}
             viewingPm={viewingPm}
             setViewingPm={setViewingPm}
@@ -1114,6 +1138,54 @@ function StationMasterModule({ user, onLogout }) {
             repF={repF}
             setRepF={setRepF}
             userRole="Station Master"
+          />
+        );
+      case "counselling":
+        return (
+          <CommonCounselling
+            users={pointsmen.map(p => ({
+              ...p,
+              role: "Pointsman",
+              station: smProfile.station || "Nagpur Junction",
+              stationName: smProfile.station || "Nagpur Junction",
+              score: p.lastScore || p.safetyScore || 80,
+              designation: "Pointsman"
+            }))}
+            stationFilter={smProfile.station || "Nagpur Junction"}
+            isAom={false}
+            addAuditLog={() => {}}
+          />
+        );
+      case "pmePosition":
+        return (
+          <CommonPmePosition
+            users={pointsmen.map(p => ({
+              ...p,
+              role: "Pointsman",
+              station: smProfile.station || "Nagpur Junction",
+              stationName: smProfile.station || "Nagpur Junction",
+              score: p.lastScore || p.safetyScore || 80,
+              designation: "Pointsman"
+            }))}
+            roleFilter="Pointsman"
+            stationFilter={smProfile.station || "Nagpur Junction"}
+            exportAlert={(format, name) => alert(`Exporting PME Report in ${format} format...`)}
+          />
+        );
+      case "refPosition":
+        return (
+          <CommonRefPosition
+            users={pointsmen.map(p => ({
+              ...p,
+              role: "Pointsman",
+              station: smProfile.station || "Nagpur Junction",
+              stationName: smProfile.station || "Nagpur Junction",
+              score: p.lastScore || p.safetyScore || 80,
+              designation: "Pointsman"
+            }))}
+            roleFilter="Pointsman"
+            stationFilter={smProfile.station || "Nagpur Junction"}
+            exportAlert={(format, name) => alert(`Exporting REF Report in ${format} format...`)}
           />
         );
       default:

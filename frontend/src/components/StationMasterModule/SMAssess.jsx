@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Award, ShieldAlert, Clock, Activity, FileText, Lock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import React, { useState } from "react";
+import { Award, Clock, Activity, Lock, AlertTriangle, CheckCircle2, Search, Filter, Play, Check } from "lucide-react";
 
 /* ─── HELPERS ─── */
 function getCat(score) {
@@ -80,35 +80,37 @@ const computeScore = (form) => {
   const knowledge = Math.min(parseInt(form.knowledgeMarks) || 0, 25);
   let ynTotal = 0;
   YN_SECTIONS.forEach(s => {
-    form[s.key].forEach(v => { if (v === "Yes") ynTotal += s.weight; });
+    form[s.key]?.forEach(v => { if (v === "Yes") ynTotal += s.weight; });
   });
   return { knowledge, ynTotal, total: knowledge + ynTotal };
 };
 
 export default function SMAssess({
-  pageMode,
-  setPageMode,
+  screenMode,
+  setScreenMode,
   assessTarget,
   setAssessTarget,
   assessForm,
   setAssessForm,
   assessLocked,
   setAssessLocked,
-  submittedAssessments,
+  submittedAssessments = [],
   setSubmittedAssessments,
-  drafts,
+  drafts = [],
   setDrafts,
   statusMsg,
   setStatusMsg,
-  activatedTests,
+  activatedTests = {},
   setActivatedTests,
-  pointsmen,
+  pointsmen = [],
   setPointsmen,
   submitAssessment,
   toggleYN,
   openAssessForm
 }) {
-  if (pageMode === "assessForm" && assessTarget) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  if (screenMode === "assessForm" && assessTarget) {
     const mcqDataStr = localStorage.getItem(`pm_mcq_test_${assessTarget.hrmsId}`);
     const mcqData = mcqDataStr ? JSON.parse(mcqDataStr) : null;
     const isMcqCompleted = mcqData && mcqData.completed;
@@ -118,14 +120,30 @@ export default function SMAssess({
     const liveCat = getCat(liveTotal);
 
     return (
-      <section className="sm2-card">
-        <div className="sm2-card-hdr">
+      <section className="ti2-card animate-fade-in" style={{ padding: "24px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <div>
-            <h2>Assessment — {assessTarget.name}</h2>
-            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>{assessTarget.hrmsId} · {assessTarget.lastDate}</p>
+            <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0B1F3A", margin: 0 }}>
+              Assessment — {assessTarget.name}
+            </h2>
+            <p style={{ margin: "4px 0 0 0", fontSize: "12.5px", color: "#64748b" }}>
+              {assessTarget.hrmsId} · Last Assessed: {assessTarget.lastDate}
+            </p>
           </div>
-          <button className="sm2-link-btn" onClick={() => setPageMode("default")}>← Back</button>
+          <button 
+            className="sdom-btn-outline" 
+            style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", padding: "8px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "13px" }}
+            onClick={() => setScreenMode("default")}
+          >
+            ← Back
+          </button>
         </div>
+
+        {statusMsg && (
+          <div style={{ marginBottom: "16px", padding: "10px 14px", background: "#e8f5e9", border: "1px solid #c8e6c9", color: "#1b5e20", borderRadius: "6px", fontSize: "13px", fontWeight: "600" }}>
+            {statusMsg}
+          </div>
+        )}
 
         {/* ── Section 1: Knowledge of Rules ── */}
         <div className="sm2-assess-section">
@@ -232,12 +250,9 @@ export default function SMAssess({
                         boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
                       }}
                       onClick={() => {
-                        if (isActivated) {
-                          localStorage.setItem(`pm_test_activated_${assessTarget.hrmsId}`, "false");
-                        } else {
-                          localStorage.setItem(`pm_test_activated_${assessTarget.hrmsId}`, "true");
-                        }
-                        setActivatedTests(prev => ({ ...prev, [assessTarget.hrmsId]: !isActivated }));
+                        const nextVal = !isActivated;
+                        localStorage.setItem(`pm_test_activated_${assessTarget.hrmsId}`, nextVal ? "true" : "false");
+                        setActivatedTests(prev => ({ ...prev, [assessTarget.hrmsId]: nextVal }));
                       }}
                     >
                       {isActivated ? "Deactivate Safety Competency Exam" : "Activate Safety Competency Exam"}
@@ -266,43 +281,53 @@ export default function SMAssess({
 
         {/* ── Sections 2–6: Yes/No blocks ── */}
         {YN_SECTIONS.map((sec, si) => {
-          const secScore = assessForm[sec.key].filter(v => v === "Yes").length * sec.weight;
+          const count = sec.criteria.length;
+          const secScore = (assessForm[sec.key] || []).filter(v => v === "Yes").length * sec.weight;
+          const weight = (sec.outOf / count).toFixed(2);
+
           return (
             <div key={sec.key} className="sm2-assess-section" style={{ opacity: isMcqCompleted ? 1 : 0.6 }}>
               <div className="sm2-assess-sec-hdr">
                 <span className="sm2-assess-sec-num">{String(si + 2).padStart(2, "0")}</span>
                 <div>
                   <strong>{sec.title}</strong>
-                  <span className="sm2-assess-sec-meta">5 criteria · {sec.weight} marks each · Total {sec.outOf}</span>
+                  <span className="sm2-assess-sec-meta">{count} criteria · {weight} marks each · Total {sec.outOf}</span>
                 </div>
                 <span className="sm2-assess-live-marks">{secScore} / {sec.outOf}</span>
               </div>
               <div className="sm2-yn-grid">
-                {sec.criteria.map((label, idx) => (
-                  <div key={idx} className="sm2-yn-row">
-                    <span className="sm2-yn-label">{idx + 1}. {label}</span>
-                    <div className="sm2-yn-btns">
-                      <button
-                        type="button" disabled={!isMcqCompleted || assessLocked}
-                        className={assessForm[sec.key][idx] === "Yes" ? "sm2-yn-btn sm2-yn-yes active" : "sm2-yn-btn sm2-yn-yes"}
-                        onClick={() => toggleYN(sec.key, idx, "Yes")}>
-                        Yes
-                      </button>
-                      <button
-                        type="button" disabled={!isMcqCompleted || assessLocked}
-                        className={assessForm[sec.key][idx] === "No" ? "sm2-yn-btn sm2-yn-no active" : "sm2-yn-btn sm2-yn-no"}
-                        onClick={() => toggleYN(sec.key, idx, "No")}>
-                        No
-                      </button>
+                {sec.criteria.map((criteriaText, idx) => {
+                  const currentAnswer = assessForm[sec.key]?.[idx] || "No";
+                  return (
+                    <div key={idx} className="sm2-yn-row">
+                      <span className="sm2-yn-label">{idx + 1}. {criteriaText}</span>
+                      <div className="sm2-yn-btns">
+                        <button
+                          type="button" disabled={!isMcqCompleted || assessLocked}
+                          className={currentAnswer === "Yes" ? "sm2-yn-btn sm2-yn-yes active" : "sm2-yn-btn sm2-yn-yes"}
+                          style={{ cursor: (!isMcqCompleted || assessLocked) ? "not-allowed" : "pointer" }}
+                          onClick={() => toggleYN(sec.key, idx, "Yes")}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button" disabled={!isMcqCompleted || assessLocked}
+                          className={currentAnswer === "No" ? "sm2-yn-btn sm2-yn-no active" : "sm2-yn-btn sm2-yn-no"}
+                          style={{ cursor: (!isMcqCompleted || assessLocked) ? "not-allowed" : "pointer" }}
+                          onClick={() => toggleYN(sec.key, idx, "No")}
+                        >
+                          No
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
         })}
 
-        {/* ── Additional Details ── */}
+        {/* ── Section 07: Additional Details ── */}
         <div className="sm2-assess-section" style={{ opacity: isMcqCompleted ? 1 : 0.6 }}>
           <div className="sm2-assess-sec-hdr">
             <span className="sm2-assess-sec-num">07</span>
@@ -310,19 +335,21 @@ export default function SMAssess({
           </div>
           <div className="sm2-assess-form" style={{ marginTop: 12 }}>
             <div className="sm2-form-field">
-              <label>Alcoholic / Non-Alcoholic <span style={{ color: "#dc2626" }}>*</span></label>
+              <label>Alcoholic Status <span style={{ color: "#dc2626" }}>*</span></label>
               <select
                 disabled={!isMcqCompleted || assessLocked}
-                value={assessForm.alcoholicStatus}
-                onChange={e => setAssessForm(p => ({ ...p, alcoholicStatus: e.target.value }))}>
+                value={assessForm.alcoholicStatus || ""}
+                onChange={e => setAssessForm(p => ({ ...p, alcoholicStatus: e.target.value }))}
+                required
+              >
                 <option value="">Select…</option>
-                <option>Non-Alcoholic</option>
-                <option>Alcoholic</option>
+                <option value="Non-Alcoholic">Non-Alcoholic</option>
+                <option value="Alcoholic">Alcoholic</option>
               </select>
             </div>
             <div className="sm2-form-field">
               <label>PME Status</label>
-              <select disabled={!isMcqCompleted || assessLocked} value={assessForm.pmeStatus}
+              <select disabled={!isMcqCompleted || assessLocked} value={assessForm.pmeStatus || "Fit"}
                 onChange={e => setAssessForm(p => ({ ...p, pmeStatus: e.target.value }))}>
                 <option>Fit</option>
                 <option>Unfit</option>
@@ -331,7 +358,7 @@ export default function SMAssess({
             </div>
             <div className="sm2-form-field">
               <label>REF Status</label>
-              <select disabled={!isMcqCompleted || assessLocked} value={assessForm.refStatus}
+              <select disabled={!isMcqCompleted || assessLocked} value={assessForm.refStatus || "Cleared"}
                 onChange={e => setAssessForm(p => ({ ...p, refStatus: e.target.value }))}>
                 <option>Cleared</option>
                 <option>Pending</option>
@@ -340,7 +367,7 @@ export default function SMAssess({
             </div>
             <div className="sm2-form-field">
               <label>Automatic Training</label>
-              <select disabled={!isMcqCompleted || assessLocked} value={assessForm.automaticTraining}
+              <select disabled={!isMcqCompleted || assessLocked} value={assessForm.automaticTraining || "Not Required"}
                 onChange={e => setAssessForm(p => ({ ...p, automaticTraining: e.target.value }))}>
                 <option>Not Required</option>
                 <option>Recommended</option>
@@ -349,7 +376,7 @@ export default function SMAssess({
             </div>
             <div className="sm2-form-field">
               <label>Counselling</label>
-              <select disabled={!isMcqCompleted || assessLocked} value={assessForm.counselling}
+              <select disabled={!isMcqCompleted || assessLocked} value={assessForm.counselling || "Not Required"}
                 onChange={e => setAssessForm(p => ({ ...p, counselling: e.target.value }))}>
                 <option>Not Required</option>
                 <option>Recommended</option>
@@ -358,17 +385,17 @@ export default function SMAssess({
             </div>
             <div className="sm2-form-field">
               <label>Date of Appointment</label>
-              <input type="date" disabled={!isMcqCompleted || assessLocked} value={assessForm.dateOfAppointment}
+              <input type="date" disabled={!isMcqCompleted || assessLocked} value={assessForm.dateOfAppointment || ""}
                 onChange={e => setAssessForm(p => ({ ...p, dateOfAppointment: e.target.value }))} />
             </div>
             <div className="sm2-form-field">
               <label>Working Since (current grade)</label>
-              <input type="date" disabled={!isMcqCompleted || assessLocked} value={assessForm.workingSince}
+              <input type="date" disabled={!isMcqCompleted || assessLocked} value={assessForm.workingSince || ""}
                 onChange={e => setAssessForm(p => ({ ...p, workingSince: e.target.value }))} />
             </div>
-            <div className="sm2-form-field sm2-form-full">
+            <div className="sm2-form-field sm2-form-full" style={{ gridColumn: "1/-1" }}>
               <label>Remarks for Traffic Inspector</label>
-              <textarea rows={3} disabled={!isMcqCompleted || assessLocked} value={assessForm.remarks}
+              <textarea rows={3} disabled={!isMcqCompleted || assessLocked} value={assessForm.remarks || ""}
                 onChange={e => setAssessForm(p => ({ ...p, remarks: e.target.value }))}
                 placeholder={isMcqCompleted ? "Enter observations, recommendations…" : "Please wait for Pointsman to complete the MCQ exam..."} />
             </div>
@@ -377,35 +404,35 @@ export default function SMAssess({
 
         {/* ── Live Score Bar ── */}
         <div className="sm2-live-score" style={{ opacity: isMcqCompleted ? 1 : 0.6 }}>
-          <div>
-            <label>Knowledge (MCQ)</label>
-            <strong>{knowledge} / 25</strong>
-          </div>
-          <div>
-            <label>Yes / No Sections</label>
-            <strong>{ynTotal} / 75</strong>
-          </div>
-          <div>
-            <label>Grand Total</label>
-            <strong style={{ color: CAT_COLOR[liveCat], fontSize: 22 }}>{liveTotal} / 100</strong>
-          </div>
-          <div>
-            <label>Category</label>
-            <span className="sm2-badge" style={{ background: CAT_BG[liveCat], color: CAT_COLOR[liveCat], fontSize: 13, padding: "4px 12px" }}>
-              Category {liveCat}
-            </span>
-          </div>
+          <div><label>Knowledge (MCQ)</label><strong>{knowledge}/25</strong></div>
+          <div><label>Yes/No Score</label><strong>{ynTotal}/75</strong></div>
+          <div><label>Grand Total</label><strong style={{ color: CAT_COLOR[liveCat], fontSize: 22 }}>{liveTotal}/100</strong></div>
+          <div><label>Category</label><span className="sm2-badge" style={{ background: CAT_BG[liveCat], color: CAT_COLOR[liveCat], fontSize: 13, padding: "4px 14px" }}>Category {liveCat}</span></div>
         </div>
 
         {assessLocked && (
-          <div className="sm2-submitted-banner">✓ Assessment submitted for TI approval. Form is now locked.</div>
+          <div style={{ background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "12px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", textAlign: "center", marginTop: "16px" }}>
+            ✓ Assessment submitted for TI approval. Form is now locked.
+          </div>
         )}
 
         {!assessLocked && (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "24px" }}>
-            <div className="sm2-assess-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-              <button className="sm2-ghost-btn" style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "1px solid #cbd5e1", background: "#fff", cursor: isMcqCompleted ? "pointer" : "not-allowed" }} disabled={!isMcqCompleted} onClick={() => submitAssessment(true)}>Save as Draft</button>
-              <button className="sm2-primary-btn" style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "none", background: isMcqCompleted ? "#2563eb" : "#cbd5e1", color: "#fff", cursor: isMcqCompleted ? "pointer" : "not-allowed" }} disabled={!isMcqCompleted} onClick={() => submitAssessment(false)}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button 
+                className="sdom-btn-outline" 
+                style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "1px solid #cbd5e1", background: "#fff", cursor: isMcqCompleted ? "pointer" : "not-allowed" }} 
+                disabled={!isMcqCompleted} 
+                onClick={() => submitAssessment(true)}
+              >
+                Save as Draft
+              </button>
+              <button 
+                className="sdom-btn-primary" 
+                style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "none", background: isMcqCompleted ? "#2563eb" : "#cbd5e1", color: "#fff", cursor: isMcqCompleted ? "pointer" : "not-allowed" }} 
+                disabled={!isMcqCompleted} 
+                onClick={() => submitAssessment(false)}
+              >
                 Submit for TI Approval
               </button>
             </div>
@@ -420,112 +447,173 @@ export default function SMAssess({
     );
   }
 
-  return (
-    <section className="sm2-card">
-      <div className="sm2-card-hdr"><h2>Assess Pointsman</h2></div>
-      <p className="sm2-subtitle">Pointsmen with pending assessments are listed below. Fill the full structured form and submit for Traffic Inspector approval.</p>
+  // --- FILTERED ROSTER LIST (TABULAR) ---
+  const filteredDrafts = drafts.filter(d => {
+    const q = searchQuery.toLowerCase();
+    return !q || d.name.toLowerCase().includes(q) || d.hrmsId.toLowerCase().includes(q);
+  });
 
-      {drafts.length === 0 ? (
-        <div className="sm2-empty-state-center">
-          <CheckCircle2 size={36} color="#16a34a" />
-          <h3>All Assessments Up-to-Date</h3>
-          <p>No pending assessments at this time.</p>
+  return (
+    <section className="ti2-card animate-fade-in" style={{ padding: "24px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div>
+          <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0f172a", margin: 0 }}>Assess Pointsmen</h2>
+          <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#64748b", fontWeight: "500" }}>
+            Pointsmen with pending assessments. Complete the structured field form and submit for Traffic Inspector approval.
+          </p>
+        </div>
+      </div>
+
+      {/* Filter Section */}
+      <div style={{ background: "#f8fafc", borderRadius: "12px", padding: "16px", marginBottom: "20px", border: "1px solid #e2e8f0", display: "flex", gap: "12px", alignItems: "center" }}>
+        <div style={{ position: "relative", flex: 1 }}>
+          <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+          <input
+            type="text"
+            placeholder="Search Pointsman by Name or HRMS ID..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{ width: "100%", padding: "10px 12px 10px 36px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "500", boxSizing: "border-box" }}
+          />
+        </div>
+        {searchQuery && (
+          <button 
+            className="sdom-btn-outline" 
+            style={{ padding: "10px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "700" }} 
+            onClick={() => setSearchQuery("")}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {filteredDrafts.length === 0 ? (
+        <div style={{ padding: "48px 0", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+          <CheckCircle2 size={40} color="#16a34a" />
+          <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a", margin: 0 }}>All Assessments Complete</h3>
+          <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>No pointsmen match the search criteria or require assessment.</p>
         </div>
       ) : (
-        <div className="sm2-assess-list">
-          {drafts.map(d => {
-            const mcqDataStr = localStorage.getItem(`pm_mcq_test_${d.hrmsId}`);
-            const mcqData = mcqDataStr ? JSON.parse(mcqDataStr) : null;
-            const isCompleted = mcqData && mcqData.completed;
-            const isActivated = localStorage.getItem(`pm_test_activated_${d.hrmsId}`) === "true";
+        <div className="sdom-table-wrap" style={{ border: "1px solid #e2e8f0", borderRadius: "8px" }}>
+          <table className="sdom-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e2e8f0" }}>
+                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>Pointsman</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>HRMS ID</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>Last Assessed</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>MCQ Exam Status</th>
+                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "right" }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDrafts.map((d) => {
+                const mcqDataStr = localStorage.getItem(`pm_mcq_test_${d.hrmsId}`);
+                const mcqData = mcqDataStr ? JSON.parse(mcqDataStr) : null;
+                const isCompleted = mcqData && mcqData.completed;
+                const isActivated = localStorage.getItem(`pm_test_activated_${d.hrmsId}`) === "true";
 
-            return (
-              <div key={d.pointsmanId} className="sm2-assess-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: "10px", marginBottom: "12px" }}>
-                <div>
-                  <strong style={{ fontSize: "15px", color: "#0f172a" }}>{d.name}</strong>
-                  <span style={{ display: "block", fontSize: "12px", color: "#64748b", marginTop: "2px" }}>{d.hrmsId}</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>Last assessed: {d.lastDate}</span>
-
-                  {isCompleted ? (
-                    <span className="sdom-badge sdom-badge-success">
-                      MCQ Completed ({mcqData.correctCount}/25)
-                    </span>
-                  ) : isActivated ? (
-                    <span className="sdom-badge sdom-badge-warning">
-                      Exam Active
-                    </span>
-                  ) : (
-                    <span className="sdom-badge sdom-badge-neutral" style={{ background: "#f1f5f9", color: "#475569" }}>
-                      Exam Locked
-                    </span>
-                  )}
-
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    {!isCompleted && (
-                      <button
-                        className="sm2-ghost-btn-sm"
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "6px",
-                          fontSize: "12px",
-                          fontWeight: "700",
-                          cursor: "pointer",
-                          border: "1px solid #cbd5e1",
-                          background: isActivated ? "#fef2f2" : "#eff6ff",
-                          color: isActivated ? "#dc2626" : "#2563eb"
-                        }}
-                        onClick={() => {
-                          if (isActivated) {
-                            localStorage.setItem(`pm_test_activated_${d.hrmsId}`, "false");
-                          } else {
-                            localStorage.setItem(`pm_test_activated_${d.hrmsId}`, "true");
-                          }
-                          setActivatedTests(prev => ({ ...prev, [d.hrmsId]: !isActivated }));
-                        }}
-                      >
-                        {isActivated ? "Deactivate Test" : "Activate Test"}
-                      </button>
-                    )}
-
-                    <button
-                      className="sm2-primary-btn-sm"
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        background: "#2563eb",
-                        color: "#fff",
-                        border: "none"
-                      }}
-                      onClick={() => openAssessForm(d)}
-                    >
-                      Open Form
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+                return (
+                  <tr key={d.pointsmanId || d.hrmsId} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "14px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#1e3a8a", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>
+                          {d.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: "700", color: "#0f172a", fontSize: "14px" }}>{d.name}</div>
+                          <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "2px" }}>Pointsman</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: "14px 16px", color: "#475569", fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>
+                      {d.hrmsId}
+                    </td>
+                    <td style={{ padding: "14px 16px", color: "#64748b", fontSize: "13px", fontWeight: "500" }}>
+                      {d.lastDate || "—"}
+                    </td>
+                    <td style={{ padding: "14px 16px" }}>
+                      {isCompleted ? (
+                        <span className="sdom-badge sdom-badge-success" style={{ padding: "4px 8px" }}>
+                          ✓ MCQ Completed ({mcqData.correctCount}/25)
+                        </span>
+                      ) : isActivated ? (
+                        <span className="sdom-badge sdom-badge-warning" style={{ padding: "4px 8px" }}>
+                          Exam Active
+                        </span>
+                      ) : (
+                        <span className="sdom-badge sdom-badge-neutral" style={{ padding: "4px 8px", background: "#f1f5f9", color: "#475569" }}>
+                          Exam Locked
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                      <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                        {!isCompleted && (
+                          <button
+                            className="sdom-btn-outline"
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                              cursor: "pointer",
+                              border: "1px solid #cbd5e1",
+                              background: isActivated ? "#fef2f2" : "#eff6ff",
+                              color: isActivated ? "#dc2626" : "#2563eb"
+                            }}
+                            onClick={() => {
+                              const nextVal = !isActivated;
+                              localStorage.setItem(`pm_test_activated_${d.hrmsId}`, nextVal ? "true" : "false");
+                              setActivatedTests(prev => ({ ...prev, [d.hrmsId]: nextVal }));
+                            }}
+                          >
+                            {isActivated ? "Deactivate Test" : "Activate Test"}
+                          </button>
+                        )}
+                        <button
+                          className="sdom-btn-primary"
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            cursor: "pointer",
+                            background: "#2563eb",
+                            color: "#fff",
+                            border: "none"
+                          }}
+                          onClick={() => openAssessForm(d)}
+                        >
+                          Assess
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
       {submittedAssessments.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <h4 style={{ margin: "0 0 12px", fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.6px" }}>Submitted This Session</h4>
-          {submittedAssessments.map(r => (
-            <div key={r.id} className="sm2-submitted-row">
-              <div><strong>{r.name}</strong><span>{r.hrmsId}</span></div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span className="sm2-badge" style={{ background: CAT_BG[r.grade], color: CAT_COLOR[r.grade] }}>Cat. {r.grade}</span>
-                <strong>{r.total}/100</strong>
-                <span className={`sm2-status-pill sm2-status-${r.approvalStatus.toLowerCase()}`}>{r.approvalStatus}</span>
+        <div style={{ marginTop: 28, background: "#f8fafc", borderRadius: "12px", padding: "20px", border: "1px solid #e2e8f0" }}>
+          <h4 style={{ margin: "0 0 12px", fontSize: "12px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.6px", fontWeight: "700" }}>Submitted This Session</h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {submittedAssessments.map(r => (
+              <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
+                <div>
+                  <strong style={{ fontSize: "14px", color: "#0f172a" }}>{r.name}</strong>
+                  <span style={{ fontSize: "12px", color: "#64748b", marginLeft: "8px" }}>({r.hrmsId})</span>
+                </div>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                  <span className="sdom-badge sdom-badge-danger" style={{ background: CAT_BG[r.grade], color: CAT_COLOR[r.grade], border: `1px solid ${CAT_COLOR[r.grade]}22` }}>Cat. {r.grade}</span>
+                  <strong style={{ fontSize: "14px" }}>{r.total}/100</strong>
+                  <span className={`sdom-badge ${r.approvalStatus === "Approved" ? "sdom-badge-success" : "sdom-badge-warning"}`}>{r.approvalStatus}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </section>

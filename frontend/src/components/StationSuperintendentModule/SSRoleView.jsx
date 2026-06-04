@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Search, Plus, Trash2, Edit, CheckCircle, RefreshCw, Paperclip, ChevronLeft, ChevronRight, PlayCircle, Star, Target, ShieldCheck, Gauge, Award, ArrowRightLeft, UserPlus, ArrowLeft, ClipboardList, TrendingUp } from "lucide-react";
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from "recharts";
+import CommonUserModal from "../CommonUserModal";
 
 const stationTiMap = {
   "Parbhani Junction": "TI PAR",
@@ -972,9 +973,42 @@ export default function SSRoleView({
               </table>
           </div>
         </div>
-        {showAddUserModal && renderAddUserModal()}
-        {editingUser && renderEditUserModal()}
-        {transferringUser && renderTransferUserModal()}
+        {editingUser && (
+          <CommonUserModal
+            isOpen={!!editingUser}
+            onClose={() => setEditingUser(null)}
+            mode="edit"
+            userData={editingUser}
+            setUserData={setEditingUser}
+            onSubmit={saveEditedUser}
+            stations={stations}
+            myStations={myStations}
+          />
+        )}
+        {transferringUser && (
+          <CommonUserModal
+            isOpen={!!transferringUser}
+            onClose={() => setTransferringUser(null)}
+            mode="shift"
+            userData={transferringUser}
+            setUserData={setTransferringUser}
+            onSubmit={confirmTransfer}
+            stations={stations}
+            myStations={myStations}
+          />
+        )}
+        {showAddUserModal && (
+          <CommonUserModal
+            isOpen={showAddUserModal}
+            onClose={() => setShowAddUserModal(false)}
+            mode="add"
+            userData={newUserData}
+            setUserData={setNewUserData}
+            onSubmit={handleAddUserSubmit}
+            stations={stations}
+            myStations={myStations}
+          />
+        )}
       </div>
     </div>
   );

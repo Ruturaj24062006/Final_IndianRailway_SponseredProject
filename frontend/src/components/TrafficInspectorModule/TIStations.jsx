@@ -386,8 +386,8 @@ export default function TIStations({
 
     // Main Station List rendering (looks exactly like AOM's renderStations)
     const filtered = stationStats.map(st => {
-      const smCount = users.filter(u => u.station === st.name && (u.role === "Station Master" || u.role === "sm")).length;
-      const pmCount = users.filter(u => u.station === st.name && (u.role === "Pointsman" || u.role === "pointsmen")).length;
+      const smCount = users.filter(u => u.station === st.name && (u.role === "Station Master" || u.role === "sm")).length || st.smCount || 0;
+      const pmCount = users.filter(u => u.station === st.name && (u.role === "Pointsman" || u.role === "pointsmen")).length || st.pmCount || st.pointsmenCount || 0;
       const pmPending = myPmList.filter(p => p.station === st.name && p.status === "Pending").length;
       const smPending = mySmList.filter(s => s.station === st.name && s.status === "Pending").length;
       const tmPending = myTmList.filter(t => t.station === st.name && t.status === "Pending").length;
@@ -418,7 +418,7 @@ export default function TIStations({
             <p className="sdom-page-subtitle">Full list of stations under your jurisdiction. Click a station to open its complete analytics dashboard.</p>
           </div>
           <button className="sdom-btn-primary" onClick={() => {
-            setNewStationData({ name: "", code: "" });
+            setNewStationData({ name: "", code: "", division: "", zone: "", category: "B", smCount: "", pmCount: "" });
             setShowAddStationModal(true);
           }} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <Plus size={16} /> Add New Station
@@ -493,20 +493,45 @@ export default function TIStations({
 
         {showAddStationModal && (
           <div className="sdom-modal-overlay" style={{ zIndex: 9999 }}>
-            <div className="sdom-modal" style={{ width: "450px" }}>
+            <div className="sdom-modal" style={{ width: "450px", maxHeight: "90vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                 <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "#0B1F3A" }}>Add New Station</h3>
                 <button type="button" onClick={() => setShowAddStationModal(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#64748b" }}>&times;</button>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div className="sdom-filter-field">
+                <div className="sdom-modal-field">
                   <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Station Name</label>
                   <input type="text" value={newStationData.name} onChange={e => setNewStationData({ ...newStationData, name: e.target.value })} placeholder="e.g. Wardha Junction" />
                 </div>
-                <div className="sdom-filter-field">
+                <div className="sdom-modal-field">
                   <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Station Code</label>
                   <input type="text" value={newStationData.code} onChange={e => setNewStationData({ ...newStationData, code: e.target.value })} placeholder="e.g. WR" />
+                </div>
+                <div className="sdom-modal-field">
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Division</label>
+                  <input type="text" value={newStationData.division} onChange={e => setNewStationData({ ...newStationData, division: e.target.value })} placeholder="e.g. Nagpur Division" />
+                </div>
+                <div className="sdom-modal-field">
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Railway Zone</label>
+                  <input type="text" value={newStationData.zone} onChange={e => setNewStationData({ ...newStationData, zone: e.target.value })} placeholder="e.g. Central Railway" />
+                </div>
+                <div className="sdom-modal-field">
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Category</label>
+                  <select value={newStationData.category} onChange={e => setNewStationData({ ...newStationData, category: e.target.value })}>
+                    <option value="A">Grade A Station</option>
+                    <option value="B">Grade B Station</option>
+                    <option value="C">Grade C Station</option>
+                    <option value="D">Grade D Station</option>
+                  </select>
+                </div>
+                <div className="sdom-modal-field">
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Initial SM Count</label>
+                  <input type="number" min="0" value={newStationData.smCount} onChange={e => setNewStationData({ ...newStationData, smCount: e.target.value })} placeholder="e.g. 2" />
+                </div>
+                <div className="sdom-modal-field">
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Initial Pointsmen Count</label>
+                  <input type="number" min="0" value={newStationData.pmCount} onChange={e => setNewStationData({ ...newStationData, pmCount: e.target.value })} placeholder="e.g. 8" />
                 </div>
               </div>
 

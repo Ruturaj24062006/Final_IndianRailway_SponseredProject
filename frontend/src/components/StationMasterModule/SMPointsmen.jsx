@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Search, Plus, Trash2, Edit, CheckCircle, RefreshCw, Paperclip, ChevronLeft, ChevronRight, PlayCircle, Star, Target, ShieldCheck, Gauge, Award, ArrowLeft, UserPlus, ArrowRightLeft, TrendingUp, Activity } from "lucide-react";
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from "recharts";
+import CommonUserModal from "../CommonUserModal";
 
 export default function SMPointsmen({
   pointsmen,
@@ -18,6 +19,7 @@ export default function SMPointsmen({
   removePm,
   pmF,
   setPmF,
+  stations = [],
   filteredPm,
   viewingPm,
   setViewingPm,
@@ -738,7 +740,15 @@ export default function SMPointsmen({
             </table>
           </div>
         </div>
-        {renderPointsmenModal()}
+      <CommonUserModal
+        isOpen={!!pmModal}
+        onClose={() => setPmModal(null)}
+        mode={pmModal?.mode}
+        userData={pmModal?.data}
+        setUserData={(data) => setPmModal(p => ({ ...p, data }))}
+        onSubmit={savePmModal}
+        stations={stations}
+      />
       </div>
     );
 }
