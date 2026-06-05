@@ -2329,6 +2329,10 @@ function AOmModule({ user, onLogout }) {
   });
 
   const handleSidebarClick = (label) => {
+    const toggleInput = document.getElementById("sdom-sidebar-toggle");
+    if (toggleInput) {
+      toggleInput.checked = false;
+    }
     setView(null);
     setSelectedReportUserId(null);
     setRepApplied(false);

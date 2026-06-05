@@ -351,7 +351,7 @@ export default function MyAssessment({
     const unansweredCount = 25 - answeredCount;
 
     return (
-      <div style={{
+      <div className="sdom-exam-layout" style={{
         position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:999999,
         background:"#f1f5f9", display:"flex", flexDirection:"column",
         height:"100vh", width:"100vw", overflow:"hidden", fontFamily:"'Poppins', sans-serif"
@@ -399,7 +399,7 @@ export default function MyAssessment({
           </div>
         </div>
 
-        <div style={{display:"grid", gridTemplateColumns:"1fr 340px", flex:1, overflow:"hidden"}}>
+        <div className="sdom-exam-body" style={{display:"grid", gridTemplateColumns:"1fr 340px", flex:1, overflow:"hidden"}}>
           {/* Left: Question Pane */}
           <div style={{padding:"32px 40px", display:"flex", flexDirection:"column", background:"#f8fafc", overflowY:"auto", height:"100%"}}>
             <div style={{background:"#ffffff", border:"1px solid #e2e8f0", borderRadius:14, padding:36, boxShadow:"0 10px 15px -3px rgba(0,0,0,0.05)", flex:1, display:"flex", flexDirection:"column", justifyContent:"space-between", marginBottom:24}}>
@@ -439,7 +439,7 @@ export default function MyAssessment({
               <span style={{fontSize:12, color:"#64748b", fontWeight:500}}>HRMS ID: {employeeId}</span>
             </div>
             <h4 style={{fontSize:12, fontWeight:800, color:"#475569", textTransform:"uppercase", letterSpacing:"0.6px", margin:0}}>Question Palette</h4>
-            <div style={{display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8, maxHeight:220, overflowY:"auto", paddingRight:4}}>
+            <div className="sdom-keep-grid" style={{display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8, maxHeight:220, overflowY:"auto", paddingRight:4}}>
               {testQuestions.map((q, idx) => {
                 const isCurrent = idx===activeQIdx;
                 const isAnswered = testResponses[idx]!==null && testResponses[idx]!==undefined;
@@ -884,7 +884,7 @@ export default function MyAssessment({
     const unansweredCount = 25 - answeredCount;
 
     return (
-      <div style={{
+      <div className="sdom-exam-layout" style={{
         position: "fixed",
         top: 0,
         left: 0,
@@ -987,7 +987,7 @@ export default function MyAssessment({
         </div>
 
         {/* Main Split Body */}
-        <div style={{
+        <div className="sdom-exam-body" style={{
           display: "grid", 
           gridTemplateColumns: "1fr 340px", 
           flex: 1, 
@@ -1185,7 +1185,7 @@ export default function MyAssessment({
             </h4>
 
             {/* Grid of questions */}
-            <div style={{
+            <div className="sdom-keep-grid" style={{
               display: "grid",
               gridTemplateColumns: "repeat(5, 1fr)",
               gap: 8,

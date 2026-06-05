@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LogOut, Bell, Menu, X, CheckCircle2 } from "lucide-react";
 
 /**
@@ -39,22 +39,44 @@ export default function CommonLayout({
 }) {
   const [bellDropdownOpen, setBellDropdownOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return undefined;
+    }
+
+    document.body.style.overflow = sidebarOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileLayout(window.innerWidth <= 768);
+      if (window.innerWidth > 768) {
+        setSidebarOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
-    <div className="sm2-layout ti2-layout sdom-app-layout" style={{ height: "100vh", overflow: "hidden" }}>
+    <div className="sm2-layout ti2-layout sdom-app-layout">
       {/* Sidebar Close Backdrop (for mobile screens) */}
       {sidebarOpen && (
         <div 
           className="sdom-sidebar-close-backdrop"
-          onClick={() => setSidebarOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.4)",
-            zIndex: 99
-          }}
+            onClick={() => {
+              setSidebarOpen(false);
+              setBellDropdownOpen(false);
+            }}
         />
       )}
 
@@ -63,15 +85,13 @@ export default function CommonLayout({
         {/* Toggle Button for Sidebar (Mobile view) */}
         <button 
           className="sdom-sidebar-toggle-btn"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#ffffff",
-            cursor: "pointer",
-            display: "none", // Controlled via responsive CSS media queries
-            padding: "8px"
+          aria-controls="sdom-main-sidebar"
+          aria-expanded={sidebarOpen}
+          onClick={() => {
+            setSidebarOpen(open => !open);
+            setBellDropdownOpen(false);
           }}
+          aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
         >
           {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -111,7 +131,10 @@ export default function CommonLayout({
           {/* Notification Bell Dropdown */}
           <div style={{ position: "relative", marginRight: "12px" }}>
             <button
-              onClick={() => setBellDropdownOpen(!bellDropdownOpen)}
+              onClick={() => {
+                setBellDropdownOpen(open => !open);
+                setSidebarOpen(false);
+              }}
               style={{
                 background: "none",
                 border: "none",
@@ -149,11 +172,11 @@ export default function CommonLayout({
 
             {bellDropdownOpen && (
               <div 
+                className="sdom-notifications-panel"
                 style={{ 
                   position: "absolute", 
                   top: "40px", 
                   right: 0, 
-                  width: "320px", 
                   background: "#ffffff", 
                   border: "1px solid #cbd5e1", 
                   borderRadius: "14px", 
@@ -208,7 +231,7 @@ export default function CommonLayout({
           <div className="sm2-user-avatar ti2-user-avatar sdom-topbar-avatar" style={{ marginRight: "8px" }}>
             {user.name.charAt(0)}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", marginRight: "12px" }}>
+          <div className="sdom-topbar-user-details" style={{ marginRight: "12px" }}>
             <strong style={{ fontSize: "13px", color: "#fff", fontWeight: "700" }}>{user.name}</strong>
             <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)" }}>{user.hrmsId}</span>
           </div>
@@ -220,17 +243,21 @@ export default function CommonLayout({
         </div>
       </header>
 
-      <div className="sm2-shell ti2-shell sdom-body-layout layout-grid" style={{ height: "calc(100vh - 60px)", overflow: "hidden" }}>
+      <div className="sm2-shell ti2-shell sdom-body-layout layout-grid">
         
         {/* Sidebar Panel */}
         <aside 
+          id="sdom-main-sidebar"
           className={`sm2-sidebar ti2-sidebar sdom-sidebar-fixed sidebar ${sidebarOpen ? "open" : ""}`}
-          style={{
-            position: "sticky",
-            top: 0,
-            height: "100%",
-            overflowY: "auto"
-          }}
+          style={isMobileLayout ? {
+            position: "fixed",
+            top: "60px",
+            left: 0,
+            height: "calc(100dvh - 60px)",
+            transform: sidebarOpen ? "translateX(0)" : "translateX(-102%)",
+            zIndex: 101,
+            boxShadow: "18px 0 40px rgba(15, 23, 42, 0.22)"
+          } : undefined}
         >
           <div className="sdom-sidebar-section-label" style={{ fontSize: "0.65rem", fontWeight: "700", color: "#486581", textTransform: "uppercase", padding: "14px 20px 8px" }}>
             Navigation
@@ -244,7 +271,8 @@ export default function CommonLayout({
                 className={`sm2-nav-item ti2-nav-item sdom-nav-btn ${isActive ? "active" : ""}`}
                 onClick={() => {
                   setActiveTab(item.key);
-                  setSidebarOpen(false); // Close sidebar on mobile select
+                  setSidebarOpen(false);
+                  setBellDropdownOpen(false);
                 }}
               >
                 <Icon size={17} />

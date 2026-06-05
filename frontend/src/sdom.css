@@ -1047,3 +1047,275 @@
   .table-row.assessment-table-cols div { font-size: 0.82rem; }
 }
 
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+  }
+
+  .sdom-app-layout {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  .sdom-topbar-fixed {
+    height: 60px !important;
+    min-height: 60px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 12px !important;
+    gap: 8px !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    box-sizing: border-box !important;
+    z-index: 1002 !important;
+  }
+
+  .sdom-topbar-brand {
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-right: auto !important;
+  }
+
+  .sdom-topbar-right {
+    width: auto !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .sdom-topbar-user-details {
+    display: none !important;
+  }
+
+  .sdom-topbar-title {
+    font-size: clamp(0.95rem, 3.8vw, 1.05rem);
+    line-height: 1.15;
+  }
+
+  .sdom-topbar-sub {
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .sdom-sidebar-toggle-btn {
+    display: inline-flex !important;
+  }
+
+  .sdom-body-layout {
+    display: block !important;
+    overflow: visible !important;
+    min-width: 0 !important;
+    height: auto !important;
+  }
+
+  .sdom-sidebar-fixed {
+    position: fixed !important;
+    top: 60px !important;
+    left: 0 !important;
+    height: calc(100dvh - 60px) !important;
+    width: min(84vw, 320px) !important;
+    transform: translateX(-104%) !important;
+    transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+    z-index: 101 !important;
+    box-shadow: 18px 0 40px rgba(15, 23, 42, 0.22) !important;
+  }
+
+  .sdom-sidebar-fixed.open {
+    transform: translateX(0) !important;
+  }
+
+  .sdom-sidebar-close-backdrop {
+    display: block !important;
+  }
+
+  .sdom-content-scrollable {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: block !important;
+    padding: 76px 16px 16px 16px !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .sdom-summary-cards,
+  .sdom-overview-cards,
+  .sdom-report-grid,
+  .sdom-row-2,
+  .sdom-row-3,
+  .sdom-profile-detail-grid,
+  .sdom-profile-safety-grid,
+  .sdom-profile-meta-grid,
+  .sdom-profile-dates,
+  .sdom-report-detail-grid,
+  .sdom-report-metrics,
+  .assessment-grid,
+  .assessment-info-grid,
+  .permission-items,
+  .sdom-modal-grid-2,
+  .tim-stats-grid,
+  .tim-profile-grid,
+  .tim-form-grid,
+  .tim-safety-grid,
+  .tim-option-grid,
+  .sdom-summary-grid,
+  .sdom-report-summary-grid,
+  .metrics-grid,
+  .ti2-myassess-summary,
+  .sm2-myassess-summary {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sdom-stack-on-mobile,
+  .sdom-report-detail-header,
+  .sdom-report-topline,
+  .tim-page-header,
+  .tim-toolbar-row,
+  .tim-live-score-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sdom-card,
+  .sdom-chart-card,
+  .tim-panel-card,
+  .tim-modal-card,
+  .role-dashboard-card,
+  .assessment-card,
+  .pm-page-card,
+  .ti2-card,
+  .ss-panel-card,
+  .tm-panel-card {
+    padding: 16px !important;
+    border-radius: 14px;
+  }
+
+  .sdom-modal-overlay {
+    padding: 8px;
+  }
+
+  .sdom-modal {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+  }
+
+  .sdom-modal-actions > *,
+  .sdom-btn-primary,
+  .sdom-btn-outline,
+  .sdom-btn-ghost,
+  .sdom-back-btn,
+  .sm2-primary-btn,
+  .sm2-ghost-btn,
+  .sm2-link-btn,
+  .pm-primary-btn,
+  .pm-secondary-btn,
+  .tim-primary-btn,
+  .tim-secondary-btn,
+  .tim-link-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .chain-table,
+  .users-table-wrapper,
+  .sdom-table-wrap,
+  .tim-table,
+  .tim-score-table {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .chain-table table,
+  .users-table,
+  .sdom-table-modern,
+  .reports-table,
+  .tm-table,
+  .tim-table,
+  .tim-score-table {
+    min-width: 750px !important;
+  }
+
+  .sdom-page-title,
+  .sdom-chart-title,
+  .role-dashboard-card h1,
+  .assessment-card h2,
+  .tim-hero-band h2,
+  .sdom-hero-band h2,
+  .tm-hero-band h2 {
+    line-height: 1.2;
+  }
+
+  .sdom-keep-grid {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .sdom-content-scrollable {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .sdom-summary-cards,
+  .sdom-overview-cards,
+  .sdom-report-summary-grid,
+  .metrics-grid,
+  .ti2-myassess-summary,
+  .sm2-myassess-summary {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sdom-topbar-title {
+    font-size: 0.95rem;
+  }
+
+  .sdom-topbar-sub,
+  .role-brand p,
+  .role-user-info span,
+  .sm2-user-strip span,
+  .ti2-user-strip span {
+    font-size: 0.72rem;
+  }
+
+  .sdom-filter-bar {
+    padding: 12px;
+  }
+
+  .sdom-filter-field,
+  .sdom-filter-field[style] {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .sdom-modal-overlay {
+    padding: 6px;
+  }
+
+  .sdom-modal {
+    width: calc(100vw - 12px) !important;
+    max-width: calc(100vw - 12px) !important;
+    padding: 14px;
+  }
+}
+

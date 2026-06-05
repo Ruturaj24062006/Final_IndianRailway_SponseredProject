@@ -31,25 +31,12 @@ export default function CommonUserModal({
     });
   };
 
-  const modalStyle = {
-    width: isShift ? "450px" : "900px",
-    maxWidth: "95vw",
-    maxHeight: "85vh",
-    overflowY: "auto",
-    background: "#ffffff",
-    borderRadius: "16px",
-    border: "1px solid #e2e8f0",
-    boxShadow: "0 20px 60px rgba(0, 0, 0, 0.18)",
-    padding: "28px",
-    boxSizing: "border-box"
-  };
-
   return (
     <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sdom-modal" style={modalStyle}>
+      <div className={`sdom-modal ${isShift ? "sdom-modal--compact" : "sdom-modal--wide"}`}>
         {isShift ? (
           <form onSubmit={(e) => { e.preventDefault(); onSubmit(e); }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <div className="sdom-stack-on-mobile" style={{ marginBottom: "20px" }}>
               <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "#0B1F3A", display: "flex", alignItems: "center", gap: "8px" }}>
                 <RefreshCw size={20} /> Transfer Station
               </h3>
@@ -77,7 +64,7 @@ export default function CommonUserModal({
               </select>
             </div>
 
-            <div className="sdom-modal-actions" style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+            <div className="sdom-modal-actions" style={{ marginTop: "24px" }}>
               <button type="submit" className="sdom-btn-primary" style={{ flex: 1 }}>Confirm Transfer</button>
               <button type="button" className="sdom-btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
             </div>
@@ -85,8 +72,8 @@ export default function CommonUserModal({
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); onSubmit(e); }} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div className="sdom-stack-on-mobile" style={{ marginBottom: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", minWidth: 0 }}>
                 <div style={{
                   background: "linear-gradient(135deg, #0d2c4d 0%, #1e40af 100%)",
                   width: "56px",
@@ -120,7 +107,7 @@ export default function CommonUserModal({
               </h4>
               <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
               
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div className="sdom-modal-grid-2">
                 <div className="sdom-modal-field">
                   <label>Full Name *</label>
                   <input 
@@ -179,7 +166,7 @@ export default function CommonUserModal({
               </h4>
               <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
               
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div className="sdom-modal-grid-2">
                 <div className="sdom-modal-field">
                   <label>Role / Designation *</label>
                   <select 
@@ -248,7 +235,7 @@ export default function CommonUserModal({
                     <option>A</option><option>B</option><option>C</option><option>D</option>
                   </select>
                 </div>
-                <div className="sdom-modal-field" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div className="sdom-modal-field sdom-modal-grid-2" style={{ gap: "10px" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
                     <label style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", fontWeight: 700 }}>PME Status</label>
                     <select 
@@ -299,7 +286,7 @@ export default function CommonUserModal({
                   {userData.role} Operational Setup
                 </h4>
                 <div style={{ height: '1px', backgroundColor: '#a7f3d0', marginBottom: '16px' }}></div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div className="sdom-modal-grid-2">
                   <div className="sdom-modal-field">
                     <label>Operational Station *</label>
                     <select 
@@ -341,7 +328,7 @@ export default function CommonUserModal({
                   Pointsman Operational Setup
                 </h4>
                 <div style={{ height: '1px', backgroundColor: '#c2e0ff', marginBottom: '16px' }}></div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div className="sdom-modal-grid-2">
                   <div className="sdom-modal-field">
                     <label>Reporting Station Master *</label>
                     <input 
@@ -388,7 +375,7 @@ export default function CommonUserModal({
                   Train Manager Operational Setup
                 </h4>
                 <div style={{ height: '1px', backgroundColor: '#e9d5ff', marginBottom: '16px' }}></div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div className="sdom-modal-grid-2">
                   <div className="sdom-modal-field">
                     <label>Crew Depot *</label>
                     <select 
@@ -464,7 +451,7 @@ export default function CommonUserModal({
               </div>
             )}
 
-            <div className="sdom-modal-actions" style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+            <div className="sdom-modal-actions" style={{ marginTop: "24px" }}>
               <button className="sdom-btn-primary" type="submit" style={{ flex: 1 }}>
                 {mode === "edit" ? "🔒 UPDATE USER DETAILS" : "👤 REGISTER NEW USER"}
               </button>

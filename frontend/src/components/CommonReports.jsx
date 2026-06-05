@@ -187,9 +187,9 @@ export default function CommonReports({
     const isPointsman = u.role?.toLowerCase() === "pointsman" || u.role?.toLowerCase() === "pointsmen";
 
     return (
-      <div className="ti2-card animate-fade-in" style={{ padding: "24px", background: "white", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0" }}>
+      <div className="ti2-card animate-fade-in sdom-report-detail" style={{ background: "white", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0" }}>
         {/* Header section with back button */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1.5px solid #e2edf8", paddingBottom: "16px", marginBottom: "20px" }}>
+        <div className="sdom-report-detail-header">
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <div className="ti2-pm-avatar" style={{ width: 48, height: 48, fontSize: 18, background: "#2563eb", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontWeight: "700" }}>{u.name.charAt(0)}</div>
             <div>
@@ -203,7 +203,7 @@ export default function CommonReports({
         </div>
 
         {/* Quick Info Summary metrics */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "24px" }}>
+        <div className="sdom-report-metrics">
           <div style={{ background: "#f8fafc", border: "1px solid #e2edf8", padding: "14px", borderRadius: "12px", textAlign: "center" }}>
             <span style={{ fontSize: "11px", fontWeight: "800", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Grand Total Score</span>
             <strong style={{ display: "block", fontSize: "24px", color: CAT_C[u.cat] || "#2563eb", marginTop: "4px", fontWeight: "900" }}>{u.score}/100</strong>
@@ -234,9 +234,9 @@ export default function CommonReports({
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "24px" }}>
+        <div className="sdom-report-detail-grid">
           {/* Left side details card */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div className="sdom-report-detail-left" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "14px", padding: "18px" }}>
               <h3 style={{ margin: "0 0 14px 0", fontSize: "13px", fontWeight: "800", color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1.5px solid #e2edf8", paddingBottom: "8px" }}>Personnel Roster Details</h3>
               <dl style={{ display: "flex", flexDirection: "column", gap: "12px", margin: 0 }}>
@@ -257,7 +257,7 @@ export default function CommonReports({
           </div>
 
           {/* Right side Performance Breakdown */}
-          <div style={{ background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "14px", padding: "18px" }}>
+          <div className="sdom-report-detail-right" style={{ background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "14px", padding: "18px" }}>
             <h3 style={{ margin: "0 0 16px 0", fontSize: "13px", fontWeight: "800", color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1.5px solid #e2edf8", paddingBottom: "8px" }}>Sectional Competency Breakdown</h3>
             
             {isPointsman ? (
@@ -340,7 +340,7 @@ export default function CommonReports({
 
   return (
     <div className="sdom-fade" style={{ background: "#f8fafc", padding: "24px", borderRadius: "16px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+      <div className="sdom-stack-on-mobile" style={{ marginBottom: "24px" }}>
         <div>
           <h1 className="sdom-page-title" style={{ fontSize: "28px", fontWeight: "800", color: "#0f172a", margin: "0 0 4px" }}>Reports &amp; Analytics</h1>
           <p className="sdom-page-subtitle" style={{ fontSize: "14px", color: "#64748b", margin: "0" }}>Division-level reporting hub. Use filters below to generate specific staff reports.</p>
@@ -364,7 +364,7 @@ export default function CommonReports({
       </div>
 
       {/* Summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px", marginBottom: "24px" }}>
+      <div className="sdom-summary-grid sdom-report-summary-grid" style={{ marginBottom: "24px" }}>
         {divSummary.map(c => (
           <div key={c.label} className="sdom-stat-card" style={{ background: "white", border: "1px solid #e2e8f0", padding: "20px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
             <div className="sdom-stat-value" style={{ fontSize: "24px", fontWeight: "800", color: "#0f172a" }}>{c.val}</div>

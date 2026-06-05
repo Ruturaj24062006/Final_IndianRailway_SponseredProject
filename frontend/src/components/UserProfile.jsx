@@ -25,7 +25,7 @@ export default function UserProfile({
   return (
     <div className="sdom-fade">
       {/* Hero header */}
-      <div className="sdom-station-header" style={{ marginBottom: 24 }}>
+      <div className="sdom-station-header sdom-profile-hero" style={{ marginBottom: 24 }}>
         <div className="sdom-station-header-meta">
           <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Staff Profile</div>
           <div style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: 4 }}>{fullName}</div>
@@ -59,7 +59,7 @@ export default function UserProfile({
         <div className="sdom-chart-card">
           <div className="sdom-chart-title" style={{ marginBottom: "16px" }}>Personal & Professional Details</div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', paddingBottom: '20px' }}>
+          <div className="sdom-profile-detail-grid">
             {[
               ["Employee ID / HRMS ID", employeeId],
               ["Designation", designation],
@@ -83,7 +83,7 @@ export default function UserProfile({
             <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: '#0f172a', fontWeight: '800', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px' }}>
               Operational & Safety Dates
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', fontSize: '13px' }}>
+            <div className="sdom-profile-safety-grid">
               <div><strong>PME Status:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{pmeStatus}</div></div>
               <div><strong>Refresher Course Status:</strong><div style={{fontWeight: 700, color: "#0d2c4d", marginTop: 4}}>{refStatus}</div></div>
               <div style={{ gridColumn: "span 2" }}><strong>Training Clearance:</strong><div style={{fontWeight: 700, color: "#d97706", marginTop: 4}}>{trainingStatus}</div></div>

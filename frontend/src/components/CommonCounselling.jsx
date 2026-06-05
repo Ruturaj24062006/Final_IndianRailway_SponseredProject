@@ -110,7 +110,7 @@ export default function CommonCounselling({
     <div className="ti2-page-body animate-fade-in" style={{ padding: "24px", background: "#f8fafc", minHeight: "100%", width: "100%", boxSizing: "border-box" }}>
       {/* Category D Pointsmen Roster */}
       <div className="ti2-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)", marginBottom: "24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div className="sdom-stack-on-mobile" style={{ marginBottom: "16px" }}>
           <div>
             <h2 style={{ fontSize: "1.25rem", fontWeight: "800", color: "#991b1b", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
               <AlertTriangle size={20} color="#991b1b" />
@@ -178,7 +178,7 @@ export default function CommonCounselling({
       {/* Schedule Form Modal */}
       {showScheduleForm && targetPm && (
         <div className="sdom-modal-overlay" style={{ zIndex: 99999 }} onClick={e => e.target === e.currentTarget && setShowScheduleForm(false)}>
-          <div className="sdom-modal" style={{ width: "480px", background: "#fff", borderRadius: "12px", padding: "24px" }}>
+          <div className="sdom-modal sdom-modal--compact" style={{ background: "#fff", borderRadius: "12px", padding: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "1.2rem", color: "#0d2c4d", fontWeight: "800" }}>Schedule Counselling Session</h3>
               <button type="button" onClick={() => setShowScheduleForm(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer" }}>&times;</button>

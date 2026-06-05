@@ -24,7 +24,7 @@ export default function CommonPmePosition({
   return (
     <div className="ti2-page-body animate-fade-in" style={{ padding: "24px", background: "#f8fafc", minHeight: "100%", width: "100%", boxSizing: "border-box" }}>
       <div className="ti2-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <div className="sdom-stack-on-mobile" style={{ marginBottom: "20px" }}>
           <div>
             <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
               Periodic Medical Examination (PME) Position
@@ -43,7 +43,7 @@ export default function CommonPmePosition({
           </button>
         </div>
 
-        <div className="ti2-myassess-summary" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" }}>
+        <div className="ti2-myassess-summary sdom-summary-grid" style={{ marginBottom: "24px" }}>
           <div className="ti2-report-mini" style={{ borderLeft: "4px solid #16a34a", padding: "16px", background: "#f8fafc", borderRadius: "8px" }}>
             <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "700" }}>PME FIT Clearance</div>
             <strong style={{ display: "block", fontSize: "20px", color: "#16a34a", marginTop: "4px" }}>{fit.length} staff</strong>

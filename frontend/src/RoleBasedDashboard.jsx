@@ -115,7 +115,7 @@ function RoleBasedDashboard({ user, onLogout }) {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="role-dashboard-card">
-            <div className="role-dashboard-icon">
+              <div className="role-dashboard-icon">
               <Home size={48} />
             </div>
             <h1>{getRoleDashboardTitle()}</h1>
@@ -260,7 +260,7 @@ function RoleBasedDashboard({ user, onLogout }) {
           color: #0066cc;
         }
 
-        .assessment-workflow-container {
+          .assessment-workflow-container {
           max-width: 1000px;
           margin: 0 auto;
         }
@@ -280,7 +280,7 @@ function RoleBasedDashboard({ user, onLogout }) {
 
         .assessment-info-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
           gap: 20px;
           margin-bottom: 40px;
         }
@@ -321,7 +321,7 @@ function RoleBasedDashboard({ user, onLogout }) {
 
         .permission-items {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
           gap: 15px;
         }
 
@@ -411,6 +411,102 @@ function RoleBasedDashboard({ user, onLogout }) {
 
         .chain-table tr:hover {
           background: #f5f5f5;
+        }
+
+        @media (max-width: 1024px) {
+          .role-topbar {
+            height: auto;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 16px;
+          }
+
+          .role-brand,
+          .role-topbar-right,
+          .role-dashboard-content {
+            width: 100%;
+          }
+
+          .role-topbar-right {
+            justify-content: space-between;
+            flex-wrap: wrap;
+          }
+
+          .role-dashboard-content {
+            padding: 28px 16px;
+          }
+
+          .assessment-info-grid,
+          .permission-items,
+          .role-info-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .role-tabs {
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+          }
+
+          .role-tabs::-webkit-scrollbar {
+            display: none;
+          }
+
+          .role-tab {
+            white-space: nowrap;
+            flex: 0 0 auto;
+            padding-inline: 16px;
+          }
+
+          .assessment-card {
+            padding: 20px;
+          }
+
+          .assessment-info-grid,
+          .permission-items,
+          .role-info-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .permission-item {
+            align-items: flex-start;
+          }
+
+          .chain-table table {
+            min-width: 560px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .role-brand h2 {
+            font-size: 18px;
+          }
+
+          .role-brand p,
+          .role-user-info span {
+            font-size: 11px;
+          }
+
+          .role-dashboard-card {
+            padding: 24px 18px;
+          }
+
+          .role-dashboard-icon {
+            width: 64px;
+            height: 64px;
+          }
+
+          .assessment-value {
+            font-size: 16px;
+          }
+
+          .chain-table th,
+          .chain-table td {
+            padding: 10px 8px;
+            font-size: 12px;
+          }
         }
       `}</style>
     </div>
