@@ -7,12 +7,13 @@ import {
   Calendar, BookOpen, Clock, HeartHandshake, HelpCircle, Download,
   FileSpreadsheet, FileText, Bell, Plus, RefreshCw, Edit, Trash2, Lock, Maximize2,
   ArrowLeft, UserCheck, BusFront, ClipboardList, UserPlus, Send, Train, ExternalLink,
-  Gauge
+  Gauge, Cpu, Sparkles
 } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LabelList
 } from "recharts";
+import { useLanguage } from "./utils/LanguageContext";
 import "./sdom.css";
 import TIDashboard from "./components/TrafficInspectorModule/TIDashboard";
 import UserProfile from "./components/UserProfile";
@@ -27,11 +28,13 @@ import TIRefPosition from "./components/TrafficInspectorModule/TIRefPosition";
 import TIInspections from "./components/TrafficInspectorModule/TIInspections";
 import TICounselling from "./components/TrafficInspectorModule/TICounselling";
 import CommonReports from "./components/CommonReports";
+import AiCommandCenter from "./components/AiCommandCenter";
+import { getTiDashboard, getTiPendingApprovals, getTiAssessmentHistory, getTiPerformanceSummary, getCounsellingRecords, getEmployees, getStations, approveAssessment, rejectAssessment, createCounsellingRecord, getProfile, getMyAssessmentHistory, getMyAuditLogs, getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "./services/tiService";
 
-/* ═══════════════════════════════════════════
+/* ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ 
    NAV CONFIG
    (Full 12 Sidebar Menu Items)
-═══════════════════════════════════════════ */
+═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═  */
 const NAV = [
   { key: "dashboard",               label: "Dashboard",                    icon: Gauge },
   { key: "pointsmen",               label: "Pointsmen",                    icon: Users },
@@ -99,7 +102,16 @@ const catBadge = (c) => {
 };
 
 const statusBadge = (s) => {
-  const map = { Approved: "sdom-badge-success", Pending: "sdom-badge-warning", Rejected: "sdom-badge-danger", Overdue: "sdom-badge-danger", Active: "sdom-badge-success" };
+  const map = { 
+    Approved: "sdom-badge-success", 
+    Completed: "sdom-badge-success", 
+    Active: "sdom-badge-success", 
+    Pending: "sdom-badge-warning", 
+    Submitted: "sdom-badge-warning", 
+    Rejected: "sdom-badge-danger", 
+    Expired: "sdom-badge-danger", 
+    Overdue: "sdom-badge-danger" 
+  };
   return <span className={`sdom-badge ${map[s] || "sdom-badge-neutral"}`}>{s}</span>;
 };
 
@@ -131,152 +143,17 @@ const MONTHLY_TREND = [
   { month: "May'26", score: 91, safety: 94 }
 ];
 
-
-/* ═══════════════════════════════════════════
-   STATIC MOCK DATA — 12 STATIONS
-═══════════════════════════════════════════ */
-const INIT_STATIONS = [
-  { id: "ST01", name: "Parbhani Junction", code: "PBN", avgScore: 82, safetyPct: 88, highRisk: 1, pointsmenCount: 10 },
-  { id: "ST02", name: "Amla Junction", code: "AMLA", avgScore: 65, safetyPct: 71, highRisk: 3, pointsmenCount: 8 },
-  { id: "ST03", name: "Badnera Junction", code: "BD", avgScore: 78, safetyPct: 83, highRisk: 1, pointsmenCount: 7 },
-  { id: "ST04", name: "Nagpur Junction", code: "NGP", avgScore: 89, safetyPct: 94, highRisk: 0, pointsmenCount: 12 },
-  { id: "ST05", name: "Akola Junction", code: "AK", avgScore: 71, safetyPct: 76, highRisk: 2, pointsmenCount: 8 },
-  { id: "ST06", name: "Wardha Junction", code: "WR", avgScore: 80, safetyPct: 85, highRisk: 1, pointsmenCount: 9 },
-  { id: "ST07", name: "Betul Station", code: "BYT", avgScore: 74, safetyPct: 80, highRisk: 1, pointsmenCount: 6 },
-  { id: "ST08", name: "Itarsi Junction", code: "ET", avgScore: 85, safetyPct: 91, highRisk: 1, pointsmenCount: 11 },
-  { id: "ST09", name: "Chandrapur Station", code: "CD", avgScore: 68, safetyPct: 73, highRisk: 2, pointsmenCount: 7 },
-  { id: "ST10", name: "Gondia Junction", code: "G", avgScore: 82, safetyPct: 87, highRisk: 0, pointsmenCount: 9 },
-  { id: "ST11", name: "Dhamangaon Station", code: "DMN", avgScore: 73, safetyPct: 79, highRisk: 1, pointsmenCount: 5 },
-  { id: "ST12", name: "Pulgaon Junction", code: "PLO", avgScore: 76, safetyPct: 81, highRisk: 1, pointsmenCount: 6 }
-];
-
-const INIT_USERS = [
-  // Station Masters
-  { id: "SM_1001", name: "S. Deshmukh", role: "Station Master", designation: "Station Master", station: "Parbhani Junction", cat: "A", lastAssessDate: "2026-03-20", score: 86, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 11001", joiningDate: "2018-02-12" },
-  { id: "SM_2102", name: "A. Kulkarni", role: "Station Master", designation: "Station Master", station: "Parbhani Junction", cat: "B", lastAssessDate: "2026-02-14", score: 72, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 11002", joiningDate: "2019-05-15" },
-  { id: "SM_2201", name: "M. Patil", role: "Station Master", designation: "Station Master", station: "Amla Junction", cat: "A", lastAssessDate: "2026-03-12", score: 84, pmeStatus: "Fit", refStatus: "Pending", contact: "+91 98765 11003", joiningDate: "2016-08-20" },
-  { id: "SM_2202", name: "R. Sharma", role: "Station Master", designation: "Station Master", station: "Amla Junction", cat: "C", lastAssessDate: "2026-01-30", score: 54, pmeStatus: "Pending", refStatus: "Pending", contact: "+91 98765 11004", joiningDate: "2021-10-10" },
-  { id: "SM_2301", name: "V. Singh", role: "Station Master", designation: "Station Master", station: "Badnera Junction", cat: "A", lastAssessDate: "2026-03-15", score: 88, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 11005", joiningDate: "2015-04-12" },
-  { id: "SM_2302", name: "T. Mehta", role: "Station Master", designation: "Station Master", station: "Badnera Junction", cat: "B", lastAssessDate: "2026-02-20", score: 71, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 11006", joiningDate: "2020-03-18" },
-  { id: "SM_2401", name: "K. Raghuvanshi", role: "Station Master", designation: "Station Master", station: "Nagpur Junction", cat: "A", lastAssessDate: "2026-03-22", score: 92, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 11007", joiningDate: "2014-06-25" },
-  { id: "SM_2501", name: "P. Wankhede", role: "Station Master", designation: "Station Master", station: "Akola Junction", cat: "B", lastAssessDate: "2026-03-01", score: 74, pmeStatus: "Overdue", refStatus: "Expired", contact: "+91 98765 11008", joiningDate: "2017-09-08" },
-  
-  // Pointsmen
-  { id: "PM_1001", name: "K. Pawar", role: "Pointsman", designation: "Pointsman Grade I", station: "Parbhani Junction", cat: "A", lastAssessDate: "2026-04-10", score: 80, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 22001", joiningDate: "2020-01-10" },
-  { id: "PM_1002", name: "R. Verma", role: "Pointsman", designation: "Pointsman Grade I", station: "Amla Junction", cat: "B", lastAssessDate: "2026-04-09", score: 68, pmeStatus: "Fit", refStatus: "Pending", contact: "+91 98765 22002", joiningDate: "2021-06-18" },
-  { id: "PM_1003", name: "D. Rane", role: "Pointsman", designation: "Pointsman Grade II", station: "Amla Junction", cat: "D", lastAssessDate: "2026-04-08", score: 44, pmeStatus: "Unfit", refStatus: "Pending", contact: "+91 98765 22003", joiningDate: "2022-11-22" },
-  { id: "PM_1004", name: "J. Shaikh", role: "Pointsman", designation: "Pointsman Grade I", station: "Badnera Junction", cat: "A", lastAssessDate: "2026-04-04", score: 88, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 22004", joiningDate: "2019-12-05" },
-  { id: "PM_1005", name: "A. Gade", role: "Pointsman", designation: "Pointsman Grade II", station: "Akola Junction", cat: "C", lastAssessDate: "2026-03-24", score: 58, pmeStatus: "Overdue", refStatus: "Cleared", contact: "+91 98765 22005", joiningDate: "2023-04-15" },
-  { id: "PM_1006", name: "S. Meshram", role: "Pointsman", designation: "Pointsman Grade I", station: "Nagpur Junction", cat: "A", lastAssessDate: "2026-03-28", score: 94, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 22006", joiningDate: "2018-05-19" },
-  { id: "PM_1007", name: "G. Chawla", role: "Pointsman", designation: "Pointsman Grade II", station: "Itarsi Junction", cat: "A", lastAssessDate: "2026-03-14", score: 82, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 22007", joiningDate: "2020-07-20" },
-  { id: "PM_1008", name: "H. Singh", role: "Pointsman", designation: "Pointsman Grade I", station: "Wardha Junction", cat: "B", lastAssessDate: "2026-03-10", score: 76, pmeStatus: "Fit", refStatus: "Expired", contact: "+91 98765 22008", joiningDate: "2017-02-28" },
-  { id: "PM_1009", name: "B. Yadav", role: "Pointsman", designation: "Pointsman Grade II", station: "Chandrapur Station", cat: "C", lastAssessDate: "2026-03-05", score: 51, pmeStatus: "Overdue", refStatus: "Pending", contact: "+91 98765 22009", joiningDate: "2022-09-01" },
-  { id: "PM_1010", name: "N. Dewangan", role: "Pointsman", designation: "Pointsman Grade I", station: "Gondia Junction", cat: "A", lastAssessDate: "2026-03-18", score: 85, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 22010", joiningDate: "2019-08-11" },
-  
-  // Station Superintendents
-  { id: "SS_1001", name: "S. K. Mukherjee", role: "Station Superintendent", designation: "Station Superintendent", station: "Nagpur Junction", cat: "A", lastAssessDate: "2026-04-14", score: 92, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 33001", joiningDate: "2012-05-18" },
-  { id: "SS_1002", name: "H. S. Rawat", role: "Station Superintendent", designation: "Station Superintendent", station: "Parbhani Junction", cat: "A", lastAssessDate: "2026-03-22", score: 89, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 33002", joiningDate: "2013-09-10" },
-  { id: "SS_1003", name: "Anand Vardhan", role: "Station Superintendent", designation: "Station Superintendent", station: "Akola Junction", cat: "B", lastAssessDate: "2026-02-18", score: 75, pmeStatus: "Fit", refStatus: "Pending", contact: "+91 98765 33003", joiningDate: "2015-11-05" },
-
-  // Train Managers
-  { id: "TM_1001", name: "Dilip Kumar", role: "Train Manager", designation: "Train Manager", station: "Nagpur Junction", cat: "A", lastAssessDate: "2026-04-20", score: 90, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 44001", joiningDate: "2017-06-12" },
-  { id: "TM_1002", name: "Vikas Dubey", role: "Train Manager", designation: "Train Manager", station: "Badnera Junction", cat: "B", lastAssessDate: "2026-03-11", score: 78, pmeStatus: "Fit", refStatus: "Pending", contact: "+91 98765 44002", joiningDate: "2019-10-22" },
-  { id: "TM_1003", name: "J. P. Nadda", role: "Train Manager", designation: "Train Manager", station: "Amla Junction", cat: "C", lastAssessDate: "2026-01-25", score: 56, pmeStatus: "Pending", refStatus: "Expired", contact: "+91 98765 44003", joiningDate: "2021-04-15" }
-];
-
-const DEFAULT_SS_TM_USERS = [
-  // Station Superintendents
-  { id: "SS_1001", name: "S. K. Mukherjee", role: "Station Superintendent", designation: "Station Superintendent", station: "Nagpur Junction", cat: "A", lastAssessDate: "2026-04-14", score: 92, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 33001", joiningDate: "2012-05-18" },
-  { id: "SS_1002", name: "H. S. Rawat", role: "Station Superintendent", designation: "Station Superintendent", station: "Parbhani Junction", cat: "A", lastAssessDate: "2026-03-22", score: 89, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 33002", joiningDate: "2013-09-10" },
-  { id: "SS_1003", name: "Anand Vardhan", role: "Station Superintendent", designation: "Station Superintendent", station: "Akola Junction", cat: "B", lastAssessDate: "2026-02-18", score: 75, pmeStatus: "Fit", refStatus: "Pending", contact: "+91 98765 33003", joiningDate: "2015-11-05" },
-
-  // Train Managers
-  { id: "TM_1001", name: "Dilip Kumar", role: "Train Manager", designation: "Train Manager", station: "Nagpur Junction", cat: "A", lastAssessDate: "2026-04-20", score: 90, pmeStatus: "Fit", refStatus: "Cleared", contact: "+91 98765 44001", joiningDate: "2017-06-12" },
-  { id: "TM_1002", name: "Vikas Dubey", role: "Train Manager", designation: "Train Manager", station: "Badnera Junction", cat: "B", lastAssessDate: "2026-03-11", score: 78, pmeStatus: "Fit", refStatus: "Pending", contact: "+91 98765 44002", joiningDate: "2019-10-22" },
-  { id: "TM_1003", name: "J. P. Nadda", role: "Train Manager", designation: "Train Manager", station: "Amla Junction", cat: "C", lastAssessDate: "2026-01-25", score: 56, pmeStatus: "Pending", refStatus: "Expired", contact: "+91 98765 44003", joiningDate: "2021-04-15" }
-];
-
-const MONTHLY = [
-  { month: "Nov 25", assessments: 14, avgScore: 72, safetyAvg: 74 },
-  { month: "Dec 25", assessments: 18, avgScore: 74, safetyAvg: 76 },
-  { month: "Jan 26", assessments: 24, avgScore: 71, safetyAvg: 73 },
-  { month: "Feb 26", assessments: 32, avgScore: 77, safetyAvg: 79 },
-  { month: "Mar 26", assessments: 38, avgScore: 80, safetyAvg: 82 },
-  { month: "Apr 26", assessments: 42, avgScore: 83, safetyAvg: 85 }
-];
-
-const INIT_PM_ASSESSMENTS = [
-  {
-    id: "PA_1001", pointsmanName: "K. Pawar", hrmsId: "PM_1001",
-    station: "Parbhani Junction", assessingSM: "S. Deshmukh",
-    submissionDate: "2026-04-10", status: "Pending",
-    originalSections: [
-      { title: "Knowledge of Rules",      score: 20, max: 25 },
-      { title: "Alertness & Observation", score: 18, max: 25 },
-      { title: "Safety Record",           score: 12, max: 15 },
-      { title: "Leadership & Management", score: 11, max: 15 },
-      { title: "Discipline",              score: 8,  max: 10 },
-      { title: "Appearance & Neatness",   score: 7,  max: 10 },
-    ],
-    meta: { pmeStatus: "Fit", refStatus: "Cleared", alcoholicStatus: "Non-Alcoholic" },
-    tiRemarks: "", tiModified: false, auditTrail: []
-  },
-  {
-    id: "PA_1002", pointsmanName: "R. Verma", hrmsId: "PM_1002",
-    station: "Amla Junction", assessingSM: "M. Patil",
-    submissionDate: "2026-04-09", status: "Pending",
-    originalSections: [
-      { title: "Knowledge of Rules",      score: 17, max: 25 },
-      { title: "Alertness & Observation", score: 16, max: 25 },
-      { title: "Safety Record",           score: 10, max: 15 },
-      { title: "Leadership & Management", score: 9,  max: 15 },
-      { title: "Discipline",              score: 6,  max: 10 },
-      { title: "Appearance & Neatness",   score: 6,  max: 10 },
-    ],
-    meta: { pmeStatus: "Fit", refStatus: "Pending", alcoholicStatus: "Non-Alcoholic" },
-    tiRemarks: "", tiModified: false, auditTrail: []
-  },
-  {
-    id: "PA_1003", pointsmanName: "D. Rane", hrmsId: "PM_1003",
-    station: "Amla Junction", assessingSM: "M. Patil",
-    submissionDate: "2026-04-08", status: "Pending",
-    originalSections: [
-      { title: "Knowledge of Rules",      score: 14, max: 25 },
-      { title: "Alertness & Observation", score: 13, max: 25 },
-      { title: "Safety Record",           score: 8,  max: 15 },
-      { title: "Leadership & Management", score: 7,  max: 15 },
-      { title: "Discipline",              score: 4,  max: 10 },
-      { title: "Appearance & Neatness",   score: 4,  max: 10 },
-    ],
-    meta: { pmeStatus: "Unfit", refStatus: "Pending", alcoholicStatus: "Alcoholic" },
-    tiRemarks: "", tiModified: false, auditTrail: []
-  },
-  {
-    id: "PA_1004", pointsmanName: "J. Shaikh", hrmsId: "PM_1004",
-    station: "Badnera Junction", assessingSM: "V. Singh",
-    submissionDate: "2026-04-04", status: "Approved",
-    originalSections: [
-      { title: "Knowledge of Rules",      score: 23, max: 25 },
-      { title: "Alertness & Observation", score: 22, max: 25 },
-      { title: "Safety Record",           score: 15, max: 15 },
-      { title: "Leadership & Management", score: 13, max: 15 },
-      { title: "Discipline",              score: 9,  max: 10 },
-      { title: "Appearance & Neatness",   score: 9,  max: 10 },
-    ],
-    finalSections: [
-      { title: "Knowledge of Rules",      score: 23, max: 25 },
-      { title: "Alertness & Observation", score: 22, max: 25 },
-      { title: "Safety Record",           score: 15, max: 15 },
-      { title: "Leadership & Management", score: 13, max: 15 },
-      { title: "Discipline",              score: 9,  max: 10 },
-      { title: "Appearance & Neatness",   score: 9,  max: 10 },
-    ],
-    meta: { pmeStatus: "Fit", refStatus: "Cleared", alcoholicStatus: "Non-Alcoholic" },
-    tiRemarks: "Excellent field performance. Approved as submitted.",
-    tiModified: false, approvalDate: "2026-04-05",
-    auditTrail: [{ action: "Approved without modification", by: "TI R. Khan", date: "2026-04-05" }]
-  },
-];
+const INIT_STATIONS = [];
+const INIT_USERS = [];
+const DEFAULT_SS_TM_USERS = [];
+const MONTHLY = [];
+const INIT_PM_ASSESSMENTS = [];
+const INIT_SM_LIST = [];
+const INIT_TM_LIST = [];
+const INIT_SS_LIST = [];
+const INIT_INSPECTIONS = [];
+const INIT_COUNSELLING = [];
+const INIT_TI_ASSESS_HISTORY = [];
 
 const TI_SM_CRITERIA = [
   { key: "stationMgmt",  label: "Station Management",          weight: 5, count: 5,
@@ -311,13 +188,6 @@ const computeSMScore = form => {
   return { ynScore: Math.min(total, 75), knowledge: km, total: Math.min(total, 75) + km };
 };
 
-const INIT_SM_LIST = [
-  { id: "SMA_5001", name: "S. Deshmukh", hrmsId: "SM_1001", station: "Parbhani Junction", lastDate: "2026-03-20", status: "Pending" },
-  { id: "SMA_5002", name: "M. Patil",    hrmsId: "SM_2201", station: "Amla Junction",       lastDate: "2026-03-12", status: "Pending" },
-  { id: "SMA_5003", name: "V. Singh",    hrmsId: "SM_2301", station: "Badnera Junction",   lastDate: "2026-03-15", status: "Submitted" },
-  { id: "SMA_5004", name: "A. Kulkarni", hrmsId: "SM_2102", station: "Parbhani Junction",  lastDate: "2026-02-14", status: "Pending" },
-];
-
 const TI_TM_CRITERIA = [
   { key: "trainSafety",  label: "Train Safety & Brake Inspection",   weight: 5, count: 5,
     criteria: ["Brake power certificate verification", "BP/FP pressure gauge monitoring", "Tail lamp/board correctness", "Loose coupling check", "Vigilance control check"] },
@@ -351,19 +221,6 @@ const computeTMScore = form => {
   return { ynScore: Math.min(total, 75), knowledge: km, total: Math.min(total, 75) + km };
 };
 
-const INIT_TM_LIST = [
-  { id: "TMA_6001", name: "R. P. Yadav", hrmsId: "TM_3001", station: "Nagpur Junction", lastDate: "2026-04-02", status: "Pending" },
-  { id: "TMA_6002", name: "S. K. Mishra", hrmsId: "TM_3002", station: "Parbhani Junction", lastDate: "2026-03-25", status: "Pending" },
-  { id: "TMA_6003", name: "D. K. Sen", hrmsId: "TM_3003", station: "Badnera Junction", lastDate: "2026-03-18", status: "Submitted" },
-  { id: "TMA_6004", name: "A. V. Joshi", hrmsId: "TM_3004", station: "Amla Junction", lastDate: "2026-02-28", status: "Pending" },
-];
-
-const INIT_SS_LIST = [
-  { id: "SSA_7001", name: "S. K. Mukherjee", hrmsId: "SS_1001", station: "Nagpur Junction",    lastDate: "2026-04-05", status: "Pending" },
-  { id: "SSA_7002", name: "H. S. Rawat",     hrmsId: "SS_1002", station: "Parbhani Junction",  lastDate: "2026-03-28", status: "Pending" },
-  { id: "SSA_7003", name: "Anand Vardhan",   hrmsId: "SS_1003", station: "Akola Junction",     lastDate: "2026-03-10", status: "Submitted" },
-];
-
 const TI_SS_CRITERIA = [
   { key: "stationOps",    label: "Station Operations & Supervision",   weight: 5, count: 5,
     criteria: ["Train reception/dispatch procedures", "Station yard supervision during peak hours", "Platform safety compliance", "Crowd management protocols", "Block instrument operation"] },
@@ -396,17 +253,6 @@ const computeSSScore = form => {
   const km = Math.min(parseInt(form.knowledgeMarks) || 0, 25);
   return { ynScore: Math.min(total, 75), knowledge: km, total: Math.min(total, 75) + km };
 };
-
-const INIT_INSPECTIONS = [
-  { id: "IN_101", date: "2026-05-10", station: "Amla Junction", officer: "TI R. Khan", observations: "Siding point interlocking operation checked. Satisfactory speed compliance.", risk: "Low", status: "Closed" },
-  { id: "IN_102", date: "2026-05-18", station: "Chandrapur Station", officer: "TI R. Khan", observations: "Joint gap clearance in crossing 12B slightly wide. Safety Speed restriction of 15km/h advised.", risk: "Medium", status: "Active" },
-  { id: "IN_103", date: "2026-05-24", station: "Akola Junction", officer: "TI R. Khan", observations: "Station Master logs audit. Slight delay in registering daily block clearing times.", risk: "Low", status: "Pending Action" }
-];
-
-const INIT_COUNSELLING = [
-  { id: "CL_101", date: "2026-05-12", staffName: "D. Rane", designation: "Pointsman Grade II", station: "Amla Junction", topics: "Alcoholic rehabilitation counseling. Safety and alertness briefing.", duration: "45 mins", progress: "Under Monitor" },
-  { id: "CL_102", date: "2026-05-20", staffName: "A. Gade", designation: "Pointsman Grade II", station: "Akola Junction", topics: "Periodic medical exam preparation. Rest compliance counseling.", duration: "30 mins", progress: "Completed" }
-];
 
 // Interactive quiz questions for self-assessments
 const TI_QUIZ = [
@@ -487,47 +333,6 @@ const formatQuarterPeriod = (periodStr) => {
   }
 };
 
-const INIT_TI_ASSESS_HISTORY = [
-  {
-    id: 1, date: "2026-03-20", period: "Q1 2026", assessedBy: "AOM_GM_1001 — P. Joshi",
-    totalScore: 88, category: "A", approvalStatus: "Approved",
-    aomRemarks: "Outstanding supervisory performance. Excellent cross-station coordination.",
-    sections: [
-      { title: "Whistle Codes & Hand Signals",          marks: 18, outOf: 20 },
-      { title: "Token & Line Clear Authorities",        marks: 17, outOf: 20 },
-      { title: "Station Interlocking & Track Circuits", marks: 18, outOf: 20 },
-      { title: "Shunting Operations & Point Locking",   marks: 17, outOf: 20 },
-      { title: "Gate Signals & Siding Isolation",        marks: 18, outOf: 20 },
-    ],
-    userAnswers: generateTiMockResponses(88)
-  },
-  {
-    id: 2, date: "2025-12-15", period: "Q4 2025", assessedBy: "AOM_GM_1001 — P. Joshi",
-    totalScore: 81, category: "A", approvalStatus: "Approved",
-    aomRemarks: "Good performance. Minor issues in documentation speed.",
-    sections: [
-      { title: "Whistle Codes & Hand Signals",          marks: 16, outOf: 20 },
-      { title: "Token & Line Clear Authorities",        marks: 16, outOf: 20 },
-      { title: "Station Interlocking & Track Circuits", marks: 17, outOf: 20 },
-      { title: "Shunting Operations & Point Locking",   marks: 15, outOf: 20 },
-      { title: "Gate Signals & Siding Isolation",        marks: 17, outOf: 20 },
-    ],
-    userAnswers: generateTiMockResponses(81)
-  },
-  {
-    id: 3, date: "2025-09-10", period: "Q3 2025", assessedBy: "AOM_GM_1001 — P. Joshi",
-    totalScore: 93, category: "A", approvalStatus: "Approved",
-    aomRemarks: "Exemplary. Best performing TI in the division this quarter.",
-    sections: [
-      { title: "Whistle Codes & Hand Signals",          marks: 19, outOf: 20 },
-      { title: "Token & Line Clear Authorities",        marks: 18, outOf: 20 },
-      { title: "Station Interlocking & Track Circuits", marks: 19, outOf: 20 },
-      { title: "Shunting Operations & Point Locking",   marks: 18, outOf: 20 },
-      { title: "Gate Signals & Siding Isolation",        marks: 19, outOf: 20 },
-    ],
-    userAnswers: generateTiMockResponses(93)
-  }
-];
 
 
 /* ═══════════════════════════════════════════
@@ -696,15 +501,9 @@ const POPULATED_USERS = generateGraphCompleteData(INIT_USERS, INIT_STATIONS);
 const { pmAssess: POPULATED_PM, smAssess: POPULATED_SM, ssAssess: POPULATED_SS, tmAssess: POPULATED_TM } = generateAssessmentsForGraphs(POPULATED_USERS, INIT_STATIONS);
 
 export default function TrafficInspectorModule({ user, onLogout }) {
+  const { locale, changeLanguage, t } = useLanguage();
   const [activePage, setActivePage]       = useState("dashboard");
-  // Dynamic Graph Completer V3 Migration Block
-  if (localStorage.getItem("ti_data_graph_complete_v3") !== "true") {
-    localStorage.setItem("ti_users", JSON.stringify(POPULATED_USERS));
-    localStorage.setItem("ti_sm_list", JSON.stringify(POPULATED_SM));
-    localStorage.setItem("ti_tm_list", JSON.stringify(POPULATED_TM));
-    localStorage.setItem("ti_ss_list", JSON.stringify(POPULATED_SS));
-    localStorage.setItem("ti_data_graph_complete_v3", "true");
-  }
+  const [dataLoaded, setDataLoaded]       = useState(false);
 
 
   const [statusMsg, setStatusMsg]         = useState("");
@@ -733,11 +532,7 @@ export default function TrafficInspectorModule({ user, onLogout }) {
 
   // Notifications Bell
   const [bellDropdownOpen, setBellDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "danger", message: "CRITICAL: PME overdue for SM P. Wankhede (Akola Junction)", time: "Just now", read: false },
-    { id: 2, type: "warning", message: "Safety alert: Joint gap crack observed at Chandrapur Crossing 12B", time: "2 hours ago", read: false },
-    { id: 3, type: "success", message: "Audit cleared: Parbhani Junction monthly logs verified.", time: "1 day ago", read: true }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   // System Audit Logs
   const [auditLogs, setAuditLogs] = useState([
@@ -746,26 +541,8 @@ export default function TrafficInspectorModule({ user, onLogout }) {
   ]);
 
   // Master Users & Stations States
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem("ti_users");
-    const initialList = saved ? JSON.parse(saved) : POPULATED_USERS;
-    const hasSS = initialList.some(u => u.role === "Station Superintendent");
-    if (!hasSS) {
-      return [...initialList, ...DEFAULT_SS_TM_USERS];
-    }
-    return initialList;
-  });
-  useEffect(() => {
-    localStorage.setItem("ti_users", JSON.stringify(users));
-  }, [users]);
-
-  const [stations, setStations] = useState(() => {
-    const saved = localStorage.getItem("ti_stations");
-    return saved ? JSON.parse(saved) : INIT_STATIONS;
-  });
-  useEffect(() => {
-    localStorage.setItem("ti_stations", JSON.stringify(stations));
-  }, [stations]);
+  const [users, setUsers] = useState([]);
+  const [stations, setStations] = useState([]);
 
   const [showAddStationModal, setShowAddStationModal] = useState(false);
   const [newStationData, setNewStationData] = useState({ name: "", code: "", division: "", zone: "", category: "B", smCount: "", pmCount: "" });
@@ -783,95 +560,261 @@ export default function TrafficInspectorModule({ user, onLogout }) {
     refStatus: "Cleared"
   });
 
-  const [pmList, setPmList]               = useState(POPULATED_PM);
-  const [smList, setSmList]               = useState(() => {
-    const saved = localStorage.getItem("ti_sm_list");
-    return saved ? JSON.parse(saved) : POPULATED_SM;
-  });
-  useEffect(() => {
-    localStorage.setItem("ti_sm_list", JSON.stringify(smList));
-  }, [smList]);
+  const [pmList, setPmList]               = useState([]);
+  const [smList, setSmList]               = useState([]);
+  const [tmList, setTmList]               = useState([]);
 
-  const [tmList, setTmList]               = useState(() => {
-    const saved = localStorage.getItem("ti_tm_list");
-    return saved ? JSON.parse(saved) : POPULATED_TM;
-  });
+  // ── Real-time data loading from backend API ──
   useEffect(() => {
-    localStorage.setItem("ti_tm_list", JSON.stringify(tmList));
-  }, [tmList]);
-
-  useEffect(() => {
-    // Migration: automatically update any references of SM_2101 to SM_1001 in localStorage
-    const savedUsers = localStorage.getItem("ti_users");
-    if (savedUsers) {
+    let cancelled = false;
+    const loadData = async () => {
       try {
-        const parsed = JSON.parse(savedUsers);
-        let changed = false;
-        const updated = parsed.map(u => {
-          if (u.id === "SM_2101") {
-            changed = true;
-            return { ...u, id: "SM_1001" };
-          }
-          return u;
-        });
-        if (changed) {
-          localStorage.setItem("ti_users", JSON.stringify(updated));
-          setUsers(updated);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
+        // Fetch all employees (all roles)
+        const [empData, stationsData, perfData, pendingData, historyData, myHistoryData, counsellingData] = await Promise.allSettled([
+          getEmployees(),
+          getStations(),
+          getTiPerformanceSummary(),
+          getTiPendingApprovals(),
+          getTiAssessmentHistory(),
+          getMyAssessmentHistory(),
+          getCounsellingRecords()
+        ]);
 
-    const savedSmList = localStorage.getItem("ti_sm_list");
-    if (savedSmList) {
-      try {
-        const parsed = JSON.parse(savedSmList);
-        let changed = false;
-        const updated = parsed.map(s => {
-          if (s.hrmsId === "SM_2101") {
-            changed = true;
-            return { ...s, hrmsId: "SM_1001" };
-          }
-          return s;
-        });
-        if (changed) {
-          localStorage.setItem("ti_sm_list", JSON.stringify(updated));
-          setSmList(updated);
+        if (cancelled) return;
+
+        // Transform employees into the UI format
+        if (empData.status === "fulfilled" && empData.value?.length > 0) {
+          const transformed = empData.value.map(e => {
+            const roleMap = { 1: "Pointsman", 2: "Station Master", 3: "Station Superintendent", 4: "Train Manager", 5: "Traffic Inspector" };
+            const role = roleMap[e.role_id] || e.designation || e.role_name || "Pointsman";
+            const score = parseFloat(e.score) || 0;
+            return {
+              id: e.hrms_id || e.employee_id || `EMP_${e.id}`,
+              name: e.full_name || "Unknown",
+              role,
+              designation: e.designation || role,
+              station: e.station_name || "Unassigned",
+              cat: e.category_grade || getCat(score),
+              lastAssessDate: e.last_assessment_date || "—",
+              score,
+              pmeStatus: e.pme_status || "Fit",
+              refStatus: e.refStatus || "Cleared",
+              contact: e.mobile || "—",
+              joiningDate: e.date_of_joining ? new Date(e.date_of_joining).toISOString().slice(0, 10) : "—",
+              dbId: e.id,
+              stationId: e.station_id
+            };
+          });
+          setUsers(transformed);
+        } else {
+          // Fallback to empty if API returns empty
+          setUsers([]);
         }
-      } catch (e) {
-        console.error(e);
+
+        // Transform stations into the UI format
+        if (stationsData.status === "fulfilled" && stationsData.value?.length > 0) {
+          const stTransformed = stationsData.value.map(s => ({
+            id: `ST_${s.id}`,
+            name: s.station_name,
+            code: s.station_code,
+            division: s.division || "Nagpur Division",
+            zone: s.zone || "Central Railway",
+            avgScore: parseFloat(s.avg_score) || 75,
+            safetyPct: Math.max(50, 100 - (parseInt(s.high_risk_count) || 0) * 12),
+            highRisk: parseInt(s.high_risk_count) || 0,
+            pointsmenCount: parseInt(s.pm_count) || 0,
+            smCount: parseInt(s.sm_count) || 0,
+            pendingCount: parseInt(s.pending_count) || 0
+          }));
+          setStations(stTransformed);
+        } else {
+          setStations(INIT_STATIONS);
+        }
+
+        // Transform pending approvals & history into PM assessment list format
+        let combinedPmList = [];
+        if (pendingData.status === "fulfilled" && pendingData.value?.length > 0) {
+          combinedPmList.push(...pendingData.value.map(a => ({
+            id: `PA_${a.assessment_id}`,
+            pointsmanName: a.employee_name,
+            hrmsId: a.employee_hrms_id,
+            station: a.station_name || "—",
+            assessingSM: a.assessor_name || "—",
+            submissionDate: a.assessment_date || "—",
+            status: a.assessment_status || "Pending",
+            originalSections: [
+              { title: "Knowledge of Rules", score: Math.round((a.practical_score || 0) * 0.25), max: 25 },
+              { title: "Alertness & Observation", score: Math.round((a.practical_score || 0) * 0.25), max: 25 },
+              { title: "Safety Record", score: Math.round((a.practical_score || 0) * 0.15), max: 15 },
+              { title: "Leadership & Management", score: Math.round((a.practical_score || 0) * 0.15), max: 15 },
+              { title: "Discipline", score: Math.round((a.practical_score || 0) * 0.10), max: 10 },
+              { title: "Appearance & Neatness", score: Math.round((a.practical_score || 0) * 0.10), max: 10 },
+            ],
+            meta: { pmeStatus: "Fit", refStatus: "Cleared", alcoholicStatus: "Non-Alcoholic" },
+            tiRemarks: a.assessor_remarks || "",
+            tiModified: false,
+            auditTrail: [],
+            dbAssessmentId: a.assessment_id,
+            dbApprovalId: a.approval_id
+          })));
+        }
+
+        if (historyData.status === "fulfilled" && historyData.value?.length > 0) {
+          combinedPmList.push(...historyData.value.map(h => ({
+            id: `PA_${h.assessment_id}`,
+            pointsmanName: h.employee_name,
+            hrmsId: h.employee_hrms_id,
+            station: h.station_name || "—",
+            assessingSM: h.assessor_name || "—",
+            submissionDate: h.assessment_date || "—",
+            status: h.status || "Approved",
+            originalSections: [
+              { title: "Knowledge of Rules", score: Math.round((h.practical_score || 0) * 0.25), max: 25 },
+              { title: "Alertness & Observation", score: Math.round((h.practical_score || 0) * 0.25), max: 25 },
+              { title: "Safety Record", score: Math.round((h.practical_score || 0) * 0.15), max: 15 },
+              { title: "Leadership & Management", score: Math.round((h.practical_score || 0) * 0.15), max: 15 },
+              { title: "Discipline", score: Math.round((h.practical_score || 0) * 0.10), max: 10 },
+              { title: "Appearance & Neatness", score: Math.round((h.practical_score || 0) * 0.10), max: 10 },
+            ],
+            meta: { pmeStatus: h.fitness_status || "Fit", refStatus: "Cleared", alcoholicStatus: "Non-Alcoholic" },
+            tiRemarks: h.approver_remarks || "",
+            tiModified: false,
+            auditTrail: [],
+            dbAssessmentId: h.assessment_id,
+            dbApprovalId: h.approval_id
+          })));
+        }
+        setPmList(combinedPmList);
+
+        // Transform performance summary into SM/TM/SS assessment lists
+        if (perfData.status === "fulfilled" && perfData.value?.length > 0) {
+          const smRows = perfData.value.filter(r => { const d = (r.designation || "").toLowerCase(); return d === "station master" || d.includes("station master"); });
+          const tmRows = perfData.value.filter(r => { const d = (r.designation || "").toLowerCase(); return d === "train manager" || d.includes("train manager"); });
+          const ssRows = perfData.value.filter(r => { const d = (r.designation || "").toLowerCase(); return d.includes("superintendent"); });
+
+          if (smRows.length > 0) {
+            setSmList(smRows.map(r => ({
+              id: `SMA_${r.employee_id}`,
+              name: r.full_name,
+              hrmsId: r.hrms_id,
+              station: r.station_name || "—",
+              lastDate: r.pme_date || "—",
+              status: (r.assessment_status === "Submitted" || r.assessment_status === "Approved" || r.assessment_status === "Completed")
+                ? r.assessment_status
+                : (localStorage.getItem(`sm_test_activated_${r.hrms_id}`) === "true" ? "Exam Sent" : "Pending")
+            })));
+          } else {
+            setSmList([]);
+          }
+
+          if (tmRows.length > 0) {
+            setTmList(tmRows.map(r => ({
+              id: `TMA_${r.employee_id}`,
+              name: r.full_name,
+              hrmsId: r.hrms_id,
+              station: r.station_name || "—",
+              lastDate: r.pme_date || "—",
+              status: (r.assessment_status === "Submitted" || r.assessment_status === "Approved" || r.assessment_status === "Completed")
+                ? r.assessment_status
+                : (localStorage.getItem(`tm_test_activated_${r.hrms_id}`) === "true" ? "Exam Sent" : "Pending")
+            })));
+          } else {
+            setTmList([]);
+          }
+
+          if (ssRows.length > 0) {
+            setSsList(ssRows.map(r => ({
+              id: `SSA_${r.employee_id}`,
+              name: r.full_name,
+              hrmsId: r.hrms_id,
+              station: r.station_name || "—",
+              lastDate: r.pme_date || "—",
+              status: (r.assessment_status === "Submitted" || r.assessment_status === "Approved" || r.assessment_status === "Completed")
+                ? r.assessment_status
+                : (localStorage.getItem(`ss_test_activated_${r.hrms_id}`) === "true" ? "Exam Sent" : "Pending")
+            })));
+          } else {
+            setSsList([]);
+          }
+        } else {
+          setSmList([]);
+          setTmList([]);
+          setSsList([]);
+        }
+
+        // Transform counselling data
+        if (counsellingData.status === "fulfilled" && counsellingData.value?.length > 0) {
+          const counTransformed = counsellingData.value.map(c => ({
+            id: `CL_${c.id}`,
+            date: (c.counselling_date || c.session_date) ? new Date(c.counselling_date || c.session_date).toISOString().slice(0, 10) : "—",
+            staffName: c.employee_name || c.staff_name || "—",
+            designation: c.employee_designation || c.designation || "—",
+            station: c.station_name || "—",
+            topics: c.remarks || c.reason || c.topics_covered || c.notes || "—",
+            duration: c.duration || "30 mins",
+            progress: c.status || c.outcome || "Completed"
+          }));
+          setCounsellings(counTransformed);
+        }
+
+        // Transform TI's own assessment history (for My Assessment / Profile)
+        if (myHistoryData.status === "fulfilled" && myHistoryData.value?.length > 0) {
+          const myHistTransformed = myHistoryData.value.map(h => {
+            const score = parseFloat(h.totalScore) || 0;
+            return {
+              id: h.assessment_id || h.result_id,
+              date: h.date,
+              period: h.assessmentPeriod || h.date,
+              assessedBy: h.assessedBy || "—",
+              totalScore: score,
+              category: h.category || getCat(score),
+              approvalStatus: h.approval_status || "Approved",
+              cbtScore: h.cbt_score,
+              practicalScore: h.practical_score,
+              aomRemarks: h.remarks || "",
+              userAnswers: generateTiMockResponses(score),
+              sections: [
+                { title: "Whistle Codes & Hand Signals", marks: Math.round(score * 0.20), outOf: 20 },
+                { title: "Token & Line Clear Authorities", marks: Math.round(score * 0.20), outOf: 20 },
+                { title: "Station Interlocking & Track Circuits", marks: Math.round(score * 0.20), outOf: 20 },
+                { title: "Shunting Operations & Point Locking", marks: Math.round(score * 0.20), outOf: 20 },
+                { title: "Gate Signals & Siding Isolation", marks: Math.round(score * 0.20), outOf: 20 }
+              ]
+            };
+          });
+          setTiAssessments(myHistTransformed);
+        } else {
+          setTiAssessments([]);
+        }
+
+        setDataLoaded(true);
+      } catch (err) {
+        console.error("Failed to load TI real-time data:", err);
+        setUsers([]);
+        setStations([]);
+        setPmList([]);
+        setSmList([]);
+        setTmList([]);
+        setSsList([]);
+        setDataLoaded(true);
       }
-    }
+    };
+    loadData();
+    const interval = setInterval(() => {
+      loadData();
+    }, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   const [inspections, setInspections]     = useState(INIT_INSPECTIONS);
-  const [counsellings, setCounsellings]   = useState(INIT_COUNSELLING);
+  const [counsellings, setCounsellings]   = useState([]);
   
   // Interactive Self-Assessment State
   const [selectedRecord, setSelectedRecord] = useState(null);
-  const [tiAssessments, setTiAssessments] = useState(() => {
-    const saved = localStorage.getItem("ti_assessments");
-    let history = saved ? JSON.parse(saved) : INIT_TI_ASSESS_HISTORY;
-    let changed = false;
-    history = history.map(item => {
-      if (!item.userAnswers) {
-        changed = true;
-        return {
-          ...item,
-          userAnswers: generateTiMockResponses(item.totalScore)
-        };
-      }
-      return item;
-    });
-    if (changed) {
-      localStorage.setItem("ti_assessments", JSON.stringify(history));
-    }
-    return history;
-  });
-  useEffect(() => {
-    localStorage.setItem("ti_assessments", JSON.stringify(tiAssessments));
-  }, [tiAssessments]);
+  const [tiAssessments, setTiAssessments] = useState([]);
 
   const [quizState, setQuizState]         = useState("idle"); // "idle" | "quiz" | "result"
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -879,7 +822,7 @@ export default function TrafficInspectorModule({ user, onLogout }) {
   const [latestQuizScore, setLatestQuizScore] = useState(null);
 
   // AOM Assigned Exam State
-  const [isExamAssigned, setIsExamAssigned] = useState(() => localStorage.getItem("ti_exam_assigned") === "true");
+  const [isExamAssigned, setIsExamAssigned] = useState(() => localStorage.getItem(`ti_exam_assigned_${user?.hrmsId || "TI_1001"}`) === "true");
 
   // Search, Filters & Expanded Blocks
   const [selectedReportUserId, setSelectedReportUserId] = useState(null);
@@ -921,25 +864,17 @@ export default function TrafficInspectorModule({ user, onLogout }) {
   }, [smForms]);
 
   useEffect(() => {
+    const tiHrmsId = user?.hrmsId || "TI_1001";
     const handleStorageChange = () => {
-      const savedUsers = localStorage.getItem("ti_users");
-      if (savedUsers) setUsers(JSON.parse(savedUsers));
-
-      const savedStations = localStorage.getItem("ti_stations");
-      if (savedStations) setStations(JSON.parse(savedStations));
-
-      const savedSmList = localStorage.getItem("ti_sm_list");
-      if (savedSmList) setSmList(JSON.parse(savedSmList));
-
       const savedSmForms = localStorage.getItem("ti_sm_forms");
       if (savedSmForms) setSmForms(JSON.parse(savedSmForms));
 
-      setIsExamAssigned(localStorage.getItem("ti_exam_assigned") === "true");
+      setIsExamAssigned(localStorage.getItem(`ti_exam_assigned_${tiHrmsId}`) === "true");
     };
     window.addEventListener("storage", handleStorageChange);
 
     const interval = setInterval(() => {
-      const current = localStorage.getItem("ti_exam_assigned") === "true";
+      const current = localStorage.getItem(`ti_exam_assigned_${tiHrmsId}`) === "true";
       setIsExamAssigned(current);
     }, 1000);
 
@@ -963,13 +898,7 @@ export default function TrafficInspectorModule({ user, onLogout }) {
   const [tmLocked, setTmLocked]           = useState({});
 
   // Station Superintendent assessment state
-  const [ssList, setSsList]               = useState(() => {
-    const saved = localStorage.getItem("ti_ss_list");
-    return saved ? JSON.parse(saved) : POPULATED_SS;
-  });
-  useEffect(() => {
-    localStorage.setItem("ti_ss_list", JSON.stringify(ssList));
-  }, [ssList]);
+  const [ssList, setSsList]               = useState([]);
   const [ssForms, setSsForms]             = useState(() => {
     const saved = localStorage.getItem("ti_ss_forms");
     return saved ? JSON.parse(saved) : {};
@@ -1037,8 +966,8 @@ export default function TrafficInspectorModule({ user, onLogout }) {
   const latestCategory = tiAssessments.length > 0 ? tiAssessments[0].category : "A";
 
   const myStations = useMemo(() => {
-    return stations.filter(st => !st.assignedTi || st.assignedTi === tiId);
-  }, [stations, tiId]);
+    return stations;
+  }, [stations]);
 
   const performanceSummaryText = useMemo(() => {
     const rec = myAssessSelected || selectedRecord || (tiAssessments && tiAssessments[0]);
@@ -1173,22 +1102,81 @@ export default function TrafficInspectorModule({ user, onLogout }) {
     triggerNotification("success", `Report "${filename}" exported safely.`);
   };
 
+  const [hierarchySubordinates, setHierarchySubordinates] = useState([]);
+
+  useEffect(() => {
+    const fetchSubordinates = async () => {
+      try {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        if (!token) return;
+        let res;
+        try {
+          res = await fetch("http://127.0.0.1:5000/api/hierarchy/subordinates", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+        } catch {
+          res = await fetch("/api/hierarchy/subordinates", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+        }
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            setHierarchySubordinates(data.data);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch TI subordinates from hierarchy API:", err);
+      }
+    };
+    fetchSubordinates();
+  }, []);
+
   /* ── Derived calculations ── */
   const myUsers = useMemo(() => {
-    return users.filter(u => myStations.some(st => st.name === u.station));
-  }, [users, myStations]);
+    const defaultList = users.filter(u => myStations.some(st => st.name === u.station));
+    if (hierarchySubordinates && hierarchySubordinates.length > 0) {
+      const subHrmsIds = new Set(hierarchySubordinates.map(s => (s.hrms_id || "").toUpperCase()));
+      const subStations = new Set(hierarchySubordinates.map(s => s.station_name));
+      return users.filter(u => {
+        const designation = (u.designation || u.role || "").toLowerCase();
+        if (designation.includes("master") || designation.includes("sm") || designation.includes("superintendent") || designation.includes("ss")) {
+          return subHrmsIds.has((u.id || "").toUpperCase());
+        } else if (designation.includes("pointsman")) {
+          return subStations.has(u.station);
+        }
+        return myStations.some(st => st.name === u.station);
+      });
+    }
+    return defaultList;
+  }, [users, myStations, hierarchySubordinates]);
 
   const myPmList = useMemo(() => {
-    return pmList.filter(p => myStations.some(st => st.name === p.station));
-  }, [pmList, myStations]);
+    const defaultList = pmList.filter(p => myStations.some(st => st.name === p.station));
+    if (hierarchySubordinates && hierarchySubordinates.length > 0) {
+      const subStations = new Set(hierarchySubordinates.map(s => s.station_name));
+      return pmList.filter(p => subStations.has(p.station));
+    }
+    return defaultList;
+  }, [pmList, myStations, hierarchySubordinates]);
 
   const mySmList = useMemo(() => {
-    return smList.filter(s => myStations.some(st => st.name === s.station));
-  }, [smList, myStations]);
+    const defaultList = smList.filter(s => myStations.some(st => st.name === s.station));
+    if (hierarchySubordinates && hierarchySubordinates.length > 0) {
+      const subHrmsIds = new Set(hierarchySubordinates.map(s => (s.hrms_id || "").toUpperCase()));
+      return smList.filter(s => subHrmsIds.has((s.hrmsId || "").toUpperCase()));
+    }
+    return defaultList;
+  }, [smList, myStations, hierarchySubordinates]);
 
   const myTmList = useMemo(() => {
-    return tmList.filter(t => myStations.some(st => st.name === t.station));
-  }, [tmList, myStations]);
+    const defaultList = tmList.filter(t => myStations.some(st => st.name === t.station));
+    if (hierarchySubordinates && hierarchySubordinates.length > 0) {
+      const subStations = new Set(hierarchySubordinates.map(s => s.station_name));
+      return tmList.filter(t => subStations.has(t.station));
+    }
+    return defaultList;
+  }, [tmList, myStations, hierarchySubordinates]);
 
   const totalPM     = myUsers.filter(u => u.role === "Pointsman").length;
   const totalSMs    = myUsers.filter(u => u.role === "Station Master").length;
@@ -1305,18 +1293,85 @@ export default function TrafficInspectorModule({ user, onLogout }) {
     ];
   }, [myPmList, mySmList, myTmList, myUsers]);
 
-  const myAssessmentMonthly = useMemo(() => {
-    return MONTHLY.map(m => {
-      const scale = myStations.length / 12.0;
+  const MONTHLY = useMemo(() => {
+    const months = [];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const d = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
+      const label = `${monthNames[m.getMonth()]}'${m.getFullYear().toString().slice(-2)}`;
+      months.push({
+        label,
+        monthNum: m.getMonth() + 1,
+        year: m.getFullYear()
+      });
+    }
+
+    return months.map(m => {
+      const parseDate = (dStr) => {
+        if (!dStr || dStr === "—") return null;
+        const parsed = new Date(dStr);
+        return isNaN(parsed.getTime()) ? null : parsed;
+      };
+
+      const filterByMonth = (list, dateField) => {
+        return list.filter(item => {
+          const date = parseDate(item[dateField]);
+          if (!date) return false;
+          return (date.getMonth() + 1) === m.monthNum && date.getFullYear() === m.year;
+        });
+      };
+
+      const pmInMonth = filterByMonth(myPmList, "submissionDate");
+      const smInMonth = filterByMonth(mySmList, "lastDate");
+      const tmInMonth = filterByMonth(myTmList, "lastDate");
+      const ssInMonth = filterByMonth(ssList, "lastDate");
+
+      const allAssessmentsInMonth = [...pmInMonth, ...smInMonth, ...tmInMonth, ...ssInMonth];
+      const assessmentsCount = allAssessmentsInMonth.length;
+
+      let avgScore = 0;
+      if (assessmentsCount > 0) {
+        const scores = allAssessmentsInMonth.map(a => a.score || a.finalScore || 0).filter(s => s > 0);
+        if (scores.length > 0) {
+          avgScore = Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length);
+        } else {
+          avgScore = avgScoreAll || 0;
+        }
+      } else {
+        avgScore = myUsers.length > 0 ? avgScoreAll : 0;
+      }
+
+      const overallSafetyPct = myStations.length ? Math.round(stationStats.reduce((s, st) => s + st.safetyPct, 0) / myStations.length) : 0;
+      
+      const approved = allAssessmentsInMonth.filter(a => a.status === "Approved").length;
+      const pending = allAssessmentsInMonth.filter(a => a.status === "Pending" || a.status === "Submitted").length;
+      const rejected = allAssessmentsInMonth.filter(a => a.status === "Rejected").length;
+
       return {
-        month: m.month,
-        approved: Math.round(m.assessments * scale * 0.8),
-        pending: Math.round(m.assessments * scale * 0.15),
-        rejected: Math.round(m.assessments * scale * 0.04),
-        overdue: Math.round(m.assessments * scale * 0.01)
+        month: m.label,
+        avgScore: avgScore,
+        safetyAvg: myUsers.length > 0 ? overallSafetyPct : 0,
+        assessments: assessmentsCount,
+        approved,
+        pending,
+        rejected,
+        overdue: myUsers.filter(u => u.pmeStatus === "Overdue" || u.refStatus === "Expired").length
       };
     });
-  }, [myStations]);
+  }, [myPmList, mySmList, myTmList, ssList, myUsers, avgScoreAll, myStations, stationStats]);
+
+  const myAssessmentMonthly = useMemo(() => {
+    return MONTHLY.map(m => {
+      return {
+        month: m.month,
+        approved: m.approved,
+        pending: m.pending,
+        rejected: m.rejected,
+        overdue: m.overdue
+      };
+    });
+  }, [MONTHLY]);
 
   // Fullscreen Derived Calculations
   const filteredFsStations = useMemo(() => {
@@ -1475,27 +1530,30 @@ export default function TrafficInspectorModule({ user, onLogout }) {
     }
     
     if (clickedStationName) {
-      setZoomPopupSearch(clickedStationName);
-      setSelectedChartType(chartType);
-      setIsChartZoomModalOpen(true);
-      setZoomPopupPage(1);
+      setFsSearch(clickedStationName);
     } else {
-      setSelectedChartType(chartType);
-      setIsChartZoomModalOpen(true);
-      setZoomPopupPage(1);
+      setFsSearch("");
+    }
+    setFsCatFilter("All");
+    setFsRiskFilter("All");
+
+    if (chartType === "trend") {
+      setFullscreenChart("trend");
+    } else {
+      setFullscreenChart("station");
     }
   };
 
   const handlePieClick = (data) => {
     if (data && data.name) {
-      const catLetter = data.name.replace("Category ", "").trim();
-      setZoomPopupCategory(catLetter);
+      const catLetter = data.name.replace("Category ", "").replace("Grade ", "").replace("Cat ", "").trim();
+      setFsCatFilter(catLetter);
     } else {
-      setZoomPopupCategory("All");
+      setFsCatFilter("All");
     }
-    setSelectedChartType("category");
-    setIsChartZoomModalOpen(true);
-    setZoomPopupPage(1);
+    setFsSearch("");
+    setFsRiskFilter("All");
+    setFullscreenChart("grade");
   };
 
   ;
@@ -1552,39 +1610,53 @@ export default function TrafficInspectorModule({ user, onLogout }) {
     });
   };
 
-  const finalizePM = (id,mode,rejectNote="") => {
-    setPmList(prev=>prev.map(p=>{
-      if (p.id!==id) return p;
-      const secs  = editSections[id]||p.originalSections;
-      const total = secs.reduce((s,x)=>s+x.score,0);
-      const modified = JSON.stringify(secs)!==JSON.stringify(p.originalSections);
-      const audit = [...(p.auditTrail||[]),{
-        action: mode==="reject"?"Rejected":(modified?"Modified & Approved":"Approved without modification"),
-        by:`TI ${tiName}`, date:new Date().toISOString().slice(0,10),
-        remark: mode==="reject"?rejectNote:(tiRemarks[id]||"")
-      }];
-      return {
-        ...p, status: mode==="reject"?"Rejected":"Approved",
-        finalSections:mode==="reject"?p.originalSections:secs,
-        finalScore:total, tiRemarks:tiRemarks[id]||rejectNote,
-        tiModified:modified, approvalDate:new Date().toISOString().slice(0,10),
-        auditTrail:audit
-      };
-    }));
-    
-    // Update target Pointsman's dynamic performance score in the main users database!
+  const finalizePM = async (id, mode, rejectNote="") => {
     const targetAssess = pmList.find(p => p.id === id);
-    if (targetAssess && mode !== "reject") {
-      const finalSecs = editSections[id] || targetAssess.originalSections;
-      const finalSum = finalSecs.reduce((s, x) => s + x.score, 0);
-      setUsers(prev => prev.map(u => u.id === targetAssess.hrmsId ? { ...u, score: finalSum, cat: getCat(finalSum) } : u));
-    }
+    if (!targetAssess) return;
+    
+    const dbAsmtId = targetAssess.dbAssessmentId;
+    const remarks = mode === "reject" ? rejectNote : (tiRemarks[id] || "");
+    const secs = editSections[id] || targetAssess.originalSections;
+    const total = secs.reduce((s, x) => s + x.score, 0);
+    const modified = JSON.stringify(secs) !== JSON.stringify(targetAssess.originalSections);
 
-    setSelectedPmId(null);
-    setStatusMsg(mode==="reject"?"Assessment rejected. SM has been notified.":`Assessment ${mode==="approve"?"approved":"modified & approved"} successfully.`);
-    addAuditLog(mode==="reject"?"Rejected PM Assessment":"Approved PM Assessment", `Staff ID: ${targetAssess?.hrmsId || ""}, Score: ${mode==="reject"?"-":total}`);
-    triggerNotification("success", `Reviewed PM Assessment for ${targetAssess?.pointsmanName || ""}.`);
-    setReviewTab(mode==="reject"?"Rejected":"Approved");
+    try {
+      if (mode === "reject") {
+        await rejectAssessment(dbAsmtId, remarks);
+      } else {
+        await approveAssessment(dbAsmtId, remarks, total);
+      }
+
+      setPmList(prev => prev.map(p => {
+        if (p.id !== id) return p;
+        const audit = [...(p.auditTrail || []), {
+          action: mode === "reject" ? "Rejected" : (modified ? "Modified & Approved" : "Approved without modification"),
+          by: `TI ${tiName}`, date: new Date().toISOString().slice(0, 10),
+          remark: remarks
+        }];
+        return {
+          ...p, status: mode === "reject" ? "Rejected" : "Approved",
+          finalSections: mode === "reject" ? p.originalSections : secs,
+          finalScore: total, tiRemarks: remarks,
+          tiModified: modified, approvalDate: new Date().toISOString().slice(0, 10),
+          auditTrail: audit
+        };
+      }));
+
+      // Update target Pointsman's dynamic performance score in the main users database!
+      if (mode !== "reject") {
+        setUsers(prev => prev.map(u => u.id === targetAssess.hrmsId ? { ...u, score: total, cat: getCat(total) } : u));
+      }
+
+      setSelectedPmId(null);
+      setStatusMsg(mode === "reject" ? "Assessment rejected. SM has been notified." : `Assessment ${mode === "approve" ? "approved" : "modified & approved"} successfully.`);
+      addAuditLog(mode === "reject" ? "Rejected PM Assessment" : "Approved PM Assessment", `Staff ID: ${targetAssess?.hrmsId || ""}, Score: ${mode === "reject" ? "-" : total}`);
+      triggerNotification("success", `Reviewed PM Assessment for ${targetAssess?.pointsmanName || ""}.`);
+      setReviewTab(mode === "reject" ? "Rejected" : "Approved");
+    } catch (err) {
+      console.error(`Failed to ${mode} assessment:`, err);
+      setStatusMsg(`Error: Failed to register decision in the database. ${err.message || ""}`);
+    }
   };
 
   /* ── SM Form ── */
@@ -1615,6 +1687,10 @@ export default function TrafficInspectorModule({ user, onLogout }) {
 
   const handleSendExamAccess = (id) => {
     setSmList(prev => prev.map(s => s.id === id ? { ...s, status: "Exam Sent" } : s));
+    const targetHrmsId = smList.find(s => s.id === id)?.hrmsId;
+    if (targetHrmsId) {
+      localStorage.setItem(`sm_test_activated_${targetHrmsId}`, "true");
+    }
     setStatusMsg("Exam access link sent successfully to the Station Master.");
     addAuditLog("Sent Exam Access", `Exam sent to SM: ${smList.find(s => s.id === id)?.name}`);
     triggerNotification("success", `Exam access granted to SM ${smList.find(s => s.id === id)?.name}`);
@@ -1687,6 +1763,10 @@ export default function TrafficInspectorModule({ user, onLogout }) {
 
   const handleSendTMExamAccess = (id) => {
     setTmList(prev => prev.map(t => t.id === id ? { ...t, status: "Exam Sent" } : t));
+    const targetHrmsId = tmList.find(t => t.id === id)?.hrmsId;
+    if (targetHrmsId) {
+      localStorage.setItem(`tm_test_activated_${targetHrmsId}`, "true");
+    }
     setStatusMsg("Exam access link sent successfully to the Train Manager.");
     addAuditLog("Sent Exam Access", `Exam sent to TM: ${tmList.find(t => t.id === id)?.name}`);
     triggerNotification("success", `Exam access granted to TM ${tmList.find(t => t.id === id)?.name}`);
@@ -1813,24 +1893,44 @@ export default function TrafficInspectorModule({ user, onLogout }) {
     setShowInspForm(false);
   };
 
-  const submitCounselling = (e) => {
+  const submitCounselling = async (e) => {
     e.preventDefault();
-    const newRecord = {
-      id: "CL_" + Date.now(),
-      date: new Date().toISOString().slice(0, 10),
-      staffName: newCoun.staffName,
-      designation: newCoun.designation,
-      station: newCoun.station,
-      topics: newCoun.topics,
-      duration: newCoun.duration,
-      progress: newCoun.progress
-    };
-    setCounsellings(prev => [newRecord, ...prev]);
-    addAuditLog("Logged Counselling Session", `Staff: ${newCoun.staffName}, Topics: ${newCoun.topics.slice(0,25)}...`);
-    triggerNotification("success", `Counselling session registered for ${newCoun.staffName}.`);
-    setStatusMsg(`Staff safety counseling briefing registered for ${newCoun.staffName}.`);
-    setNewCoun({ staffName: "", designation: "Pointsman Grade I", station: "Parbhani Junction", topics: "", duration: "30 mins", progress: "Under Monitor" });
-    setShowCounForm(false);
+    const targetUser = users.find(u => u.name === newCoun.staffName);
+    if (!targetUser) {
+      setStatusMsg("Selected staff member not found.");
+      return;
+    }
+    try {
+      const payload = {
+        employee_id: targetUser.dbId,
+        counselling_date: new Date().toISOString().slice(0, 10),
+        reason: "Safety Awareness Briefing",
+        remarks: newCoun.topics,
+        next_review_date: null
+      };
+      
+      const createdRecord = await createCounsellingRecord(payload);
+      
+      const newRecord = {
+        id: `CL_${createdRecord.id || Date.now()}`,
+        date: new Date().toISOString().slice(0, 10),
+        staffName: newCoun.staffName,
+        designation: newCoun.designation,
+        station: newCoun.station,
+        topics: newCoun.topics,
+        duration: newCoun.duration,
+        progress: newCoun.progress
+      };
+      setCounsellings(prev => [newRecord, ...prev]);
+      addAuditLog("Logged Counselling Session", `Staff: ${newCoun.staffName}, Topics: ${newCoun.topics.slice(0,25)}...`);
+      triggerNotification("success", `Counselling session registered for ${newCoun.staffName}.`);
+      setStatusMsg(`Staff safety counseling briefing registered for ${newCoun.staffName}.`);
+      setNewCoun({ staffName: "", designation: "Pointsman Grade I", station: "Parbhani Junction", topics: "", duration: "30 mins", progress: "Under Monitor" });
+      setShowCounForm(false);
+    } catch (err) {
+      console.error("Failed to submit counselling to database:", err);
+      setStatusMsg("Failed to register counselling session in the database.");
+    }
   };
 
   /* ── Self-Assessment Interactive Quiz ── */
@@ -1887,7 +1987,7 @@ export default function TrafficInspectorModule({ user, onLogout }) {
     
     setTiAssessments(prev => [newRecord, ...prev]);
     setSelectedRecord(newRecord);
-    localStorage.removeItem("ti_exam_assigned");
+    localStorage.removeItem(`ti_exam_assigned_${employeeId}`);
     setIsExamAssigned(false);
     addAuditLog("Assigned Assessment Completed", `Score: ${finalScore}/100`);
     triggerNotification("success", `Compliance check complete: Scored ${finalScore}%`);
@@ -1981,6 +2081,9 @@ export default function TrafficInspectorModule({ user, onLogout }) {
   ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═  */
   const renderContent = () => {
     switch (activePage) {
+      case "ai":
+        return <AiCommandCenter user={{ name: tiName, hrmsId: tiId, role: "Traffic Inspector" }} role="Traffic Inspector" />;
+
       case "dashboard":
         return <TIDashboard
           dbStationFilter={dbStationFilter} setDbStationFilter={setDbStationFilter}
@@ -1991,10 +2094,10 @@ export default function TrafficInspectorModule({ user, onLogout }) {
           activePage={activePage} setActivePage={setActivePage} setSelectedStation={setSelectedStation}
           fullscreenChart={fullscreenChart} setFullscreenChart={setFullscreenChart}
           TI_PROFILE={TI_PROFILE} stationTiMap={stationTiMap} MONTHLY={MONTHLY}
-          DEFAULT_SS_TM_USERS={[]} totalPM={pmList.length} totalSMs={smList.length}
-          pending={myPmList.length + mySmList.length + myTmList.length}
-          highRiskAll={users.filter(u => getUserRisk(u) === "High").length}
-          avgScoreAll={Math.round(users.reduce((s, u) => s + (u.score || 0), 0) / (users.length || 1))}
+          DEFAULT_SS_TM_USERS={[]} totalPM={totalPM} totalSMs={totalSMs}
+          pending={pending}
+          highRiskAll={highRiskAll}
+          avgScoreAll={avgScoreAll}
           goTo={goTo} setUserStationFilter={setUserStationFilter} setUserCategoryFilter={setUserCategoryFilter}
           setUserRiskFilter={setUserRiskFilter} setUserSearch={setUserSearch} setReviewTab={setReviewTab}
           myStationsProgress={myStationsProgress} stationStats={stationStats}
@@ -2100,6 +2203,8 @@ export default function TrafficInspectorModule({ user, onLogout }) {
           handleSendSSExamAccess={handleSendSSExamAccess} activeTmId={activeTmId} openTMForm={openTMForm}
           tmForms={tmForms} toggleTMYN={toggleTMYN} setTMField={setTMField} submitTMAssessment={submitTMAssessment}
           tmLocked={tmLocked} handleSendTMExamAccess={handleSendTMExamAccess} myStations={myStations}
+          setSmList={setSmList}
+          setTmList={setTmList}
         />;
       case "pmePosition":
         return <TIPmePosition
@@ -2189,6 +2294,7 @@ export default function TrafficInspectorModule({ user, onLogout }) {
         brandSubtitle="Operations Workspace: Traffic Inspector Module"
         notifications={notifications}
         markAllNotificationsRead={markAllNotificationsRead}
+
       >
         <div className="ti2-page-wrap" style={{ padding: 0 }}>
           {renderContent()}
@@ -2208,24 +2314,24 @@ export default function TrafficInspectorModule({ user, onLogout }) {
               </div>
               <div>
                 <h2>
-                  {fullscreenChart === "station" && "Station-wise Safety & Performance — Deep Dive"}
-                  {fullscreenChart === "trend"   && "Compliance & Assessment Trends — Deep Dive"}
-                  {fullscreenChart === "grade"   && "Staff Grade Distribution (Pointsmen) — Deep Dive"}
+                  {fullscreenChart === "station" && (t("analytics.stationSafetyDeepDive") || "Station-wise Safety & Performance — Deep Dive")}
+                  {fullscreenChart === "trend"   && (t("analytics.complianceTrendsDeepDive") || "Compliance & Assessment Trends — Deep Dive")}
+                  {fullscreenChart === "grade"   && (t("analytics.staffGradeDeepDive") || "Staff Grade Distribution (Pointsmen) — Deep Dive")}
                 </h2>
-                <p>Indian Railway Evaluation Command · Operations Workspace</p>
+                <p>{t("analytics.subTitle") || "Indian Railway Evaluation Command · Operations Workspace"}</p>
               </div>
             </div>
             <button className="sm2-fullscreen-close-btn" onClick={() => setFullscreenChart(null)}>
-              ✕ Close
+              {t("analytics.close") || "✕ Close"}
             </button>
           </div>
 
           {/* Filter Bar */}
           <div className="sm2-fullscreen-filter-bar">
-            <span className="sm2-fs-filter-tag">FILTERS</span>
+            <span className="sm2-fs-filter-tag">{t("analytics.filters") || "FILTERS"}</span>
             <input
               type="text"
-              placeholder={fullscreenChart === "station" ? "Search station name / code..." : "Search staff name / ID..."}
+              placeholder={fullscreenChart === "station" ? (t("analytics.searchStationPlaceholder") || "Search station name / code...") : (t("analytics.searchPlaceholder") || "Search staff name / ID...")}
               value={fsSearch}
               onChange={e => setFsSearch(e.target.value)}
               className="sm2-fs-input"
@@ -2233,32 +2339,32 @@ export default function TrafficInspectorModule({ user, onLogout }) {
             {fullscreenChart !== "trend" && (
               <>
                 <select value={fsCatFilter} onChange={e => setFsCatFilter(e.target.value)} className="sm2-fs-select">
-                  <option value="All">All Grades (A-D)</option>
-                  <option value="A">Grade A</option>
-                  <option value="B">Grade B</option>
-                  <option value="C">Grade C</option>
-                  <option value="D">Grade D</option>
+                  <option value="All">{t("dashboard.allCategories") || "All Grades (A-D)"}</option>
+                  <option value="A">{t("dashboard.colCategory") + " A"}</option>
+                  <option value="B">{t("dashboard.colCategory") + " B"}</option>
+                  <option value="C">{t("dashboard.colCategory") + " C"}</option>
+                  <option value="D">{t("dashboard.colCategory") + " D"}</option>
                 </select>
                 <select value={fsRiskFilter} onChange={e => setFsRiskFilter(e.target.value)} className="sm2-fs-select">
-                  <option value="All">All Risk Levels</option>
-                  <option value="High">High Risk</option>
-                  <option value="Medium">Medium Risk</option>
-                  <option value="Low">Low Risk</option>
+                  <option value="All">{t("workflow.allPriorities") || "All Risk Levels"}</option>
+                  <option value="High">{t("priority.high") + " " + (t("dashboard.colRiskLevel") || "Risk")}</option>
+                  <option value="Medium">{t("priority.medium") + " " + (t("dashboard.colRiskLevel") || "Risk")}</option>
+                  <option value="Low">{t("priority.low") + " " + (t("dashboard.colRiskLevel") || "Risk")}</option>
                 </select>
               </>
             )}
             <button onClick={() => { setFsSearch(""); setFsCatFilter("All"); setFsRiskFilter("All"); }} className="sm2-fs-reset-btn">
-              Reset
+              {t("analytics.reset") || "Reset"}
             </button>
             <div className="sm2-fs-counter">
               {fullscreenChart === "station" && (
-                <>Showing <strong>{filteredFsStations.length}</strong> of {stationStats.length} stations</>
+                <>{t("analytics.showing") || "Showing"} <strong>{filteredFsStations.length}</strong> {t("analytics.of") || "of"} {stationStats.length} {t("sidebar.stations") || "stations"}</>
               )}
               {fullscreenChart === "grade" && (
-                <>Showing <strong>{filteredFsUsers.length}</strong> of {users.filter(u=>u.role==="Pointsman").length} Pointsmen</>
+                <>{t("analytics.showing") || "Showing"} <strong>{filteredFsUsers.length}</strong> {t("analytics.of") || "of"} {users.filter(u=>u.role==="Pointsman").length} {t("sidebar.pointsmen") || "Pointsmen"}</>
               )}
               {fullscreenChart === "trend" && (
-                <>Displaying all <strong>{MONTHLY.length}</strong> monthly cycles</>
+                <>{t("analytics.showing") || "Showing"} <strong>{MONTHLY.length}</strong> {t("analytics.monthlyTrendDeepDive") || "monthly cycles"}</>
               )}
             </div>
           </div>

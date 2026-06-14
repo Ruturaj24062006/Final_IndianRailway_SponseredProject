@@ -1,0 +1,3 @@
+- Attempted to open http://localhost:5173 to check Vite dev server status.
+- Encountered ERR_CONNECTION_REFUSED.
+- The Vite dev server is not currently running.

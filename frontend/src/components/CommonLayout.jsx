@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { LogOut, Bell, Menu, X, CheckCircle2 } from "lucide-react";
+import { LogOut, Menu, X, CheckCircle2 } from "lucide-react";
+import NotificationBell from "./NotificationBell";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { getWorkflowStats, getMyRecommendations } from "../services/workflowService";
+import { getQueue } from "../utils/offlineQueue";
+import { useLanguage } from "../utils/LanguageContext";
 
 /**
  * CommonLayout - A unified dashboard layout wrapper for the Indian Railway Evaluation System.
@@ -21,6 +26,7 @@ import { LogOut, Bell, Menu, X, CheckCircle2 } from "lucide-react";
  * @param {string} props.brandSubtitle - Subtitle (e.g. "Station Master Module")
  * @param {Array} props.notifications - Optional array of notifications for the bell dropdown
  * @param {Function} props.markAllNotificationsRead - Optional callback to clear notifications
+ * @param {Function} props.onViewAll - Callback to open all alerts in the notifications hub
  * @param {React.ReactNode} props.children - Active workspace screen content
  */
 export default function CommonLayout({
@@ -37,11 +43,72 @@ export default function CommonLayout({
   markAllNotificationsRead = () => {},
   children
 }) {
-  const [bellDropdownOpen, setBellDropdownOpen] = useState(false);
+  const { locale, changeLanguage, t } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [workflowBadgeCount, setWorkflowBadgeCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== "undefined" ? navigator.onLine : true));
+  const [queueCount, setQueueCount] = useState(0);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Connection and offline queue listeners
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateOnlineStatus = () => {
+      setIsOnline(navigator.onLine);
+    };
+
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    async function updateQueueCount() {
+      try {
+        const list = await getQueue();
+        setQueueCount(list.length);
+      } catch (err) {
+        console.warn("IndexedDB not ready for count check:", err);
+      }
+    }
+    updateQueueCount();
+
+    window.addEventListener("offline-queue-changed", updateQueueCount);
+    window.addEventListener("online", updateQueueCount);
+    return () => {
+      window.removeEventListener("offline-queue-changed", updateQueueCount);
+      window.removeEventListener("online", updateQueueCount);
+    };
+  }, []);
+
+  // Fetch workflow stats periodically to update sidebar badge
+  useEffect(() => {
+    if (!user || user.hrmsId === "GST_1001" || user.role === "Visitor") return;
+    
+    async function fetchStats() {
+      try {
+        if (user.role === "Pointsman") {
+          const res = await getMyRecommendations({ status: "Pending", limit: 100 });
+          setWorkflowBadgeCount(res.data?.length || 0);
+        } else {
+          const res = await getWorkflowStats();
+          const openEsc = parseInt(res?.escalations?.open_count || 0, 10);
+          const pendingRec = parseInt(res?.recommendations?.pending_count || 0, 10);
+          setWorkflowBadgeCount(openEsc + pendingRec);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch workflow stats for layout badge:", err);
+      }
+    }
+    fetchStats();
+    const interval = setInterval(fetchStats, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -75,7 +142,6 @@ export default function CommonLayout({
           className="sdom-sidebar-close-backdrop"
             onClick={() => {
               setSidebarOpen(false);
-              setBellDropdownOpen(false);
             }}
         />
       )}
@@ -89,7 +155,6 @@ export default function CommonLayout({
           aria-expanded={sidebarOpen}
           onClick={() => {
             setSidebarOpen(open => !open);
-            setBellDropdownOpen(false);
           }}
           aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
         >
@@ -117,10 +182,10 @@ export default function CommonLayout({
           </div>
           <div>
             <h1 className="sdom-topbar-title" style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#fff" }}>
-              {brandTitle}
+              {t("layout.brandTitle") || brandTitle}
             </h1>
             <p className="sdom-topbar-sub" style={{ margin: "2px 0 0", fontSize: "11px", color: "rgba(255,255,255,0.5)" }}>
-              {brandSubtitle}
+              {t("layout.brandSubtitle") || brandSubtitle}
             </p>
           </div>
         </div>
@@ -128,103 +193,53 @@ export default function CommonLayout({
         {/* Topbar Right Section (User details, Notifications, Logout) */}
         <div className="sm2-user-strip ti2-user-strip sdom-topbar-right topbar-right">
           
-          {/* Notification Bell Dropdown */}
-          <div style={{ position: "relative", marginRight: "12px" }}>
-            <button
-              onClick={() => {
-                setBellDropdownOpen(open => !open);
-                setSidebarOpen(false);
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#e2edf8",
-                cursor: "pointer",
-                position: "relative",
-                display: "flex",
-                alignItems: "center",
-                padding: "6px"
-              }}
-            >
-              <Bell size={20} />
-              {unreadCount > 0 && (
-                <span 
-                  style={{ 
-                    position: "absolute", 
-                    top: "-2px", 
-                    right: "-2px", 
-                    width: "16px", 
-                    height: "16px", 
-                    borderRadius: "50%", 
-                    background: "#dc2626", 
-                    color: "#ffffff", 
-                    fontSize: "9px", 
-                    fontWeight: "900", 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center" 
-                  }}
-                >
-                  {unreadCount}
+          {/* Online/Offline Connection Sync Badge */}
+          <div style={{ marginRight: "16px", display: "flex", alignItems: "center" }}>
+            <span style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "11px",
+              fontWeight: "700",
+              textTransform: "uppercase",
+              padding: "4px 10px",
+              borderRadius: "12px",
+              border: isOnline ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(239, 68, 68, 0.2)",
+              background: isOnline ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              color: isOnline ? "#10b981" : "#ef4444"
+            }}>
+              <span style={{
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                background: isOnline ? "#10b981" : "#ef4444",
+                display: "inline-block"
+              }}></span>
+              {isOnline ? t("layout.online") : t("layout.offline")}
+              {queueCount > 0 && (
+                <span style={{
+                  marginLeft: "4px",
+                  background: "#ea580c",
+                  color: "#fff",
+                  fontSize: "9px",
+                  padding: "1px 5px",
+                  borderRadius: "8px",
+                  fontWeight: "800"
+                }}>
+                  {queueCount} {t("layout.pendingSync")}
                 </span>
               )}
-            </button>
+            </span>
+          </div>
 
-            {bellDropdownOpen && (
-              <div 
-                className="sdom-notifications-panel"
-                style={{ 
-                  position: "absolute", 
-                  top: "40px", 
-                  right: 0, 
-                  background: "#ffffff", 
-                  border: "1px solid #cbd5e1", 
-                  borderRadius: "14px", 
-                  boxShadow: "0 10px 25px rgba(15, 23, 42, 0.15)", 
-                  zIndex: 1000, 
-                  overflow: "hidden", 
-                  color: "#0f172a" 
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "#f8fafc", borderBottom: "1px solid #e2edf8" }}>
-                  <h4 style={{ margin: 0, fontSize: "13px", fontWeight: "800" }}>Operations Alerts</h4>
-                  {unreadCount > 0 && (
-                    <button 
-                      onClick={markAllNotificationsRead} 
-                      style={{ background: "none", border: "none", color: "#2563eb", fontWeight: "700", fontSize: "11px", cursor: "pointer" }}
-                    >
-                      Mark all read
-                    </button>
-                  )}
-                </div>
-                <div style={{ maxHeight: "260px", overflowY: "auto" }}>
-                  {notifications.map(n => (
-                    <div 
-                      key={n.id} 
-                      style={{ 
-                        display: "flex", 
-                        alignItems: "flex-start", 
-                        gap: "10px", 
-                        padding: "12px 16px", 
-                        borderBottom: "1px solid #f1f5f9", 
-                        background: n.read ? "#fff" : "#f0f6ff" 
-                      }}
-                    >
-                      <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: n.type === "danger" ? "#dc2626" : n.type === "warning" ? "#ea580c" : "#16a34a", marginTop: "4px", flexShrink: 0 }}></div>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ margin: "0 0 4px 0", fontSize: "12px", lineHeight: "1.4", fontWeight: n.read ? "500" : "800", color: "#1e293b" }}>{n.message}</p>
-                        <span style={{ fontSize: "10px", color: "#64748b" }}>{n.time}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {notifications.length === 0 && (
-                    <p style={{ margin: 0, padding: "20px", textAlign: "center", fontSize: "12px", color: "#64748b" }}>
-                      No alerts in your inbox.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+          {/* Live Notification Bell */}
+          <div style={{ marginRight: "12px" }}>
+            <NotificationBell />
+          </div>
+
+          {/* Language Selector Component */}
+          <div style={{ marginRight: "12px", display: "flex", alignItems: "center" }}>
+            <LanguageSwitcher />
           </div>
 
           {/* User Details */}
@@ -238,7 +253,7 @@ export default function CommonLayout({
 
           {/* Logout Button */}
           <button className="sm2-logout-btn ti2-logout-btn sdom-logout-btn logout-btn" onClick={onLogout}>
-            <LogOut size={15} /> Logout
+            <LogOut size={15} /> {t("layout.logout")}
           </button>
         </div>
       </header>
@@ -260,11 +275,13 @@ export default function CommonLayout({
           } : undefined}
         >
           <div className="sdom-sidebar-section-label" style={{ fontSize: "0.65rem", fontWeight: "700", color: "#486581", textTransform: "uppercase", padding: "14px 20px 8px" }}>
-            Navigation
+            {t("layout.navigation")}
           </div>
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.key;
+            const transKey = `sidebar.${item.key}`;
+            const labelText = t(transKey) !== transKey ? t(transKey) : item.label;
             return (
               <button
                 key={item.key}
@@ -272,11 +289,24 @@ export default function CommonLayout({
                 onClick={() => {
                   setActiveTab(item.key);
                   setSidebarOpen(false);
-                  setBellDropdownOpen(false);
                 }}
               >
                 <Icon size={17} />
-                <span>{item.label}</span>
+                <span>{labelText}</span>
+                {item.key === "workflow" && workflowBadgeCount > 0 && (
+                  <span style={{
+                    marginLeft: "auto",
+                    background: "#ef4444",
+                    color: "white",
+                    fontSize: "10px",
+                    fontWeight: "bold",
+                    padding: "2px 6px",
+                    borderRadius: "10px",
+                    lineHeight: 1
+                  }}>
+                    {workflowBadgeCount}
+                  </span>
+                )}
               </button>
             );
           })}

@@ -34,7 +34,9 @@ import {
   Users,
   Building2,
   UserPlus,
-  Edit
+  Edit,
+  Cpu,
+  Sparkles
 } from "lucide-react";
 import {
   LineChart,
@@ -56,6 +58,9 @@ import SSSafety from "./components/StationSuperintendentModule/SSSafety";
 import MyAssessment from './components/MyAssessment';
 import CommonRoleView from "./components/CommonRoleView";
 import CommonLayout from "./components/CommonLayout";
+import AiCommandCenter from "./components/AiCommandCenter";
+import { getEmployeeProfile, getEmployeeHistory } from "./services/employeeService";
+import { getSmPointsmen, getSmDashboard, getSmComplianceSummary } from "./services/smService";
 
 
 /* ─── Navigation ─── */
@@ -115,7 +120,16 @@ const catBadge = (c) => {
 };
 
 const statusBadge = (s) => {
-  const map = { Approved: "sdom-badge-success", Pending: "sdom-badge-warning", Rejected: "sdom-badge-danger", Overdue: "sdom-badge-danger", Active: "sdom-badge-success" };
+  const map = { 
+    Approved: "sdom-badge-success", 
+    Completed: "sdom-badge-success", 
+    Active: "sdom-badge-success", 
+    Pending: "sdom-badge-warning", 
+    Submitted: "sdom-badge-warning", 
+    Rejected: "sdom-badge-danger", 
+    Expired: "sdom-badge-danger", 
+    Overdue: "sdom-badge-danger" 
+  };
   return <span className={`sdom-badge ${map[s] || "sdom-badge-neutral"}`}>{s}</span>;
 };
 
@@ -430,30 +444,68 @@ function stopAlarmSound() {
   }
 }
 
+const mapUserToFrontend = (u) => ({
+  id: u.hrms_id,
+  hrmsId: u.hrms_id,
+  name: u.full_name,
+  role: u.designation === "Pointsman Grade I" || u.designation === "Pointsman Grade II" || u.designation === "Pointsman" ? "Pointsman" : u.designation,
+  designation: u.designation,
+  station: u.station_name,
+  stationCode: u.station_code,
+  cat: u.category_grade || "A",
+  score: u.final_score || u.practical_score || 80,
+  pmeStatus: u.pme_status || "Fit",
+  refStatus: u.ref_status || "Cleared",
+  contact: u.mobile || "N/A",
+  joiningDate: u.joining_date || "2020-01-10",
+  status: u.status || "Active",
+  reportingSm: u.reporting_officer_name || "N/A"
+});
+
 /* ─── Main component ─── */
 function StationSuperintendentModule({ user, onLogout }) {
-  const fullName = user?.name && user.name !== "Station Superintendent User" ? user.name : stationSuperintendentProfile.name;
-  const employeeId = user?.hrmsId || stationSuperintendentProfile.hrmsId;
+  const [profileData, setProfileData] = useState(stationSuperintendentProfile);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fullName = profileData?.full_name || user?.name || stationSuperintendentProfile.name;
+  const employeeId = profileData?.hrms_id || user?.hrmsId || stationSuperintendentProfile.hrmsId;
 
   const [activeNav, setActiveNav] = useState("dashboard");
 
   // CRUD & Staff Directory States
   const [view, setView] = useState(null);
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem("ti_users");
-    return saved ? JSON.parse(saved) : INIT_USERS;
-  });
-  useEffect(() => {
-    localStorage.setItem("ti_users", JSON.stringify(users));
-  }, [users]);
+  const [users, setUsers] = useState([]);
 
   const [stations, setStations] = useState(() => {
-    const saved = localStorage.getItem("ti_stations");
-    return saved ? JSON.parse(saved) : INIT_STATIONS;
+    return INIT_STATIONS;
   });
+
   useEffect(() => {
-    localStorage.setItem("ti_stations", JSON.stringify(stations));
-  }, [stations]);
+    async function loadData() {
+      try {
+        setLoading(true);
+        const profile = await getEmployeeProfile();
+        setProfileData(profile);
+        const histData = await getEmployeeHistory();
+        if (histData && histData.length > 0) {
+          setHistory(histData);
+        }
+
+        // Fetch station staff roster dynamically
+        const pms = await getSmPointsmen("Pointsman");
+        const sms = await getSmPointsmen("Station Master");
+        const mappedPms = pms.map(mapUserToFrontend);
+        const mappedSms = sms.map(mapUserToFrontend);
+        setUsers([...mappedPms, ...mappedSms]);
+      } catch (err) {
+        console.warn("Failed to load superintendent dashboard databases:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const myStations = useMemo(() => stations, [stations]);
 
@@ -537,12 +589,7 @@ function StationSuperintendentModule({ user, onLogout }) {
 
   // 3. Real-Time Notifications
   const [bellDropdownOpen, setBellDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "danger", message: "CRITICAL: PME Medical examination scheduled on 2026-06-10.", time: "10 mins ago", read: false },
-    { id: 2, type: "warning", message: "Safety Directive: New speed restriction (15km/h) active at Siding Points 12B.", time: "2 hours ago", read: false },
-    { id: 3, type: "info", message: "Circular Update: SWR (Station Working Rules) Amendment v4.2 published.", time: "1 day ago", read: true },
-    { id: 4, type: "success", message: "Training status updated: Periodic Shunting Refresher completed.", time: "3 days ago", read: true }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   // 4. Audit Activity Logs
   const [profileSubTab, setProfileSubTab] = useState("details"); // "details" | "audit"
@@ -1113,7 +1160,15 @@ function StationSuperintendentModule({ user, onLogout }) {
           testQuestions={testQuestions}
           testAssigned={testAssigned}
           mcqTest={ssMcqTest}
-          startTestAttempt={startTestAttempt}
+          startTestAttempt={startTest}
+          activeTest={activeTest}
+          setActiveTest={setActiveTest}
+          currentQuestion={currentQuestion}
+          setCurrentQuestion={setCurrentQuestion}
+          responses={responses}
+          setResponses={setResponses}
+          handleSelectOption={handleSelectOption}
+          submitTest={submitTest}
           history={history}
           openScorecard={openScorecard}
           handleReattempt={handleReattempt}
@@ -1141,6 +1196,10 @@ function StationSuperintendentModule({ user, onLogout }) {
       );
     }
 
+    if (activeNav === "ai") {
+      return <AiCommandCenter user={{ name: fullName, hrmsId: employeeId, role: "Station Superintendent" }} role="Station Superintendent" />;
+    }
+
     if (activeNav === "dashboard") {
       const pmList = users.filter(u => u.role === "Pointsman" && u.station === "Nagpur Junction");
       const smList = users.filter(u => u.role === "Station Master" && u.station === "Nagpur Junction");
@@ -1161,6 +1220,7 @@ function StationSuperintendentModule({ user, onLogout }) {
           pointsmen={pmList}
           stationMasters={smList}
           employeeId={employeeId}
+          profileData={profileData}
         />
       );
     }
@@ -1173,7 +1233,7 @@ function StationSuperintendentModule({ user, onLogout }) {
           latestCategory={latestCategory}
           latestScore={latestScore}
           history={history}
-          profileData={stationSuperintendentProfile}
+          profileData={profileData}
         />
       );
     }
@@ -1292,6 +1352,7 @@ function StationSuperintendentModule({ user, onLogout }) {
         brandSubtitle="Operations Workspace: Station Superintendent Module"
         notifications={notifications}
         markAllNotificationsRead={markAllNotificationsRead}
+
       >
         <div className="pm-main-panel" style={{ background: "transparent", border: "none", boxShadow: "none", padding: 0 }}>
           <div className="pm-main-header-band" style={{ marginBottom: "24px" }}>

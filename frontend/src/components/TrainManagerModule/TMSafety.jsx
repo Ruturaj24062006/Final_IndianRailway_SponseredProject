@@ -1,4 +1,5 @@
 import { AlertTriangle, FileText, ShieldCheck, Paperclip, Plus } from "lucide-react";
+import { useLanguage } from "../../utils/LanguageContext";
 
 export default function TMSafety({
   openEmergencyDialog,
@@ -30,15 +31,17 @@ export default function TMSafety({
   incidentAction,
   setIncidentAction
 }) {
+  const { t } = useLanguage();
+
   return (
-          <section className="pm-page-card">
+    <section className="pm-page-card">
       <div className="pm-page-header">
-        <h2>Safety Broadcast & Incident Reports</h2>
+        <h2>{t("safety.title")}</h2>
         <button className="pm-emergency-trigger-btn animate-pulse" onClick={openEmergencyDialog}>
-          🚨 TRIGGER SYSTEM EMERGENCY ALERT
+          {t("buttons.triggerEmergency")}
         </button>
       </div>
-      <p className="pm-subtitle font-semibold">Immediate access to railway safety logs, abnormal track defect forms, and division-wide broadcasts.</p>
+      <p className="pm-subtitle font-semibold">{t("safety.subtitle")}</p>
 
       {/* Safety Sub-Tabs */}
       <div className="pm-subnav-tabs" style={{ marginBottom: "16px" }}>
@@ -46,19 +49,19 @@ export default function TMSafety({
           className={`pm-subtab-btn ${safetySubTab === "track" ? "active" : ""}`}
           onClick={() => setSafetySubTab("track")}
         >
-          <AlertTriangle size={16} /> Report Track Defect
+          <AlertTriangle size={16} /> {t("safety.reportTrackDefect")}
         </button>
         <button
           className={`pm-subtab-btn ${safetySubTab === "incident" ? "active" : ""}`}
           onClick={() => setSafetySubTab("incident")}
         >
-          <FileText size={16} /> Log Abnormal Incident
+          <FileText size={16} /> {t("safety.logIncident")}
         </button>
         <button
           className={`pm-subtab-btn ${safetySubTab === "history" ? "active" : ""}`}
           onClick={() => setSafetySubTab("history")}
         >
-          <ShieldCheck size={16} /> View Filed Safety Tickets ({safetyReports.length})
+          <ShieldCheck size={16} /> {t("safety.viewTickets")} ({safetyReports.length})
         </button>
       </div>
 
@@ -66,48 +69,48 @@ export default function TMSafety({
         <form onSubmit={submitTrackIssue} className="pm-safety-form">
           <div className="pm-safety-form-grid">
             <div className="pm-form-field">
-              <label>Siding / Station Line Location</label>
+              <label>{t("safety.sidingLocation")}</label>
               <select value={trackLine} onChange={e => setTrackLine(e.target.value)}>
-                <option value="Line 1 Main">Line 1 Main</option>
-                <option value="Line 2 Loop">Line 2 Loop</option>
-                <option value="Siding Line A">Siding Line A</option>
-                <option value="Marshalling Yard Point 14">Marshalling Yard Point 14</option>
-                <option value="Cross-over 11A">Cross-over 11A</option>
+                <option value="Line 1 Main">{t("safetyOptions.line1Main")}</option>
+                <option value="Line 2 Loop">{t("safetyOptions.line2Loop")}</option>
+                <option value="Siding Line A">{t("safetyOptions.sidingLineA")}</option>
+                <option value="Marshalling Yard Point 14">{t("safetyOptions.yardPoint14")}</option>
+                <option value="Cross-over 11A">{t("safetyOptions.crossover11A")}</option>
               </select>
             </div>
             <div className="pm-form-field">
-              <label>KM Mark Location (e.g. 102/4)</label>
+              <label>{t("safety.kmMark")}</label>
               <input
                 type="text"
-                placeholder="Enter KM Mark"
+                placeholder={t("safety.kmMarkPlaceholder") || "Enter KM Mark"}
                 value={trackLocation}
                 onChange={e => setTrackLocation(e.target.value)}
                 required
               />
             </div>
             <div className="pm-form-field">
-              <label>Track Defect Class</label>
+              <label>{t("safety.defectClass")}</label>
               <select value={trackDefect} onChange={e => setTrackDefect(e.target.value)}>
-                <option value="Rail Fracture">Rail Joint Crack / Fracture</option>
-                <option value="Points Jammed">Siding Point Jam / Failure</option>
-                <option value="Track Obstruction">Obstruction on Siding (Fouling)</option>
-                <option value="Ballast Washout">Ballast Washout / Sinkage</option>
-                <option value="Vegetation Overgrowth">High Vegetation Blockage</option>
+                <option value="Rail Fracture">{t("safetyOptions.railFracture")}</option>
+                <option value="Points Jammed">{t("safetyOptions.pointsJammed")}</option>
+                <option value="Track Obstruction">{t("safetyOptions.trackObstruction")}</option>
+                <option value="Ballast Washout">{t("safetyOptions.ballastWashout")}</option>
+                <option value="Vegetation Overgrowth">{t("safetyOptions.vegetationOvergrowth")}</option>
               </select>
             </div>
             <div className="pm-form-field">
-              <label>Severity Category</label>
+              <label>{t("safety.severityCategory")}</label>
               <select value={trackSeverity} onChange={e => setTrackSeverity(e.target.value)}>
-                <option value="High - Urgent Action">High - Urgent (Suspend Movements)</option>
-                <option value="Medium - Caution Advised">Medium - Caution (15 km/h restriction)</option>
-                <option value="Low - Monitor Area">Low - Watchful (Monitor daily)</option>
+                <option value="High - Urgent Action">{t("safetyOptions.highUrgent")}</option>
+                <option value="Medium - Caution Advised">{t("safetyOptions.mediumCaution")}</option>
+                <option value="Low - Monitor Area">{t("safetyOptions.lowMonitor")}</option>
               </select>
             </div>
             <div className="pm-form-field pm-field-wide">
-              <label>Defect Observations & Technical Details</label>
+              <label>{t("safety.observations")}</label>
               <textarea
                 rows="4"
-                placeholder="Explain the visual findings, track alignment defects, or points feedback failures in detail..."
+                placeholder={t("safety.explainVisualFindings") || "Explain the visual findings, track alignment defects, or points feedback failures in detail..."}
                 value={trackDesc}
                 onChange={e => setTrackDesc(e.target.value)}
                 required
@@ -116,7 +119,7 @@ export default function TMSafety({
 
             {/* File Attachment Upload Mock */}
             <div className="pm-form-field pm-field-wide pm-upload-area">
-              <label><Paperclip size={14} /> Upload Details (Photos, Track Reports, Audio Logs)</label>
+              <label><Paperclip size={14} /> {t("safety.uploadDetails")}</label>
               <div className="pm-file-selector-box">
                 <input
                   key={fileInputKey}
@@ -127,18 +130,18 @@ export default function TMSafety({
                   id="safety-evidence-files"
                 />
                 <label htmlFor="safety-evidence-files" className="pm-file-upload-label">
-                  <Plus size={18} /> Click to Choose Files to Upload
+                  <Plus size={18} /> {t("safety.chooseFiles")}
                 </label>
               </div>
 
               {attachedFiles.length > 0 && (
                 <div className="pm-attached-files-list">
-                  <h5>Evidence Files Queued ({attachedFiles.length}):</h5>
+                  <h5>{t("safety.evidenceQueued") || "Evidence Files Queued"} ({attachedFiles.length}):</h5>
                   <ul>
                     {attachedFiles.map((file, fIdx) => (
                       <li key={fIdx}>
                         <span>📎 {file.name} ({file.size})</span>
-                        <button type="button" onClick={() => removeAttachedFile(fIdx)}>Remove</button>
+                        <button type="button" onClick={() => removeAttachedFile(fIdx)}>{t("buttons.delete") || "Remove"}</button>
                       </li>
                     ))}
                   </ul>
@@ -147,7 +150,7 @@ export default function TMSafety({
             </div>
           </div>
           <button type="submit" className="pm-safety-submit-btn">
-            Log Track defect safety ticket
+            {t("safety.submitTicket")}
           </button>
         </form>
       )}
@@ -156,28 +159,28 @@ export default function TMSafety({
         <form onSubmit={submitIncidentReport} className="pm-safety-form">
           <div className="pm-safety-form-grid">
             <div className="pm-form-field">
-              <label>Abnormal incident Type</label>
+              <label>{t("safety.incidentType")}</label>
               <select value={incidentType} onChange={e => setIncidentType(e.target.value)}>
-                <option value="Hot Axle">Hot Axle / Sparks on Wheel</option>
-                <option value="Flat Tyre">Flat Tyre / Heavy Impact Thuds</option>
-                <option value="Brake Binding">Brake Binding (Heavy Smoke)</option>
-                <option value="Hanging Parts">Hanging Coupling / Gear Parts</option>
-                <option value="SPAD Incident">SPAD (Signal Passed at Danger)</option>
-                <option value="Open Siding Gate">Unlocked Siding Gate during transit</option>
+                <option value="Hot Axle">{t("safetyOptions.hotAxle")}</option>
+                <option value="Flat Tyre">{t("safetyOptions.flatTyre")}</option>
+                <option value="Brake Binding">{t("safetyOptions.brakeBinding")}</option>
+                <option value="Hanging Parts">{t("safetyOptions.hangingParts")}</option>
+                <option value="SPAD Incident">{t("safetyOptions.spadIncident")}</option>
+                <option value="Open Siding Gate">{t("safetyOptions.openSidingGate")}</option>
               </select>
             </div>
             <div className="pm-form-field">
-              <label>Train Number & Name (e.g. 12289 Duronto)</label>
+              <label>{t("safety.trainNumber")}</label>
               <input
                 type="text"
-                placeholder="Enter Train Details"
+                placeholder={t("safety.trainNumberPlaceholder") || "Enter Train Details"}
                 value={incidentTrain}
                 onChange={e => setIncidentTrain(e.target.value)}
                 required
               />
             </div>
             <div className="pm-form-field">
-              <label>Time of Observation</label>
+              <label>{t("safety.observationTime")}</label>
               <input
                 type="datetime-local"
                 value={incidentTime}
@@ -185,20 +188,20 @@ export default function TMSafety({
               />
             </div>
             <div className="pm-form-field">
-              <label>Immediate Safety Actions Taken</label>
+              <label>{t("safety.safetyActions")}</label>
               <input
                 type="text"
-                placeholder="e.g. Flagged Red, informed SM on Walkie-Talkie"
+                placeholder={t("safety.safetyActionsPlaceholder") || "e.g. Flagged Red, informed SM on Walkie-Talkie"}
                 value={incidentAction}
                 onChange={e => setIncidentAction(e.target.value)}
                 required
               />
             </div>
             <div className="pm-form-field pm-field-wide">
-              <label>Incident Details & Hand-Signal Remarks</label>
+              <label>{t("safety.incidentDetails")}</label>
               <textarea
                 rows="4"
-                placeholder="Describe the train movement, automatic block operations speeds, visual smoke, wheel fire, or hand signal exchanges..."
+                placeholder={t("safety.explainIncident") || "Describe the train movement, shunting speeds, visual smoke, wheel fire, or hand signal exchanges..."}
                 value={trackDesc}
                 onChange={e => setTrackDesc(e.target.value)}
               />
@@ -206,7 +209,7 @@ export default function TMSafety({
 
             {/* File Upload Incident Details */}
             <div className="pm-form-field pm-field-wide pm-upload-area">
-              <label><Paperclip size={14} /> Upload Incident Photos / Logs</label>
+              <label><Paperclip size={14} /> {t("safety.uploadDetails") || "Upload Incident Photos / Logs"}</label>
               <div className="pm-file-selector-box">
                 <input
                   key={fileInputKey}
@@ -217,18 +220,18 @@ export default function TMSafety({
                   id="incident-evidence-files"
                 />
                 <label htmlFor="incident-evidence-files" className="pm-file-upload-label">
-                  <Plus size={18} /> Choose Evidence Logs
+                  <Plus size={18} /> {t("safety.chooseFiles") || "Choose Evidence Logs"}
                 </label>
               </div>
 
               {attachedFiles.length > 0 && (
                 <div className="pm-attached-files-list">
-                  <h5>Attached Evidence Logs ({attachedFiles.length}):</h5>
+                  <h5>{t("safety.evidenceQueued") || "Attached Evidence Logs"} ({attachedFiles.length}):</h5>
                   <ul>
                     {attachedFiles.map((file, fIdx) => (
                       <li key={fIdx}>
                         <span>📎 {file.name} ({file.size})</span>
-                        <button type="button" onClick={() => removeAttachedFile(fIdx)}>Remove</button>
+                        <button type="button" onClick={() => removeAttachedFile(fIdx)}>{t("buttons.delete") || "Remove"}</button>
                       </li>
                     ))}
                   </ul>
@@ -237,14 +240,14 @@ export default function TMSafety({
             </div>
           </div>
           <button type="submit" className="pm-safety-submit-btn warning">
-            File Critical Incident Report
+            {t("safety.submitIncident")}
           </button>
         </form>
       )}
 
       {safetySubTab === "history" && (
         <div className="pm-safety-records-list">
-          <h3 style={{ fontSize: "16px", color: "#0e2e4f", marginBottom: "14px" }}>Submitted Safety Reports Ledger</h3>
+          <h3 style={{ fontSize: "16px", color: "#0e2e4f", marginBottom: "14px" }}>{t("safety.ledgerTitle")}</h3>
           <div className="pm-safety-ledger-grid">
             {safetyReports.map(report => (
               <article key={report.id} className="pm-safety-ticket-card">
@@ -256,20 +259,20 @@ export default function TMSafety({
                 </div>
                 <h4>{report.defect}</h4>
                 <div className="pm-ticket-details">
-                  <div><strong>Loc:</strong> {report.location}</div>
-                  <div><strong>Severity:</strong> <span className="text-danger-bold">{report.severity}</span></div>
+                  <div><strong>{t("safety.sidingLocation")}:</strong> {report.location}</div>
+                  <div><strong>{t("safety.severityCategory")}:</strong> <span className="text-danger-bold">{report.severity}</span></div>
                 </div>
                 <p className="pm-ticket-desc">{report.desc}</p>
                 {report.attachments && report.attachments.length > 0 && (
                   <div className="pm-ticket-attachments">
-                    <strong>Attachments ({report.attachments.length}):</strong>
+                    <strong>{t("safety.uploadDetails")} ({report.attachments.length}):</strong>
                     <ul>
                       {report.attachments.map((at, idx) => <li key={idx} className="font-mono text-small">📎 {at.name} ({at.size})</li>)}
                     </ul>
                   </div>
                 )}
                 <div className="pm-ticket-footer">
-                  <span>Ticket #{report.id}</span>
+                  <span>{t("safety.ticket")} #{report.id}</span>
                   <span className={`pm-ticket-status ${report.status.replace(/\s+/g, '-').toLowerCase()}`}>
                     {report.status}
                   </span>
@@ -280,6 +283,5 @@ export default function TMSafety({
         </div>
       )}
     </section>
-  
   );
 }

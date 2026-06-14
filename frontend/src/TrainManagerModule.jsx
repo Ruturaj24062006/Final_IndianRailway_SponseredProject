@@ -49,6 +49,10 @@ import TMDashboard from "./components/TrainManagerModule/TMDashboard";
 import UserProfile from "./components/UserProfile";
 import MyAssessment from './components/MyAssessment';
 import TMSafety from "./components/TrainManagerModule/TMSafety";
+import NotificationBell from "./components/NotificationBell";
+import LanguageSwitcher from "./components/LanguageSwitcher";
+import { getEmployeeProfile, getEmployeeHistory } from "./services/employeeService";
+import { useLanguage } from "./utils/LanguageContext";
 
 
 /* ─── Navigation ─── */
@@ -316,16 +320,39 @@ function stopAlarmSound() {
 
 /* ─── Main component ─── */
 function TrainManagerModule({ user, onLogout }) {
-  const fullName = user?.name && user.name !== "Train Manager User" ? user.name : trainManagerProfile.name;
-  const employeeId = user?.hrmsId || trainManagerProfile.hrmsId;
+  const { locale, changeLanguage, t } = useLanguage();
+  const [profileData, setProfileData] = useState(trainManagerProfile);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fullName = profileData?.full_name || user?.name || trainManagerProfile.name;
+  const employeeId = profileData?.hrms_id || user?.hrmsId || trainManagerProfile.hrmsId;
 
   const [activeNav, setActiveNav] = useState("dashboard");
   const [screenMode, setScreenMode] = useState("default");
 
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem(`tm_history_${employeeId}`);
-    return saved ? JSON.parse(saved) : initialHistory;
+    return initialHistory;
   });
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        const profile = await getEmployeeProfile();
+        setProfileData(profile);
+        const histData = await getEmployeeHistory();
+        if (histData && histData.length > 0) {
+          setHistory(histData);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch Train Manager database profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const [historyDateSearch, setHistoryDateSearch] = useState("");
   const [historySortOrder, setHistorySortOrder] = useState("date-desc");
@@ -374,12 +401,7 @@ function TrainManagerModule({ user, onLogout }) {
 
   // 3. Real-Time Notifications
   const [bellDropdownOpen, setBellDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "danger", message: "CRITICAL: PME Medical examination scheduled on 2026-06-10.", time: "10 mins ago", read: false },
-    { id: 2, type: "warning", message: "Safety Directive: New speed restriction (15km/h) active at Siding Points 12B.", time: "2 hours ago", read: false },
-    { id: 3, type: "info", message: "Circular Update: SWR (Station Working Rules) Amendment v4.2 published.", time: "1 day ago", read: true },
-    { id: 4, type: "success", message: "Training status updated: Periodic Safety Refresher completed.", time: "3 days ago", read: true }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   // 4. Audit Activity Logs
   const [profileSubTab, setProfileSubTab] = useState("details"); // "details" | "audit"
@@ -844,6 +866,7 @@ function TrainManagerModule({ user, onLogout }) {
       setBellDropdownOpen={setBellDropdownOpen}
       markAllNotificationsRead={markAllNotificationsRead}
       setActiveNav={setActiveNav}
+      profileData={profileData || trainManagerProfile}
     />
   );
 
@@ -854,7 +877,7 @@ function TrainManagerModule({ user, onLogout }) {
       latestCategory={latestCategory}
       latestScore={latestScore}
       history={history}
-      profileData={trainManagerProfile}
+      profileData={profileData}
     />
   );
 
@@ -868,7 +891,15 @@ function TrainManagerModule({ user, onLogout }) {
       testQuestions={testQuestions}
       testAssigned={testAssigned}
       mcqTest={tmMcqTest}
-      startTestAttempt={startTestAttempt}
+      startTestAttempt={startTest}
+      activeTest={activeTest}
+      setActiveTest={setActiveTest}
+      currentQuestion={currentQuestion}
+      setCurrentQuestion={setCurrentQuestion}
+      responses={responses}
+      setResponses={setResponses}
+      handleSelectOption={handleSelectOption}
+      submitTest={submitTest}
       history={history}
       openScorecard={openScorecard}
       handleReattempt={handleReattempt}
@@ -924,6 +955,7 @@ function TrainManagerModule({ user, onLogout }) {
     if (activeNav === "profile") return renderProfilePage();
     if (activeNav === "myAssessment") return renderMyAssessment();
     if (activeNav === "safety") return renderSafetyPage();
+
     return renderDashboardPage();
   };
 
@@ -937,16 +969,22 @@ function TrainManagerModule({ user, onLogout }) {
       {emergencyActive && (
         <div className="pm-emergency-siren-banner">
           <div className="siren-message">
-            <span className="siren-light animate-flash">🚨 ALERT</span>
-            <strong>MANDATORY EMERGENCY BROADCAST ACTIVE: {emergencyType} detected at {emergencyLocation}! All train & siding movements are frozen immediately.</strong>
+            <span className="siren-light animate-flash">🚨 {t("emergency.alert") || "ALERT"}</span>
+            <strong>
+              {(t("emergency.broadcastActive") !== "emergency.broadcastActive"
+                ? t("emergency.broadcastActive")
+                : "MANDATORY EMERGENCY BROADCAST ACTIVE: {type} detected at {location}! All train & siding movements are frozen immediately."
+              ).replace("{type}", t(`emergency.options.${emergencyType.toLowerCase().replace(/\s+/g, '')}`) || emergencyType)
+               .replace("{location}", emergencyLocation)}
+            </strong>
           </div>
           <div className="siren-controls">
             <button className="pm-siren-mute-btn" onClick={toggleAlarmMute}>
               {alarmMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
-              {alarmMuted ? "Unmute Alarm" : "Mute Sound"}
+              {alarmMuted ? t("buttons.unmute") || "Unmute Alarm" : t("buttons.mute") || "Mute Sound"}
             </button>
             <button className="pm-siren-clear-btn" onClick={clearEmergencyState}>
-              Clear & Safe Return
+              {t("buttons.clearEmergency") || "Clear & Safe Return"}
             </button>
           </div>
         </div>
@@ -956,8 +994,8 @@ function TrainManagerModule({ user, onLogout }) {
         <div className="pm-topbar-brand">
           <div className="pm-topbar-logo">IR</div>
           <div>
-            <h1>Indian Railway Evaluation Command</h1>
-            <p>Operations Workspace: Train Manager Module</p>
+            <h1>{t("layout.brandTitle") || "Indian Railway Evaluation Command"}</h1>
+            <p>{t("layout.trainManagerWorkspace") || "Operations Workspace: Train Manager Module"}</p>
           </div>
         </div>
 
@@ -965,38 +1003,13 @@ function TrainManagerModule({ user, onLogout }) {
 
         <div className="pm-user-strip">
           {/* ── Real-Time Notifications Bell Dropdown ── */}
-          <div className="pm-notification-bell-container">
-            <button className="pm-bell-btn" onClick={() => setBellDropdownOpen(!bellDropdownOpen)}>
-              <Bell size={20} />
-              {unreadNotificationsCount > 0 && (
-                <span className="pm-bell-badge">{unreadNotificationsCount}</span>
-              )}
-            </button>
+          <div className="pm-notification-bell-container" style={{ marginRight: "12px" }}>
+            <NotificationBell />
+          </div>
 
-            {bellDropdownOpen && (
-              <div className="pm-bell-dropdown">
-                <div className="pm-bell-header">
-                  <h4>Operations Notifications</h4>
-                  {unreadNotificationsCount > 0 && (
-                    <button onClick={markAllNotificationsRead}>Mark read</button>
-                  )}
-                </div>
-                <div className="pm-bell-list">
-                  {notifications.map(n => (
-                    <div key={n.id} className={`pm-bell-item ${n.read ? 'read' : 'unread'} type-${n.type}`}>
-                      <div className="pm-bell-item-dot"></div>
-                      <div className="pm-bell-item-content">
-                        <p>{n.message}</p>
-                        <span>{n.time}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {notifications.length === 0 && (
-                    <p className="pm-bell-empty">No alerts received today.</p>
-                  )}
-                </div>
-              </div>
-            )}
+          {/* Language Selector Component */}
+          <div style={{ marginRight: "8px", display: "flex", alignItems: "center" }}>
+            <LanguageSwitcher />
           </div>
 
           <div className="pm-user-avatar">{fullName.charAt(0)}</div>
@@ -1005,7 +1018,7 @@ function TrainManagerModule({ user, onLogout }) {
             <span>HRMS ID: {employeeId}</span>
           </div>
           <button className="pm-logout-btn" onClick={() => { stopAlarmSound(); onLogout(); }}>
-            <LogOut size={15} /> Logout
+            <LogOut size={15} /> {t("layout.logout") || "Logout"}
           </button>
         </div>
       </header>
@@ -1015,6 +1028,8 @@ function TrainManagerModule({ user, onLogout }) {
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = activeNav === item.key && screenMode === "default";
+            const transKey = `sidebar.${item.key}`;
+            const labelText = t(transKey) !== transKey ? t(transKey) : item.label;
             return (
               <button
                 key={item.key}
@@ -1022,7 +1037,7 @@ function TrainManagerModule({ user, onLogout }) {
                 onClick={() => { goToNavPage(item.key); setBellDropdownOpen(false); }}
               >
                 <Icon size={18} />
-                <span>{item.label}</span>
+                <span>{labelText}</span>
               </button>
             );
           })}
@@ -1033,25 +1048,25 @@ function TrainManagerModule({ user, onLogout }) {
         <main className="pm-main-panel">
           <div className="pm-main-header-band">
             <div>
-              <p className="pm-hero-eyebrow">Nagpur Junction Operations</p>
+              <p className="pm-hero-eyebrow">{t("layout.nagpurOperations") || "Nagpur Junction Operations"}</p>
               <h2 className="pm-main-title">
-                {screenMode === "scorecard" ? "Detailed Evaluation scorecard"
-                  : screenMode === "attempt" ? "Competency Examination Attempt"
-                    : navItems.find(i => i.key === activeNav)?.label || "Workspace"}
+                {screenMode === "scorecard" ? (t("assessment.detailedScorecard") || "Detailed Evaluation scorecard")
+                  : screenMode === "attempt" ? (t("assessment.activeSession") || "Competency Examination Attempt")
+                    : (t(`sidebar.${activeNav}`) || navItems.find(i => i.key === activeNav)?.label || "Workspace")}
               </h2>
             </div>
             <div className="pm-header-kpis">
-              <div className="pm-hkpi">
+              <div className="pm-hkpi" onClick={() => goToNavPage("myAssessment")} style={{ cursor: "pointer" }}>
                 <Award size={14} />
-                <span>{history.length} Assessments</span>
+                <span>{history.length} {t("sidebar.assessments") || "Assessments"}</span>
               </div>
-              <div className="pm-hkpi">
+              <div className="pm-hkpi" onClick={() => goToNavPage("myAssessment")} style={{ cursor: "pointer" }}>
                 <Gauge size={14} />
-                <span>Avg {averageScore}</span>
+                <span>{t("dashboard.averageScore") || "Avg"} {averageScore}</span>
               </div>
-              <div className="pm-hkpi" style={{ color: getCategoryColor(latestCategory) }}>
+              <div className="pm-hkpi" onClick={() => goToNavPage("myAssessment")} style={{ cursor: "pointer", color: getCategoryColor(latestCategory) }}>
                 <ShieldCheck size={14} />
-                <span>Cat. {latestCategory}</span>
+                <span>{t("dashboard.currentCategory") || "Cat."} {latestCategory}</span>
               </div>
             </div>
           </div>
@@ -1071,36 +1086,36 @@ function TrainManagerModule({ user, onLogout }) {
         <div className="pm-emergency-modal-overlay">
           <div className="pm-emergency-modal">
             <div className="modal-header">
-              <h2>🚨 CONFIRM URGENT DIVISION-WIDE BROADCAST</h2>
+              <h2>🚨 {t("emergency.confirmBroadcast") || "CONFIRM URGENT DIVISION-WIDE BROADCAST"}</h2>
               <button onClick={() => setEmergencyModalOpen(false)}>×</button>
             </div>
             <div className="modal-body">
               <p className="danger-notice">
-                WARNING: Triggering this broadcast sends an audio warning signal and locks automatic block operations/movement panels on all active Station Master & Superintendent terminals! Use for genuine safety emergencies only.
+                {t("emergency.warningText") || "WARNING: Triggering this broadcast sends an audio warning signal and locks automatic block operations/movement panels on all active Station Master & Superintendent terminals! Use for genuine safety emergencies only."}
               </p>
               <div className="modal-fields">
-                <label>Emergency Category</label>
+                <label>{t("emergency.category") || "Emergency Category"}</label>
                 <select value={emergencyType} onChange={e => setEmergencyType(e.target.value)}>
-                  <option value="Obstruction on Track">Obstruction on Siding (Fouling Clearance)</option>
-                  <option value="Derailment Danger">Visible Rail Crack / Splitting Point</option>
-                  <option value="Signal Failure">Critical Signal Lock Failure</option>
-                  <option value="Hot Axle Fire Spark">Hot Axle / Spark Smoke in Incoming train</option>
-                  <option value="Other Danger">Other Major Track Danger</option>
+                  <option value="Obstruction on Track">{t("emergency.options.obstruction") || "Obstruction on Siding (Fouling Clearance)"}</option>
+                  <option value="Derailment Danger">{t("emergency.options.derailment") || "Visible Rail Crack / Splitting Point"}</option>
+                  <option value="Signal Failure">{t("emergency.options.signalFailure") || "Critical Signal Lock Failure"}</option>
+                  <option value="Hot Axle Fire Spark">{t("emergency.options.hotAxle") || "Hot Axle / Spark Smoke in Incoming train"}</option>
+                  <option value="Other Danger">{t("emergency.options.other") || "Other Major Track Danger"}</option>
                 </select>
 
-                <label>Vulnerable Location / Track</label>
+                <label>{t("emergency.location") || "Vulnerable Location / Track"}</label>
                 <input
                   type="text"
                   value={emergencyLocation}
                   onChange={e => setEmergencyLocation(e.target.value)}
-                  placeholder="e.g. Line 2 Loop Siding, KM 102/4"
+                  placeholder={t("emergency.locationPlaceholder") || "e.g. Line 2 Loop Siding, KM 102/4"}
                 />
               </div>
             </div>
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setEmergencyModalOpen(false)}>Cancel</button>
+              <button className="cancel-btn" onClick={() => setEmergencyModalOpen(false)}>{t("buttons.cancel") || "Cancel"}</button>
               <button className="confirm-btn" onClick={triggerEmergencyBroadcast}>
-                CONFIRM & BROADCAST ALARM
+                {t("emergency.confirmAndBroadcast") || "CONFIRM & BROADCAST ALARM"}
               </button>
             </div>
           </div>

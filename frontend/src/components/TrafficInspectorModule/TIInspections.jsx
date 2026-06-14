@@ -68,15 +68,23 @@ export default function TIInspections({
             <span>Status</span>
           </div>
 
-          {inspections.map(i => (
-            <div key={i.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.4fr 3fr 1.2fr 1fr", padding: "12px 14px", borderBottom: "1px solid #f1f5f9", fontSize: "13px", alignItems: "center" }}>
-              <strong>{i.date}</strong>
-              <strong>{i.station}</strong>
-              <span>{i.observations}</span>
-              <span><span className="ti2-badge" style={{ background: RISK_B[i.risk], color: RISK_C[i.risk] }}>{i.risk} Risk</span></span>
-              <span><span className="ti2-pill-grey">{i.status}</span></span>
+          {inspections.length === 0 ? (
+            <div style={{ padding: "48px 0", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+              <Search size={40} color="#64748b" />
+              <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a", margin: 0 }}>No Data Available</h3>
+              <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>No inspections have been logged yet.</p>
             </div>
-          ))}
+          ) : (
+            inspections.map(i => (
+              <div key={i.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.4fr 3fr 1.2fr 1fr", padding: "12px 14px", borderBottom: "1px solid #f1f5f9", fontSize: "13px", alignItems: "center" }}>
+                <strong>{i.date}</strong>
+                <strong>{i.station}</strong>
+                <span>{i.observations}</span>
+                <span><span className="ti2-badge" style={{ background: RISK_B[i.risk], color: RISK_C[i.risk] }}>{i.risk} Risk</span></span>
+                <span><span className="ti2-pill-grey">{i.status}</span></span>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

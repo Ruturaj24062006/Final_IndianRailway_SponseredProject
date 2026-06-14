@@ -83,7 +83,7 @@ export default function CommonRefPosition({
                 filteredUsers.filter(u => u.refStatus !== "Cleared").map(u => (
                   <tr key={u.id || u.hrmsId} style={{ borderBottom: "1px solid #e2e8f0" }}>
                     <td style={{ padding: "12px 14px", fontWeight: "700", color: "#0f172a" }}>{u.name}</td>
-                    <td style={{ padding: "12px 14px", fontFamily: "monospace", fontSize: "13px" }}>{u.id || u.hrmsId}</td>
+                    <td style={{ padding: "12px 14px", fontFamily: "monospace", fontSize: "13px" }}>{u.hrmsId || u.id}</td>
                     <td style={{ padding: "12px 14px" }}>{u.designation}</td>
                     <td style={{ padding: "12px 14px", fontWeight: "700" }}>{u.station || u.stationName}</td>
                     <td style={{ padding: "12px 14px", color: u.refStatus === "Expired" ? "#dc2626" : "#d97706", fontWeight: "800" }}>{u.refStatus}</td>

@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, Building2, ExternalLink, HelpCircle, Activity, ShieldCheck, Award, TrendingUp, Users, ArrowLeft } from "lucide-react";
-import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, LabelList, LineChart, Line } from "recharts";
+import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, LabelList, LineChart, Line, Cell, PieChart, Pie, Legend } from "recharts";
+import { useLanguage } from "../../utils/LanguageContext";
+import { getEmployeeHistory } from "../../services/employeeService";
 
 const MONTHLY_TREND = [
   { month: "Dec'25", score: 81, safety: 80 },
@@ -55,6 +57,33 @@ export default function TIStations({
   stationStats = [],
   tiName
 }) {
+  const { t } = useLanguage();
+  const [assessmentHistory, setAssessmentHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  useEffect(() => {
+    if (view?.type === "staffDetail" && view.data) {
+      const empId = view.data.dbId || view.data.id;
+      if (empId) {
+        setHistoryLoading(true);
+        getEmployeeHistory(empId)
+          .then(data => {
+            setAssessmentHistory(data || []);
+            setHistoryLoading(false);
+          })
+          .catch(err => {
+            console.error("Failed to load employee history:", err);
+            setAssessmentHistory([]);
+            setHistoryLoading(false);
+          });
+      } else {
+        setAssessmentHistory([]);
+      }
+    } else {
+      setAssessmentHistory([]);
+    }
+  }, [view]);
+
   const RISK_COLORS = {
       Low: "#16a34a",
       Medium: "#f59e0b",
@@ -81,7 +110,12 @@ export default function TIStations({
 
     const renderStaffDetail = (s) => {
       const computedRisk = getUserRisk(s);
-      const scoreData = MONTHLY_TREND.map((m, i) => ({ month: m.month, score: Math.max(50, s.score - 10 + i * 2) }));
+      const scoreData = [...assessmentHistory]
+        .reverse()
+        .map(item => ({
+          month: item.assessmentPeriod || item.date || "Exam",
+          score: parseFloat(item.totalScore) || 0
+        }));
       
       return (
         <div className="sdom-fade animate-fade-in">
@@ -93,13 +127,13 @@ export default function TIStations({
                 setView(null);
               }
             }} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontWeight: 700 }}>
-              <ArrowLeft size={16} /> Back to List
+              <ArrowLeft size={16} /> {t("buttons.backToList")}
             </button>
           </div>
 
           <div className="sdom-station-header" style={{ marginBottom: 24 }}>
             <div className="sdom-station-header-meta">
-              <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Staff Profile</div>
+              <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t("stations.staffProfile")}</div>
               <div style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: 4 }}>{s.name}</div>
               <div style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.7)" }}>{ROLE_MAP[s.role] || s.role} &bull; {s.station} &bull; {s.zone || "Central Railway"}</div>
               <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
@@ -111,36 +145,36 @@ export default function TIStations({
             <div className="sdom-station-header-stats">
               <div className="sdom-station-header-stat">
                 <span className="val">{s.score}%</span>
-                <span className="lbl">Latest Score</span>
+                <span className="lbl">{t("dashboard.latestScore")}</span>
               </div>
               <div style={{ width: 1, height: 60, background: "rgba(255,255,255,0.15)" }} />
               <div className="sdom-station-header-stat">
                 <span className="val">{s.contact || "—"}</span>
-                <span className="lbl">Contact</span>
+                <span className="lbl">{t("stations.contact")}</span>
               </div>
               <div style={{ width: 1, height: 60, background: "rgba(255,255,255,0.15)" }} />
               <div className="sdom-station-header-stat">
                 <span className="val">{s.lastAssessDate || s.lastDate || "—"}</span>
-                <span className="lbl">Last Assessment</span>
+                <span className="lbl">{t("assessment.lastAssessed")}</span>
               </div>
             </div>
           </div>
 
           <div className="sdom-row-2">
             <div className="sdom-chart-card">
-              <div className="sdom-chart-title" style={{ marginBottom: "16px" }}>Personal &amp; Professional Details</div>
+              <div className="sdom-chart-title" style={{ marginBottom: "16px" }}>{t("profile.personalDetails")}</div>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', paddingBottom: '20px' }}>
                 {[
-                  ["Employee ID / HRMS ID", s.id || s.hrmsId],
-                  ["Designation", ROLE_MAP[s.role] || s.role],
-                  ["Mobile Number", s.contact || "N/A"],
-                  ["Email ID", s.email || `${(s.id || s.hrmsId)?.toLowerCase()}@rail.in`],
-                  ["Account Status", s.status || "Active"],
-                  ["Current Zone", s.zone || "Central Railway"],
-                  ["Current Division", s.division || "Nagpur Division"],
-                  ["Current Station Placement", s.station],
-                  ["Reporting Officer", s.reportingAom || "TI R. Khan (Safety)"]
+                  [t("profile.hrmsId"), s.id || s.hrmsId],
+                  [t("profile.designation"), ROLE_MAP[s.role] || s.role],
+                  [t("profile.mobile"), s.contact || "N/A"],
+                  [t("profile.email"), s.email || `${(s.id || s.hrmsId)?.toLowerCase()}@rail.in`],
+                  [t("assessment.statusCol"), s.status || "Active"],
+                  [t("profile.zone"), s.zone || "Central Railway"],
+                  [t("profile.division"), s.division || "Nagpur Division"],
+                  [t("profile.placement"), s.station],
+                  [t("profile.reportingOfficer"), s.reportingAom || "TI R. Khan (Safety)"]
                 ].map(([lbl, val]) => (
                   <div key={lbl} style={{ background: "#f8fafc", borderRadius: 8, padding: "12px 16px", border: "1px solid #e2e8f0" }}>
                     <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>{lbl}</div>
@@ -151,56 +185,66 @@ export default function TIStations({
 
               <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '10px' }}>
                 <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: '#0f172a', fontWeight: '800', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px' }}>
-                  Operational Profile Specifications
+                  {t("profile.operationalProfileSpecs")}
                 </h4>
                 
                 {(s.role === "Pointsman" || s.role === "pointsmen") && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', fontSize: '13px' }}>
-                    <div><strong>Reporting SM:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.reportingSm || "S. Deshmukh (SM)"}</div></div>
-                    <div><strong>Assigned Shift:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.shift || "Morning Shift (06:00 - 14:00)"}</div></div>
-                    <div><strong>Work Location:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.workLocation || "Yard Area"}</div></div>
+                    <div><strong>{t("profile.reportingSM")}:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.reportingSm || "S. Deshmukh (SM)"}</div></div>
+                    <div><strong>{t("profile.assignedShift")}:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.shift || "Morning Shift (06:00 - 14:00)"}</div></div>
+                    <div><strong>{t("profile.workLocation")}:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.workLocation || "Yard Area"}</div></div>
                   </div>
                 )}
 
                 {(s.role === "Station Master" || s.role === "sm" || s.role === "Station Superintendent" || s.role === "ss") && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', fontSize: '13px' }}>
-                    <div><strong>Operational Station:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{s.station || "N/A"}</div></div>
-                    <div><strong>Operational Division:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{s.division || "Nagpur Division"}</div></div>
-                    <div><strong>Operational Zone:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{s.zone || "Central Railway"}</div></div>
+                    <div><strong>{t("stations.operationalStation")}:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{s.station || "N/A"}</div></div>
+                    <div><strong>{t("stations.operationalDivision")}:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{s.division || "Nagpur Division"}</div></div>
+                    <div><strong>{t("stations.operationalZone")}:</strong><div style={{fontWeight: 700, color: "#065f46", marginTop: 4}}>{s.zone || "Central Railway"}</div></div>
                   </div>
                 )}
 
                 {(s.role === "Train Manager" || s.role === "tm") && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', fontSize: '13px' }}>
-                    <div><strong>Crew Depot:</strong><div style={{fontWeight: 700, color: "#6b21a8", marginTop: 4}}>{s.workLocation || "Nagpur Depot"}</div></div>
-                    <div><strong>Assigned Shift:</strong><div style={{fontWeight: 700, color: "#6b21a8", marginTop: 4}}>{s.shift || "Goods Train Beat"}</div></div>
-                    <div><strong>Assigned Section Beats:</strong><div style={{fontWeight: 700, color: "#6b21a8", marginTop: 4}}>{s.reportingSm || "NGP-BSL Section"}</div></div>
+                    <div><strong>{t("stations.crewDepot")}:</strong><div style={{fontWeight: 700, color: "#6b21a8", marginTop: 4}}>{s.workLocation || "Nagpur Depot"}</div></div>
+                    <div><strong>{t("profile.assignedShift")}:</strong><div style={{fontWeight: 700, color: "#6b21a8", marginTop: 4}}>{s.shift || "Goods Train Beat"}</div></div>
+                    <div><strong>{t("stations.assignedSectionBeats")}:</strong><div style={{fontWeight: 700, color: "#6b21a8", marginTop: 4}}>{s.reportingSm || "NGP-BSL Section"}</div></div>
                   </div>
                 )}
 
                 {(s.role === "Traffic Inspector" || s.role === "ti") && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', fontSize: '13px' }}>
-                    <div><strong>Jurisdiction:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.jurisdiction || "Parbhani-Amla Section"}</div></div>
-                    <div><strong>Division:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.division || "Nagpur Division"}</div></div>
-                    <div><strong>Reporting Officer:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.reportingAom || "P. K. Verma (Sr. DOM)"}</div></div>
+                    <div><strong>{t("stations.jurisdiction")}:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.jurisdiction || "Parbhani-Amla Section"}</div></div>
+                    <div><strong>{t("profile.division")}:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.division || "Nagpur Division"}</div></div>
+                    <div><strong>{t("profile.reportingOfficer")}:</strong><div style={{fontWeight: 700, color: "#1e3a5f", marginTop: 4}}>{s.reportingAom || "P. K. Verma (Sr. DOM)"}</div></div>
                   </div>
                 )}
               </div>
             </div>
 
             <div className="sdom-chart-card">
-              <div className="sdom-chart-title">Score Trend</div>
-              <div className="sdom-chart-subtitle">Monthly performance tracking for this employee</div>
+              <div className="sdom-chart-title">{t("profile.scoreTrend")}</div>
+              <div className="sdom-chart-subtitle">{t("profile.scoreProgression")}</div>
               <div style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={scoreData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="month" fontSize={11} />
-                    <YAxis domain={[40, 100]} fontSize={11} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={3} dot={{ r: 5 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                {historyLoading ? (
+                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+                    Loading history...
+                  </div>
+                ) : scoreData.length === 0 ? (
+                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", borderRadius: 8, border: "1px dashed #cbd5e1", color: "#64748b", fontWeight: 600 }}>
+                    Data not available
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={scoreData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="month" fontSize={11} />
+                      <YAxis domain={[40, 100]} fontSize={11} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={3} dot={{ r: 5 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
           </div>
@@ -235,51 +279,51 @@ export default function TIStations({
         <div className="sdom-fade">
           <div style={{ marginBottom: 20 }}>
             <button className="sdom-back-btn" onClick={() => { setView(null); setSelectedStation(null); }} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontWeight: 700 }}>
-              <ArrowLeft size={16} /> Back to Stations
+              <ArrowLeft size={16} /> {t("stations.backToStations")}
             </button>
           </div>
 
           <div className="sdom-station-header">
             <div className="sdom-station-header-meta">
-              <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Station Analytics Dashboard</div>
+              <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t("stations.stationAnalyticsDashboard")}</div>
               <div style={{ fontSize: "1.9rem", fontWeight: 800, marginBottom: 4 }}>{st.name}</div>
-              <div style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.7)" }}>Code: <b>{st.code}</b> &bull; Assigned TI: <b>{st.ti}</b></div>
+              <div style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.7)" }}>{t("stations.code")}: <b>{st.code}</b> &bull; {t("stations.assignedTI")}: <b>{st.ti}</b></div>
               <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
-                <span className="sdom-badge" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>{st.smCount} Station Masters</span>
-                <span className="sdom-badge" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>{st.pmCount} Pointsmen</span>
-                <span className={`sdom-badge ${st.highRisk > 4 ? "sdom-badge-red" : "sdom-badge-green"}`}>{st.highRisk} High-Risk</span>
+                <span className="sdom-badge" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>{st.smCount} {t("sidebar.stationMasters")}</span>
+                <span className="sdom-badge" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>{st.pmCount} {t("sidebar.pointsmen")}</span>
+                <span className={`sdom-badge ${st.highRisk > 4 ? "sdom-badge-red" : "sdom-badge-green"}`}>{st.highRisk} {t("dashboard.riskBreakdown")}</span>
               </div>
             </div>
             <div className="sdom-station-header-stats">
               <div className="sdom-station-header-stat">
                 <span className="val">{st.score}</span>
-                <span className="lbl">Avg Score</span>
+                <span className="lbl">{t("stations.avgScore")}</span>
               </div>
               <div style={{ width: 1, height: 60, background: "rgba(255,255,255,0.15)" }} />
               <div className="sdom-station-header-stat">
                 <span className="val">{st.safety}%</span>
-                <span className="lbl">Safety</span>
+                <span className="lbl">{t("stations.safety")}</span>
               </div>
               <div style={{ width: 1, height: 60, background: "rgba(255,255,255,0.15)" }} />
               <div className="sdom-station-header-stat">
                 <span className="val">{st.pending}</span>
-                <span className="lbl">Pending</span>
+                <span className="lbl">{t("assessment.pending")}</span>
               </div>
               <div style={{ width: 1, height: 60, background: "rgba(255,255,255,0.15)" }} />
               <div className="sdom-station-header-stat">
                 <span className="val">{stStaff.length}</span>
-                <span className="lbl">Total Staff</span>
+                <span className="lbl">{t("stations.totalStaff")}</span>
               </div>
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 16, marginBottom: 24 }}>
             {[
-              { label: "Total Staff", val: stStaff.length },
-              { label: "Pending Assessments", val: st.pending },
-              { label: "Completed", val: stStaff.filter(s => s.status === "Approved" || s.status === "Submitted").length },
-              { label: "High-Risk Pointsmen", val: pmList.filter(s => s.risk === "High").length },
-              { label: "Safety Compliance", val: `${st.safety}%` },
+              { label: t("stations.totalStaff"), val: stStaff.length },
+              { label: t("stations.pendingAssessments"), val: st.pending },
+              { label: t("assessment.completed"), val: stStaff.filter(s => s.status === "Approved" || s.status === "Submitted").length },
+              { label: t("stations.highRiskPointsmen"), val: pmList.filter(s => s.risk === "High").length },
+              { label: t("dashboard.safetyCompliance"), val: `${st.safety}%` },
             ].map(c => (
               <div key={c.label} className="sdom-stat-card">
                 <div className="sdom-stat-value">{c.val}</div>
@@ -290,8 +334,8 @@ export default function TIStations({
 
           <div className="sdom-row-2">
             <div className="sdom-chart-card">
-              <div className="sdom-chart-title">Category/Grade Distribution</div>
-              <div className="sdom-chart-subtitle">A/B/C/D breakdown of staff at this station</div>
+              <div className="sdom-chart-title">{t("dashboard.gradeDistribution")}</div>
+              <div className="sdom-chart-subtitle">{t("stations.gradeBreakdownDesc")}</div>
               <div style={{ height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={catCount} barSize={46} margin={{ top: 16, right: 24, left: 0, bottom: 8 }}>
@@ -309,8 +353,8 @@ export default function TIStations({
             </div>
 
             <div className="sdom-chart-card">
-              <div className="sdom-chart-title">Risk Distribution</div>
-              <div className="sdom-chart-subtitle">Staff risk level breakdown at this station</div>
+              <div className="sdom-chart-title">{t("dashboard.riskBreakdown")}</div>
+              <div className="sdom-chart-subtitle">{t("stations.riskBreakdownDesc")}</div>
               <div style={{ height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -330,12 +374,12 @@ export default function TIStations({
 
           <div className="sdom-row-1">
             <div className="sdom-chart-card">
-              <div className="sdom-chart-title" style={{ marginBottom: 16 }}>Station Masters</div>
+              <div className="sdom-chart-title" style={{ marginBottom: 16 }}>{t("sidebar.stationMasters")}</div>
               <div className="sdom-table-wrap">
                 <table className="sdom-table">
-                  <thead><tr><th>Name</th><th>HRMS ID</th><th>Category</th><th>Last Score</th><th>Last Assessment</th><th>Status</th><th>Action</th></tr></thead>
+                  <thead><tr><th>{t("profile.name")}</th><th>{t("login.hrmsId")}</th><th>{t("assessment.categoryCol")}</th><th>{t("dashboard.latestScore")}</th><th>{t("assessment.lastAssessed")}</th><th>{t("assessment.statusCol")}</th><th>{t("workflow.actions")}</th></tr></thead>
                   <tbody>
-                    {smList.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>No Station Masters assigned</td></tr>}
+                    {smList.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>{t("stations.noSMAssigned")}</td></tr>}
                     {smList.map(s => (
                       <tr key={s.id}>
                         <td style={{ fontWeight: 700 }}>{s.name}</td>
@@ -344,7 +388,7 @@ export default function TIStations({
                         <td style={{ fontWeight: 700 }}>{s.score}</td>
                         <td>{s.lastAssessDate || s.lastDate || "—"}</td>
                         <td>{statusBadge(s.status || "Active")}</td>
-                        <td><button className="sdom-btn-ghost" onClick={() => setView({ type: "staffDetail", data: s, returnTo: "stationDetail", stationData: st })}>View Details</button></td>
+                        <td><button className="sdom-btn-ghost" onClick={() => setView({ type: "staffDetail", data: s, returnTo: "stationDetail", stationData: st })}>{t("buttons.viewDetails")}</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -355,12 +399,12 @@ export default function TIStations({
 
           <div className="sdom-row-1">
             <div className="sdom-chart-card">
-              <div className="sdom-chart-title" style={{ marginBottom: 16 }}>Pointsmen</div>
+              <div className="sdom-chart-title" style={{ marginBottom: 16 }}>{t("sidebar.pointsmen")}</div>
               <div className="sdom-table-wrap">
                 <table className="sdom-table">
-                  <thead><tr><th>Name</th><th>HRMS ID</th><th>Category</th><th>Risk Level</th><th>Latest Score</th><th>Status</th><th>Action</th></tr></thead>
+                  <thead><tr><th>{t("profile.name")}</th><th>{t("login.hrmsId")}</th><th>{t("assessment.categoryCol")}</th><th>{t("stations.riskLevel")}</th><th>{t("dashboard.latestScore")}</th><th>{t("assessment.statusCol")}</th><th>{t("workflow.actions")}</th></tr></thead>
                   <tbody>
-                    {pmList.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>No Pointsmen assigned</td></tr>}
+                    {pmList.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>{t("stations.noPMAssigned")}</td></tr>}
                     {pmList.map(s => (
                       <tr key={s.id}>
                         <td style={{ fontWeight: 700 }}>{s.name}</td>
@@ -369,7 +413,7 @@ export default function TIStations({
                         <td>{riskBadge(s.risk)}</td>
                         <td style={{ fontWeight: 700 }}>{s.score}</td>
                         <td>{statusBadge(s.status || "Active")}</td>
-                        <td><button className="sdom-btn-ghost" onClick={() => setView({ type: "staffDetail", data: s, returnTo: "stationDetail", stationData: st })}>View Details</button></td>
+                        <td><button className="sdom-btn-ghost" onClick={() => setView({ type: "staffDetail", data: s, returnTo: "stationDetail", stationData: st })}>{t("buttons.viewDetails")}</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -414,30 +458,30 @@ export default function TIStations({
       <div className="sdom-fade">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div>
-            <h1 className="sdom-page-title">Stations</h1>
-            <p className="sdom-page-subtitle">Full list of stations under your jurisdiction. Click a station to open its complete analytics dashboard.</p>
+            <h1 className="sdom-page-title">{t("sidebar.stations")}</h1>
+            <p className="sdom-page-subtitle">{t("stations.subtitle")}</p>
           </div>
           <button className="sdom-btn-primary" onClick={() => {
             setNewStationData({ name: "", code: "", division: "", zone: "", category: "B", smCount: "", pmCount: "" });
             setShowAddStationModal(true);
           }} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <Plus size={16} /> Add New Station
+            <Plus size={16} /> {t("stations.addNewStation")}
           </button>
         </div>
 
         <div className="sdom-filter-bar" style={{ display: "flex", gap: "12px", flexWrap: "nowrap", marginBottom: "16px" }}>
           <div className="sdom-filter-field" style={{ flex: 1 }}>
-            <label>Search Station</label>
-            <input value={stSearch} onChange={e => setStSearch(e.target.value)} placeholder="Station name or code..." />
+            <label>{t("stations.searchStation")}</label>
+            <input value={stSearch} onChange={e => setStSearch(e.target.value)} placeholder={t("stations.searchPlaceholder")} />
           </div>
           <div className="sdom-filter-field" style={{ width: "200px" }}>
-            <label>Category Filter</label>
+            <label>{t("stations.categoryFilter")}</label>
             <select value={stCatFilter} onChange={e => setStCatFilter(e.target.value)}>
-              <option value="All">All Categories</option>
-              <option value="A">Grade A Stations</option>
-              <option value="B">Grade B Stations</option>
-              <option value="C">Grade C Stations</option>
-              <option value="D">Grade D Stations</option>
+              <option value="All">{t("stations.allCategories")}</option>
+              <option value="A">{t("stations.gradeAStations")}</option>
+              <option value="B">{t("stations.gradeBStations")}</option>
+              <option value="C">{t("stations.gradeCStations")}</option>
+              <option value="D">{t("stations.gradeDStations")}</option>
             </select>
           </div>
         </div>
@@ -447,23 +491,23 @@ export default function TIStations({
             <table className="sdom-table">
               <thead>
                 <tr>
-                  <th>Station Name</th>
-                  <th>Code</th>
-                  <th>Assigned TI</th>
-                  <th>SMs</th>
-                  <th>Pointsmen</th>
-                  <th>Avg Score</th>
-                  <th>Safety %</th>
-                  <th>High Risk</th>
-                  <th>Pending</th>
-                  <th>Dashboard</th>
+                  <th>{t("stations.stationName")}</th>
+                  <th>{t("stations.code")}</th>
+                  <th>{t("stations.assignedTI")}</th>
+                  <th>{t("stations.sms")}</th>
+                  <th>{t("sidebar.pointsmen")}</th>
+                  <th>{t("stations.avgScore")}</th>
+                  <th>{t("stations.safety")}%</th>
+                  <th>{t("dashboard.riskBreakdown")}</th>
+                  <th>{t("assessment.pending")}</th>
+                  <th>{t("sidebar.dashboard")}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan={10} style={{ textAlign: "center", color: "#64748b", padding: "24px" }}>
-                      No stations found matching filters.
+                      {t("stations.noStationsFound")}
                     </td>
                   </tr>
                 ) : (
@@ -480,7 +524,7 @@ export default function TIStations({
                       <td>{st.pending}</td>
                       <td>
                         <button className="sdom-btn-primary" style={{ padding: "7px 14px", fontSize: "0.82rem" }} onClick={() => setSelectedStation(st)}>
-                          Open Station Dashboard
+                          {t("stations.openStationDashboard")}
                         </button>
                       </td>
                     </tr>
@@ -493,51 +537,51 @@ export default function TIStations({
 
         {showAddStationModal && (
           <div className="sdom-modal-overlay" style={{ zIndex: 9999 }}>
-            <div className="sdom-modal" style={{ width: "450px", maxHeight: "90vh", overflowY: "auto" }}>
+            <div className="sdom-modal" style={{ width: "550px", maxHeight: "90vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "#0B1F3A" }}>Add New Station</h3>
+                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "#0B1F3A" }}>{t("stations.addNewStation")}</h3>
                 <button type="button" onClick={() => setShowAddStationModal(false)} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#64748b" }}>&times;</button>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div className="sdom-modal-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Station Name</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div className="sdom-modal-field" style={{ gridColumn: "span 2" }}>
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>{t("stations.stationName")}</label>
                   <input type="text" value={newStationData.name} onChange={e => setNewStationData({ ...newStationData, name: e.target.value })} placeholder="e.g. Wardha Junction" />
                 </div>
                 <div className="sdom-modal-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Station Code</label>
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>{t("stations.stationCode")}</label>
                   <input type="text" value={newStationData.code} onChange={e => setNewStationData({ ...newStationData, code: e.target.value })} placeholder="e.g. WR" />
                 </div>
                 <div className="sdom-modal-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Division</label>
-                  <input type="text" value={newStationData.division} onChange={e => setNewStationData({ ...newStationData, division: e.target.value })} placeholder="e.g. Nagpur Division" />
-                </div>
-                <div className="sdom-modal-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Railway Zone</label>
-                  <input type="text" value={newStationData.zone} onChange={e => setNewStationData({ ...newStationData, zone: e.target.value })} placeholder="e.g. Central Railway" />
-                </div>
-                <div className="sdom-modal-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Category</label>
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>{t("assessment.categoryCol")}</label>
                   <select value={newStationData.category} onChange={e => setNewStationData({ ...newStationData, category: e.target.value })}>
-                    <option value="A">Grade A Station</option>
-                    <option value="B">Grade B Station</option>
-                    <option value="C">Grade C Station</option>
-                    <option value="D">Grade D Station</option>
+                    <option value="A">{t("stations.gradeAStations").replace(" Stations", " Station")}</option>
+                    <option value="B">{t("stations.gradeBStations").replace(" Stations", " Station")}</option>
+                    <option value="C">{t("stations.gradeCStations").replace(" Stations", " Station")}</option>
+                    <option value="D">{t("stations.gradeDStations").replace(" Stations", " Station")}</option>
                   </select>
                 </div>
                 <div className="sdom-modal-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Initial SM Count</label>
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>{t("profile.division")}</label>
+                  <input type="text" value={newStationData.division} onChange={e => setNewStationData({ ...newStationData, division: e.target.value })} placeholder="e.g. Nagpur Division" />
+                </div>
+                <div className="sdom-modal-field">
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>{t("profile.zone")}</label>
+                  <input type="text" value={newStationData.zone} onChange={e => setNewStationData({ ...newStationData, zone: e.target.value })} placeholder="e.g. Central Railway" />
+                </div>
+                <div className="sdom-modal-field">
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>{t("stations.initialSMCount")}</label>
                   <input type="number" min="0" value={newStationData.smCount} onChange={e => setNewStationData({ ...newStationData, smCount: e.target.value })} placeholder="e.g. 2" />
                 </div>
                 <div className="sdom-modal-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>Initial Pointsmen Count</label>
+                  <label style={{ fontWeight: 600, fontSize: "0.8rem", color: "#334155" }}>{t("stations.initialPointsmenCount")}</label>
                   <input type="number" min="0" value={newStationData.pmCount} onChange={e => setNewStationData({ ...newStationData, pmCount: e.target.value })} placeholder="e.g. 8" />
                 </div>
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
-                <button className="sdom-btn-outline" onClick={() => setShowAddStationModal(false)}>Cancel</button>
-                <button className="sdom-btn-primary" onClick={handleAddStationSubmit}>Create Station</button>
+                <button className="sdom-btn-outline" onClick={() => setShowAddStationModal(false)}>{t("buttons.cancel")}</button>
+                <button className="sdom-btn-primary" onClick={handleAddStationSubmit}>{t("stations.createStation")}</button>
               </div>
             </div>
           </div>

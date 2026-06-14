@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, Trash2, Edit, RefreshCw, ChevronLeft, ChevronRight, Star, HeartHandshake, Eye, Award, Clock, FileCheck, CheckCircle2, Lock, Paperclip, ArrowLeft, UserPlus } from "lucide-react";
+import { getEmployeeHistory } from "../services/employeeService";
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from "recharts";
 import CommonUserModal from "./CommonUserModal";
 
@@ -75,18 +76,57 @@ export default function CommonRoleView({
     return <span className={`sdom-badge ${map[c] || "sdom-badge-neutral"}`}>{c}</span>;
   },
   statusBadge = s => {
-    const map = { Approved: "sdom-badge-success", Pending: "sdom-badge-warning", Rejected: "sdom-badge-danger", Overdue: "sdom-badge-danger", Active: "sdom-badge-success" };
+    const map = { 
+      Approved: "sdom-badge-success", 
+      Completed: "sdom-badge-success", 
+      Active: "sdom-badge-success", 
+      Pending: "sdom-badge-warning", 
+      Submitted: "sdom-badge-warning", 
+      Rejected: "sdom-badge-danger", 
+      Expired: "sdom-badge-danger", 
+      Overdue: "sdom-badge-danger" 
+    };
     return <span className={`sdom-badge ${map[s] || "sdom-badge-neutral"}`}>{s}</span>;
   },
   stationTiMap = DEFAULT_STATION_TI_MAP,
   saveEditedUser = () => {},
   confirmTransfer = () => {},
-  activePage
 }) {
+
+  const [assessmentHistory, setAssessmentHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  useEffect(() => {
+    if (view?.type === "staffDetail" && view.data) {
+      const empId = view.data.dbId || view.data.id;
+      if (empId) {
+        setHistoryLoading(true);
+        getEmployeeHistory(empId)
+          .then(data => {
+            setAssessmentHistory(data || []);
+            setHistoryLoading(false);
+          })
+          .catch(err => {
+            console.error("Failed to load employee history:", err);
+            setAssessmentHistory([]);
+            setHistoryLoading(false);
+          });
+      } else {
+        setAssessmentHistory([]);
+      }
+    } else {
+      setAssessmentHistory([]);
+    }
+  }, [view]);
 
   const renderStaffDetail = (s) => {
     const computedRisk = getUserRisk(s);
-    const scoreData = MONTHLY_TREND.map((m, i) => ({ month: m.month, score: Math.max(50, s.score - 10 + i * 2) }));
+    const scoreData = [...assessmentHistory]
+      .reverse()
+      .map(item => ({
+        month: item.assessmentPeriod || item.date || "Exam",
+        score: parseFloat(item.totalScore) || 0
+      }));
     
     return (
       <div className="sdom-fade animate-fade-in">
@@ -195,17 +235,27 @@ export default function CommonRoleView({
 
           <div className="sdom-chart-card">
             <div className="sdom-chart-title">Score Trend</div>
-            <div className="sdom-chart-subtitle">Monthly performance tracking for this employee</div>
+            <div className="sdom-chart-subtitle">Performance history tracking for this employee</div>
             <div style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={scoreData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" fontSize={11} />
-                  <YAxis domain={[40, 100]} fontSize={11} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={3} dot={{ r: 5 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              {historyLoading ? (
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+                  Loading history...
+                </div>
+              ) : scoreData.length === 0 ? (
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", borderRadius: 8, border: "1px dashed #cbd5e1", color: "#64748b", fontWeight: 600 }}>
+                  Data not available
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={scoreData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="month" fontSize={11} />
+                    <YAxis domain={[40, 100]} fontSize={11} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={3} dot={{ r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </div>

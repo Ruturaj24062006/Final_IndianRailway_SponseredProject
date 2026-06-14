@@ -1,0 +1,17 @@
+{
+  "short_name": "IR Safety",
+  "name": "Indian Railway Safety Evaluation System",
+  "description": "Nagpur Division safety evaluation dashboard and offline field tools.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone",
+  "orientation": "portrait"
+}

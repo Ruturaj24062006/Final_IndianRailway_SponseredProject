@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Search, Calendar, ClipboardCheck, ArrowLeft, RefreshCw, ShieldCheck, Lock, CheckCircle, AlertTriangle, Users, BookOpen, Clock, Play } from "lucide-react";
+import { Search, Calendar, ClipboardCheck, ArrowLeft, RefreshCw, ShieldCheck, Lock, CheckCircle, CheckCircle2, AlertTriangle, Users, BookOpen, Clock, Play } from "lucide-react";
+import { useLanguage } from "../../utils/LanguageContext";
 
 /* ─── CRITERIA DEFINITIONS ─── */
 const TI_SM_CRITERIA = [
@@ -96,8 +97,11 @@ export default function TIAssessments({
   submitTMAssessment,
   tmLocked = {},
   handleSendTMExamAccess,
-  myStations = []
+  myStations = [],
+  setSmList = () => {},
+  setTmList = () => {}
 }) {
+  const { t } = useLanguage();
   const currentRole = assessRole || "SM";
 
   // --- RENDERING LEVEL 3: ACTIVE EVALUATION FORM ---
@@ -151,44 +155,44 @@ export default function TIAssessments({
 
   return (
     <div className="ti2-page-body animate-fade-in" style={{ padding: "24px", background: "#f8fafc", minHeight: "100%", width: "100%", boxSizing: "border-box" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <div>
-          <h1 style={{ fontSize: "28px", fontWeight: "800", color: "#0f172a", margin: "0 0 4px" }}>
-            Assessments Directory
-          </h1>
-          <p style={{ margin: 0, fontSize: "14px", color: "#64748b", fontWeight: "500" }}>
-            Select a staff category to conduct periodic competency evaluations and log shunting records.
-          </p>
-        </div>
-      </div>
-
-      {/* Role Navigation Tabs */}
-      <div className="ti2-tabs" style={{ marginBottom: "20px" }}>
-        {[
-          { key: "SM", label: "Station Masters", count: smList.filter(s => s.status === "Pending").length },
-          { key: "TM", label: "Train Managers", count: tmList.filter(t => t.status === "Pending").length }
-        ].map(tab => (
-          <button
-            key={tab.key}
-            className={`ti2-tab ${currentRole === tab.key ? "active" : ""}`}
-            onClick={() => {
-              setAssessRole(tab.key);
-              setAssessSearch("");
-              setAssessStation("All");
-              setAssessStatus("All");
-              setAssessCat("All");
-            }}
-          >
-            {tab.label}
-            {tab.count > 0 && <span className="ti2-tab-count">{tab.count}</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* Filters Section */}
-      <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "20px", marginBottom: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1.2fr 1fr auto", gap: "16px", alignItems: "end" }}>
+      <section className="ti2-card animate-fade-in" style={{ padding: "24px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
           <div>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+              Assessments Directory
+            </h2>
+            <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#64748b", fontWeight: "500" }}>
+              Select a staff category to conduct periodic competency evaluations and log shunting records.
+            </p>
+          </div>
+        </div>
+
+        {/* Role Navigation Tabs */}
+        <div className="ti2-tabs" style={{ marginBottom: "20px" }}>
+          {[
+            { key: "SM", label: "Station Masters", count: smList.filter(s => s.status === "Pending").length },
+            { key: "TM", label: "Train Managers", count: tmList.filter(t => t.status === "Pending").length }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              className={`ti2-tab ${currentRole === tab.key ? "active" : ""}`}
+              onClick={() => {
+                setAssessRole(tab.key);
+                setAssessSearch("");
+                setAssessStation("All");
+                setAssessStatus("All");
+                setAssessCat("All");
+              }}
+            >
+              {tab.label}
+              {tab.count > 0 && <span className="ti2-tab-count">{tab.count}</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* Filters Section */}
+        <div style={{ background: "#f8fafc", borderRadius: "12px", padding: "16px", marginBottom: "20px", border: "1px solid #e2e8f0", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "end" }}>
+          <div style={{ position: "relative", flex: "1 1 200px" }}>
             <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Search Staff</label>
             <div style={{ position: "relative" }}>
               <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
@@ -197,17 +201,17 @@ export default function TIAssessments({
                 placeholder="Name or HRMS ID..."
                 value={assessSearch}
                 onChange={(e) => setAssessSearch(e.target.value)}
-                style={{ width: "100%", padding: "10px 12px 10px 36px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", boxSizing: "border-box" }}
+                style={{ width: "100%", padding: "10px 12px 10px 36px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "500", boxSizing: "border-box" }}
               />
             </div>
           </div>
 
-          <div>
+          <div style={{ flex: "1 1 150px" }}>
             <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Station Placement</label>
             <select
               value={assessStation}
               onChange={(e) => setAssessStation(e.target.value)}
-              style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "500", boxSizing: "border-box" }}
             >
               <option value="All">All Stations</option>
               {myStations.map(st => (
@@ -216,12 +220,12 @@ export default function TIAssessments({
             </select>
           </div>
 
-          <div>
+          <div style={{ flex: "1 1 150px" }}>
             <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Evaluation Status</label>
             <select
               value={assessStatus}
               onChange={(e) => setAssessStatus(e.target.value)}
-              style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "500", boxSizing: "border-box" }}
             >
               <option value="All">All Statuses</option>
               <option value="Pending">Pending</option>
@@ -231,12 +235,12 @@ export default function TIAssessments({
             </select>
           </div>
 
-          <div>
+          <div style={{ flex: "1 1 150px" }}>
             <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Category</label>
             <select
               value={assessCat}
               onChange={(e) => setAssessCat(e.target.value)}
-              style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "500", boxSizing: "border-box" }}
             >
               <option value="All">All Categories</option>
               <option value="A">Category A</option>
@@ -246,50 +250,51 @@ export default function TIAssessments({
             </select>
           </div>
 
-          <div>
+          <div style={{ flexShrink: 0 }}>
             <button
               onClick={() => { setAssessSearch(""); setAssessStation("All"); setAssessStatus("All"); setAssessCat("All"); }}
-              style={{ background: "#ffffff", border: "1px solid #cbd5e1", padding: "10px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "700", color: "#475569", cursor: "pointer" }}
+              className="sdom-btn-outline"
+              style={{ padding: "10px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "700", border: "1px solid #cbd5e1", background: "#ffffff" }}
             >
               Reset Filters
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Roster Table */}
-      <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table className="sdom-table" style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1.5px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
-                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase" }}>Employee</th>
-                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase" }}>HRMS ID</th>
-                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase" }}>Station</th>
-                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase" }}>Last Assessed</th>
-                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase" }}>Score</th>
-                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase" }}>Status</th>
-                <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredList.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>
-                    No staff records found matching filters.
-                  </td>
+        {filteredList.length === 0 ? (
+          <div style={{ padding: "48px 0", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+            <CheckCircle2 size={40} color="#16a34a" />
+            <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a", margin: 0 }}>{t("assessment.allAssessmentsComplete") || "All Assessments Complete"}</h3>
+            <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>{t("assessment.noStaffMatch") || "No staff records found matching filters."}</p>
+          </div>
+        ) : (
+          <div className="sdom-table-wrap" style={{ border: "1px solid #e2e8f0", borderRadius: "8px" }}>
+            <table className="sdom-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e2e8f0", textAlign: "left" }}>
+                  <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    {currentRole === "SM" ? t("sidebar.stationMasters") : t("sidebar.trainManagers")}
+                  </th>
+                  <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>{t("login.hrmsId")}</th>
+                  <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>{t("assessment.lastAssessed")}</th>
+                  <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>{t("assessment.mcqExamStatus")}</th>
+                  <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "right" }}>{t("workflow.actions")}</th>
                 </tr>
-              ) : (
-                filteredList.map(item => {
-                  const score = item.score || null;
-                  const cat = item.category || (score ? getCat(score) : null);
+              </thead>
+              <tbody>
+                {filteredList.map(item => {
                   const isSubmitted = item.status === "Submitted" || item.status === "Approved";
+                  const mcqKey = currentRole === "SM" ? `sm_mcq_test_${item.hrmsId}` : `tm_mcq_test_${item.hrmsId}`;
+                  const mcqDataStr = localStorage.getItem(mcqKey);
+                  const mcqData = mcqDataStr ? JSON.parse(mcqDataStr) : null;
+                  const isCompleted = mcqData && mcqData.completed;
+                  const isExamCompleted = isSubmitted || isCompleted;
 
                   return (
                     <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "14px 16px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#0f172a", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>
+                          <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#1e3a8a", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>
                             {item.name.charAt(0)}
                           </div>
                           <div>
@@ -303,40 +308,60 @@ export default function TIAssessments({
                       <td style={{ padding: "14px 16px", color: "#475569", fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>
                         {item.hrmsId}
                       </td>
-                      <td style={{ padding: "14px 16px", color: "#334155", fontSize: "13px", fontWeight: "500" }}>
-                        {item.station}
-                      </td>
                       <td style={{ padding: "14px 16px", color: "#64748b", fontSize: "13px", fontWeight: "500" }}>
                         {item.lastDate || "—"}
                       </td>
                       <td style={{ padding: "14px 16px" }}>
-                        {score ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <strong style={{ fontSize: "14px" }}>{score}/100</strong>
-                            {catBadge(cat)}
-                          </div>
-                        ) : "—"}
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span className={`sdom-badge ${
-                          item.status === "Approved" ? "sdom-badge-success" :
-                          item.status === "Submitted" ? "sdom-badge-info" :
-                          item.status === "Exam Sent" ? "sdom-badge-warning" : "sdom-badge-neutral"
-                        }`}>
-                          {item.status}
-                        </span>
+                        {isExamCompleted ? (
+                          <span className="sdom-badge sdom-badge-success" style={{ padding: "4px 8px" }}>
+                            ✓ {t("assessment.completed")} {mcqData ? `(${mcqData.correctCount}/25)` : ""}
+                          </span>
+                        ) : item.status === "Exam Sent" ? (
+                          <span className="sdom-badge sdom-badge-warning" style={{ padding: "4px 8px" }}>
+                            {t("assessment.examActiveStatus")}
+                          </span>
+                        ) : (
+                          <span className="sdom-badge sdom-badge-neutral" style={{ padding: "4px 8px", background: "#f1f5f9", color: "#475569" }}>
+                            {t("assessment.examLockedStatus")}
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: "14px 16px", textAlign: "right" }}>
                         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                          {item.status === "Pending" && (
+                          {!isExamCompleted && (
                             <button
                               onClick={() => {
-                                if (currentRole === "SM") handleSendExamAccess(item.id);
-                                else if (currentRole === "TM") handleSendTMExamAccess(item.id);
+                                if (item.status === "Exam Sent") {
+                                  if (currentRole === "SM") {
+                                    setSmList(prev => prev.map(s => s.id === item.id ? { ...s, status: "Pending" } : s));
+                                    localStorage.setItem(`sm_test_activated_${item.hrmsId}`, "false");
+                                  } else {
+                                    setTmList(prev => prev.map(t => t.id === item.id ? { ...t, status: "Pending" } : t));
+                                    localStorage.setItem(`tm_test_activated_${item.hrmsId}`, "false");
+                                  }
+                                } else {
+                                  if (currentRole === "SM") {
+                                    handleSendExamAccess(item.id);
+                                    localStorage.setItem(`sm_test_activated_${item.hrmsId}`, "true");
+                                  } else if (currentRole === "TM") {
+                                    handleSendTMExamAccess(item.id);
+                                    localStorage.setItem(`tm_test_activated_${item.hrmsId}`, "true");
+                                  }
+                                }
                               }}
-                              style={{ background: "#7c3aed", border: "none", color: "#ffffff", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px" }}
+                              className="sdom-btn-outline"
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: "6px",
+                                fontSize: "12px",
+                                fontWeight: "700",
+                                cursor: "pointer",
+                                border: "1px solid #cbd5e1",
+                                background: item.status === "Exam Sent" ? "#fef2f2" : "#eff6ff",
+                                color: item.status === "Exam Sent" ? "#dc2626" : "#2563eb"
+                              }}
                             >
-                              Send Access
+                              {item.status === "Exam Sent" ? t("assessment.deactivateTest") : t("assessment.activateTest")}
                             </button>
                           )}
                           <button
@@ -344,29 +369,30 @@ export default function TIAssessments({
                               if (currentRole === "SM") openSMForm(item.id);
                               else if (currentRole === "TM") openTMForm(item.id);
                             }}
+                            className="sdom-btn-primary"
                             style={{
-                              background: isSubmitted ? "#f1f5f9" : "#2563eb",
-                              color: isSubmitted ? "#475569" : "#ffffff",
-                              border: isSubmitted ? "1px solid #cbd5e1" : "none",
                               padding: "6px 12px",
-                              borderRadius: "8px",
-                              cursor: "pointer",
+                              borderRadius: "6px",
+                              fontSize: "12px",
                               fontWeight: "700",
-                              fontSize: "12px"
+                              cursor: "pointer",
+                              background: "#2563eb",
+                              color: "#fff",
+                              border: "none"
                             }}
                           >
-                            {isSubmitted ? "View Sheet" : "Assess"}
+                            {isExamCompleted ? "View Sheet" : "Assess"}
                           </button>
                         </div>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -83,7 +83,7 @@ export default function CommonPmePosition({
                 overdue.map(u => (
                   <tr key={u.id || u.hrmsId} style={{ borderBottom: "1px solid #fecdd3" }}>
                     <td style={{ padding: "12px 14px", fontWeight: "700", color: "#0f172a" }}>{u.name}</td>
-                    <td style={{ padding: "12px 14px", fontFamily: "monospace", fontSize: "13px" }}>{u.id || u.hrmsId}</td>
+                    <td style={{ padding: "12px 14px", fontFamily: "monospace", fontSize: "13px" }}>{u.hrmsId || u.id}</td>
                     <td style={{ padding: "12px 14px" }}>{u.designation}</td>
                     <td style={{ padding: "12px 14px", fontWeight: "700" }}>{u.station || u.stationName}</td>
                     <td style={{ padding: "12px 14px", color: "#dc2626", fontWeight: "800" }}>{u.pmeStatus}</td>

@@ -30,7 +30,8 @@ export default function TIApprovals({
   getCat,
   updateSec,
   finalizePM,
-  myStations = []
+  myStations = [],
+  openPmReview
 }) {
   const tabs = ["Pending", "Approved", "Rejected"];
 

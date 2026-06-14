@@ -31,13 +31,16 @@ import {
   UserPlus,
   ArrowRightLeft,
   Clock,
-  HeartHandshake
+  HeartHandshake,
+  Bell,
+  Cpu
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend, BarChart, Bar,
   LabelList
 } from "recharts";
+import { useLanguage } from "./utils/LanguageContext";
 import "./sdom.css";
 import SMDashboard from "./components/StationMasterModule/SMDashboard";
 import UserProfile from "./components/UserProfile";
@@ -50,6 +53,20 @@ import CommonUserModal from "./components/CommonUserModal";
 import CommonPmePosition from "./components/CommonPmePosition";
 import CommonRefPosition from "./components/CommonRefPosition";
 import CommonCounselling from "./components/CommonCounselling";
+import {
+  getSmDashboard,
+  getSmPointsmen,
+  getSmPendingAssessments,
+  getSmAssessmentHistory,
+  getSmComplianceSummary,
+  createAssessmentRequest,
+  getSmShiftMasters,
+  registerPointsman,
+  updateMcqStatus
+} from "./services/smService";
+import { getToken } from "./utils/auth";
+import { getSubordinates } from "./services/hierarchyService";
+
 
 const DIVISION_STATIONS = [
   { id: "ST01", name: "Parbhani Junction", code: "PBN" },
@@ -535,12 +552,208 @@ const formatQuarterPeriod = (periodStr) => {
    MAIN COMPONENT
 ════════════════════════════════════════ */
 function StationMasterModule({ user, onLogout }) {
+  const { locale, changeLanguage, t } = useLanguage();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [pageMode, setPageMode] = useState("default");
   const [statusMsg, setStatusMsg] = useState("");
-  const [pointsmen, setPointsmen] = useState(initialPointsmen);
-  const [drafts, setDrafts] = useState(initialDrafts);
+  const [pointsmen, setPointsmen] = useState([]);
+  const [drafts, setDrafts] = useState([]);
   const [submittedAssessments, setSubmittedAssessments] = useState([]);
+  const [dashboardMetrics, setDashboardMetrics] = useState(null);
+  const [complianceSummary, setComplianceSummary] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [shiftMasters, setShiftMasters] = useState([]);
+
+  const smName = user?.name || "S Deshmukh";
+  const smId = user?.hrmsId || "SM_1001";
+  const fullName = smName;
+  const employeeId = smId;
+
+  // Dynamic Station Master profile based on backend and context data
+  const smProfile = {
+    name: smName,
+    employeeId: smId,
+    contact: "+91 98220 44556",
+    designation: "Station Master",
+    department: "Operations",
+    station: dashboardMetrics?.station_name || "Nagpur Junction",
+    reportingOfficer: "TI_2001 — A. Kulkarni",
+    dob: "1985-04-12",
+    dateOfAppointment: "2015-06-01",
+    pmeDoneDate: "2024-06-02",
+    pmeDueDate: "2028-06-01",
+    isolatorCertificateIssuedDate: "2024-11-15",
+    automaticTrainingDate: "2025-03-10",
+    counsellingDate: "2026-01-20"
+  };
+
+  const refreshData = async () => {
+    try {
+      setIsLoading(true);
+      
+      let rawPmList = [];
+      let subList = [];
+      try {
+        const [pms, subs] = await Promise.all([
+          getSmPointsmen(),
+          getSubordinates().catch(err => {
+            console.warn("Failed to fetch subordinates, falling back to station roster:", err);
+            return [];
+          })
+        ]);
+        rawPmList = pms || [];
+        subList = subs || [];
+      } catch (err) {
+        console.error("Error loading pointsmen, attempting station-wide fallback:", err);
+        rawPmList = await getSmPointsmen().catch(() => []);
+      }
+
+      const [metrics, pendingList, historyList, summary, shiftSMs] = await Promise.all([
+        getSmDashboard(),
+        getSmPendingAssessments(),
+        getSmAssessmentHistory(),
+        getSmComplianceSummary(),
+        getSmShiftMasters().catch(err => {
+          console.warn("Failed to fetch shift Station Masters:", err);
+          return [];
+        })
+      ]);
+
+      setDashboardMetrics(metrics);
+      setComplianceSummary(summary);
+      setShiftMasters(shiftSMs || []);
+
+      if (subList && subList.length > 0) {
+        const subHrmsIds = new Set(subList.map(s => (s.hrms_id || "").toUpperCase()));
+        rawPmList = rawPmList.filter(p => subHrmsIds.has((p.hrms_id || "").toUpperCase()));
+      }
+
+      // Map backend pointsmen schema to UI expected properties
+      const mappedPM = rawPmList.map(p => ({
+        id: p.employee_id,
+        hrmsId: p.hrms_id,
+        name: p.full_name,
+        contact: p.mobile,
+        designation: p.designation || "Pointsman",
+        station: p.station_name,
+        lastScore: parseFloat(p.practical_score) || parseFloat(p.final_score) || 0,
+        score: parseFloat(p.final_score) || 0,
+        safetyScore: parseFloat(p.overall_compliance_percentage) || 0,
+        totalAssessments: 1,
+        pmeStatus: p.pme_status === 'Valid' ? 'Fit' : p.pme_status === 'Expired' ? 'Overdue' : 'Pending',
+        pmeDate: p.pme_date,
+        pmeDueDate: p.pme_next_due_date,
+        refStatus: p.ref_status === 'Valid' ? 'Cleared' : p.ref_status === 'Expired' ? 'Expired' : 'Pending',
+        refDate: p.ref_date,
+        refDueDate: p.ref_next_due_date,
+        cbtStatus: p.cbt_status,
+        cbtScore: p.cbt_score,
+        cbtResult: p.cbt_result,
+        approvalStatus: p.assessment_status || "Not Started",
+        monitoringStatus: "Active",
+        cat: p.category_grade || getCat(parseFloat(p.practical_score) || parseFloat(p.final_score) || 0),
+        category_grade: p.category_grade
+      }));
+      setPointsmen(mappedPM);
+
+      // Map pending assessments
+      const mappedDrafts = pendingList.map(d => ({
+        pointsmanId: d.employee_id,
+        hrmsId: d.employee_hrms_id,
+        name: d.employee_name,
+        lastDate: d.assessment_date,
+        assessment_id: d.assessment_id,
+        ...d
+      }));
+      setDrafts(mappedDrafts);
+
+      // Map history assessments
+      const mappedHistory = historyList.map(h => ({
+        id: h.assessment_id,
+        pointsmanId: h.employee_id,
+        hrmsId: h.employee_hrms_id,
+        name: h.employee_name,
+        date: h.assessment_date,
+        testMarks: parseFloat(h.cbt_score) || 0,
+        addMarks: 0,
+        total: parseFloat(h.practical_score) || 0,
+        grade: h.grade_name || getCat(parseFloat(h.practical_score) || 0),
+        approvalStatus: h.status,
+        tiRemarks: h.remarks,
+        ...h
+      }));
+      setSubmittedAssessments(mappedHistory);
+    } catch (err) {
+      console.error("Failed to load Station Master data from APIs:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInitiateAssessment = async (employeeId) => {
+    try {
+      setStatusMsg("Initiating safety assessment request...");
+      await createAssessmentRequest(employeeId, new Date().toISOString().slice(0, 10));
+      setStatusMsg("Safety assessment request initiated successfully.");
+      await refreshData();
+      alert("Safety assessment request initiated successfully! Pointsman can now attempt the safety exam.");
+    } catch (err) {
+      console.error("Error initiating assessment:", err);
+      alert(err.message || "Failed to initiate assessment request.");
+    }
+  };
+
+  const handleClearRef = (pointsman) => {
+    setPointsmen(prev => prev.map(p => {
+      if (p.hrmsId === pointsman.hrmsId) {
+        return {
+          ...p,
+          refStatus: 'Cleared',
+          refDate: new Date().toISOString().split('T')[0],
+          refDueDate: new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        };
+      }
+      return p;
+    }));
+    alert(`Successfully cleared Refresher Training (REF) status for ${pointsman.name} (${pointsman.hrmsId}).`);
+  };
+
+  const handleScheduleCounsellingFromPme = (pointsman) => {
+    const todayStr = new Date(Date.now() + 24*60*60*1000).toISOString().slice(0, 16);
+    const saved = localStorage.getItem("sm_counsel_schedules");
+    const counselSchedules = saved ? JSON.parse(saved) : {};
+    const [date, time] = todayStr.split("T");
+    const updated = {
+      ...counselSchedules,
+      [pointsman.id]: { date, time, attended: false }
+    };
+    localStorage.setItem("sm_counsel_schedules", JSON.stringify(updated));
+    alert(`Counselling scheduled for ${pointsman.name} on ${date} at ${time}.`);
+    setActiveTab("counselling");
+  };
+
+  const handleToggleMcqStatus = async (assessmentId, nextMcqStatus) => {
+    try {
+      setStatusMsg("Updating MCQ exam access status...");
+      await updateMcqStatus(assessmentId, nextMcqStatus);
+      setStatusMsg(`CBT exam access updated to ${nextMcqStatus}.`);
+      await refreshData();
+    } catch (err) {
+      console.error("Error updating MCQ status:", err);
+      alert(err.message || "Failed to update CBT exam status.");
+    }
+  };
+
+  useEffect(() => {
+    if (employeeId) {
+      refreshData();
+      const interval = setInterval(() => {
+        refreshData();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [employeeId]);
+
   const [selectedPm, setSelectedPm] = useState(null);
   const [assessTarget, setAssessTarget] = useState(null);
   const [assessForm, setAssessForm] = useState(defaultAssessForm);
@@ -608,7 +821,7 @@ function StationMasterModule({ user, onLogout }) {
     });
   };
 
-  const savePmModal = () => {
+  const savePmModal = async () => {
     if (!pmModal.data.name || !pmModal.data.hrmsId) {
       alert("Name and HRMS ID are required.");
       return;
@@ -623,7 +836,21 @@ function StationMasterModule({ user, onLogout }) {
       }
     }
     if (pmModal.mode === "add") {
-      setPointsmen(prev => [pmModal.data, ...prev]);
+      try {
+        await registerPointsman({
+          name: pmModal.data.name,
+          contact: pmModal.data.contact || pmModal.data.contactNumber || "N/A",
+          hrmsId: pmModal.data.hrmsId,
+          email: pmModal.data.email || pmModal.data.emailId || "",
+          cat: pmModal.data.cat || pmModal.data.category || "A",
+          joiningDate: pmModal.data.joiningDate || pmModal.data.doj
+        });
+        alert(`Pointsman registered successfully!\nHRMS ID: ${pmModal.data.hrmsId}\nDefault Password: Railway@123`);
+        refreshData();
+      } catch (err) {
+        alert("Failed to register Pointsman: " + err.message);
+        return;
+      }
     } else {
       setPointsmen(prev => prev.map(u => u.hrmsId === pmModal.data.hrmsId ? pmModal.data : u));
     }
@@ -643,11 +870,6 @@ function StationMasterModule({ user, onLogout }) {
   const [fsCategory, setFsCategory] = useState("All");
   const [fsRisk, setFsRisk] = useState("All");
   const [fsSearch, setFsSearch] = useState("");
-
-  const smName = user?.name || smProfile.name;
-  const smId = user?.hrmsId || smProfile.employeeId;
-  const fullName = smName;
-  const employeeId = smId;
 
   // Reactively Filtered Pointsmen for Fullscreen View
   const filteredFsPointsmen = useMemo(() => {
@@ -903,10 +1125,18 @@ function StationMasterModule({ user, onLogout }) {
     const mcqData = mcqDataStr ? JSON.parse(mcqDataStr) : null;
     const initialMcqMarks = mcqData && mcqData.completed ? String(mcqData.correctCount) : "0";
 
-    setAssessForm({
-      ...defaultAssessForm,
-      knowledgeMarks: initialMcqMarks
-    });
+    // Load local draft if any exists
+    const savedDraftStr = localStorage.getItem(`sm_draft_form_${draft.hrmsId}`);
+    const savedDraft = savedDraftStr ? JSON.parse(savedDraftStr) : null;
+
+    if (savedDraft) {
+      setAssessForm(savedDraft);
+    } else {
+      setAssessForm({
+        ...defaultAssessForm,
+        knowledgeMarks: initialMcqMarks
+      });
+    }
     setAssessLocked(false);
     setPageMode("assessForm");
   };
@@ -932,47 +1162,115 @@ function StationMasterModule({ user, onLogout }) {
   };
 
   /* ─── Submit assessment ─── */
-  const submitAssessment = (isDraft) => {
-    if (!isDraft && !assessForm.alcoholicStatus) {
-      setStatusMsg("Alcoholic / Non-Alcoholic status is mandatory."); return;
+  const submitAssessment = async (isDraft) => {
+    if (isDraft) {
+      localStorage.setItem(`sm_draft_form_${assessTarget.hrmsId}`, JSON.stringify(assessForm));
+      setStatusMsg("Draft saved successfully to local storage.");
+      return;
     }
-    const { knowledge, ynTotal, total } = computeScore(assessForm);
-    const sectionBreakdown = YN_SECTIONS.map(s => ({
-      title: s.title,
-      marks: assessForm[s.key].filter(v => v === "Yes").length * s.weight,
-      outOf: s.outOf
-    }));
-    const record = {
-      id: Date.now(), pointsmanId: assessTarget.pointsmanId,
-      hrmsId: assessTarget.hrmsId, name: assessTarget.name,
-      date: new Date().toISOString().slice(0, 10),
-      knowledgeMarks: knowledge, ynTotal, total,
-      grade: getCat(total), approvalStatus: isDraft ? "Draft" : "Pending",
-      remarks: assessForm.remarks,
-      sections: [
-        { title: "Knowledge of Rules (MCQ)", marks: knowledge, outOf: 25 },
-        ...sectionBreakdown
-      ],
-      meta: {
-        alcoholicStatus: assessForm.alcoholicStatus,
-        pmeStatus: assessForm.pmeStatus,
-        refStatus: assessForm.refStatus,
-        automaticTraining: assessForm.automaticTraining,
-        counselling: assessForm.counselling,
-        dateOfAppointment: assessForm.dateOfAppointment,
-        workingSince: assessForm.workingSince
+
+    if (!assessForm.alcoholicStatus) {
+      setStatusMsg("Alcoholic / Non-Alcoholic status is mandatory.");
+      return;
+    }
+
+    try {
+      setStatusMsg("Submitting evaluation to Traffic Inspector...");
+      
+      const scores = [];
+      
+      // 1. alertness -> IDs 1 to 5
+      assessForm.alertness.forEach((v, idx) => {
+        scores.push({
+          checklist_id: idx + 1,
+          response: v || "No",
+          marks_awarded: v === "Yes" ? 4 : 0
+        });
+      });
+      
+      // 2. safety -> IDs 6 to 10
+      assessForm.safety.forEach((v, idx) => {
+        scores.push({
+          checklist_id: idx + 6,
+          response: v || "No",
+          marks_awarded: v === "Yes" ? 4 : 0
+        });
+      });
+      
+      // 3. leadership -> IDs 11 to 15
+      assessForm.leadership.forEach((v, idx) => {
+        scores.push({
+          checklist_id: idx + 11,
+          response: v || "No",
+          marks_awarded: v === "Yes" ? 4 : 0
+        });
+      });
+      
+      // 4. discipline -> IDs 16 to 20
+      assessForm.discipline.forEach((v, idx) => {
+        scores.push({
+          checklist_id: idx + 16,
+          response: v || "No",
+          marks_awarded: v === "Yes" ? 4 : 0
+        });
+      });
+      
+      // 5. appearance -> IDs 21 to 25
+      assessForm.appearance.forEach((v, idx) => {
+        scores.push({
+          checklist_id: idx + 21,
+          response: v || "No",
+          marks_awarded: v === "Yes" ? 4 : 0
+        });
+      });
+
+      const token = getToken() || localStorage.getItem("token");
+      let response;
+      try {
+        response = await fetch(`http://127.0.0.1:5000/api/assessments/${assessTarget.assessment_id}/submit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            scores,
+            remarks: assessForm.remarks
+          })
+        });
+      } catch {
+        response = await fetch(`/api/assessments/${assessTarget.assessment_id}/submit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            scores,
+            remarks: assessForm.remarks
+          })
+        });
       }
-    };
-    setSubmittedAssessments(prev => [record, ...prev]);
-    if (!isDraft) setDrafts(prev => prev.filter(d => d.pointsmanId !== assessTarget.pointsmanId));
-    setPointsmen(prev => prev.map(p =>
-      p.id === assessTarget.pointsmanId
-        ? { ...p, lastScore: total, approvalStatus: isDraft ? p.approvalStatus : "Pending" }
-        : p
-    ));
-    if (!isDraft) setAssessLocked(true);
-    setStatusMsg(isDraft ? "Draft saved." : "Assessment submitted for TI approval. Status: Pending.");
-    if (!isDraft) setPageMode("default");
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || "Failed to submit assessment to database.");
+      }
+
+      setStatusMsg("Assessment evaluation submitted successfully to Traffic Inspector.");
+      setAssessLocked(true);
+      
+      // Clear local draft
+      localStorage.removeItem(`sm_draft_form_${assessTarget.hrmsId}`);
+      
+      // Refresh backend datasets
+      await refreshData();
+      
+      setPageMode("default");
+    } catch (err) {
+      console.error("Error submitting assessment:", err);
+      setStatusMsg(`Error: ${err.message}`);
+    }
   };
 
   /* ════ RENDERERS ════ */
@@ -1013,6 +1311,7 @@ function StationMasterModule({ user, onLogout }) {
       case "dashboard":
         return (
           <SMDashboard
+            smList={shiftMasters}
             averageScore={averageScore}
             complianceRate={complianceRate}
             pointsmen={pointsmen}
@@ -1033,6 +1332,8 @@ function StationMasterModule({ user, onLogout }) {
             viewingStaff={viewingStaff}
             setViewingStaff={setViewingStaff}
             openPmDetail={openPmDetail}
+            dashboardMetrics={dashboardMetrics}
+            onInitiateAssessment={handleInitiateAssessment}
           />
         );
       case "profile":
@@ -1074,6 +1375,7 @@ function StationMasterModule({ user, onLogout }) {
             CAT_COLOR={CAT_COLOR}
             RISK_BG={RISK_BG}
             RISK_COLOR={RISK_COLOR}
+            onInitiateAssessment={handleInitiateAssessment}
           />
         );
       case "assess":
@@ -1100,6 +1402,7 @@ function StationMasterModule({ user, onLogout }) {
             openAssessForm={openAssessForm}
             activatedTests={activatedTests}
             setActivatedTests={setActivatedTests}
+            onToggleMcqStatus={handleToggleMcqStatus}
           />
         );
       case "myAssessment":
@@ -1148,7 +1451,9 @@ function StationMasterModule({ user, onLogout }) {
               role: "Pointsman",
               station: smProfile.station || "Nagpur Junction",
               stationName: smProfile.station || "Nagpur Junction",
-              score: p.lastScore || p.safetyScore || 80,
+              score: p.lastScore,
+              cat: p.cat || p.category_grade || getCat(p.lastScore),
+              category_grade: p.category_grade || p.cat,
               designation: "Pointsman"
             }))}
             stationFilter={smProfile.station || "Nagpur Junction"}
@@ -1164,11 +1469,14 @@ function StationMasterModule({ user, onLogout }) {
               role: "Pointsman",
               station: smProfile.station || "Nagpur Junction",
               stationName: smProfile.station || "Nagpur Junction",
-              score: p.lastScore || p.safetyScore || 80,
+              score: p.lastScore,
+              cat: p.cat || p.category_grade || getCat(p.lastScore),
+              category_grade: p.category_grade || p.cat,
               designation: "Pointsman"
             }))}
             roleFilter="Pointsman"
             stationFilter={smProfile.station || "Nagpur Junction"}
+            onScheduleCounselling={handleScheduleCounsellingFromPme}
             exportAlert={(format, name) => alert(`Exporting PME Report in ${format} format...`)}
           />
         );
@@ -1180,11 +1488,14 @@ function StationMasterModule({ user, onLogout }) {
               role: "Pointsman",
               station: smProfile.station || "Nagpur Junction",
               stationName: smProfile.station || "Nagpur Junction",
-              score: p.lastScore || p.safetyScore || 80,
+              score: p.lastScore,
+              cat: p.cat || p.category_grade || getCat(p.lastScore),
+              category_grade: p.category_grade || p.cat,
               designation: "Pointsman"
             }))}
             roleFilter="Pointsman"
             stationFilter={smProfile.station || "Nagpur Junction"}
+            onClearRef={handleClearRef}
             exportAlert={(format, name) => alert(`Exporting REF Report in ${format} format...`)}
           />
         );
@@ -1212,6 +1523,7 @@ function StationMasterModule({ user, onLogout }) {
         setStatusMsg={setStatusMsg}
         brandTitle="Indian Railway Evaluation System"
         brandSubtitle="Station Master Module"
+
       >
         <div className="sm2-page-wrap" style={{ padding: 0 }}>
           {renderContent()}
@@ -1233,49 +1545,49 @@ function StationMasterModule({ user, onLogout }) {
               </div>
               <div>
                 <h2>
-                  {fullscreenChart === "monthly" && "Monthly Assessment Trend — Deep Dive"}
-                  {fullscreenChart === "safety" && "Safety Compliance Trend — Deep Dive"}
-                  {fullscreenChart === "performance" && "Performance Distribution — Deep Dive"}
+                  {fullscreenChart === "monthly" && (t("analytics.monthlyTrendDeepDive") || "Monthly Assessment Trend — Deep Dive")}
+                  {fullscreenChart === "safety" && (t("analytics.safetyTrendDeepDive") || "Safety Compliance Trend — Deep Dive")}
+                  {fullscreenChart === "performance" && (t("analytics.performanceDistDeepDive") || "Performance Distribution — Deep Dive")}
                 </h2>
                 <p>
-                  Indian Railway Evaluation System · Station Master Analytics
+                  {t("analytics.subTitle") || "Indian Railway Evaluation Command · Operations Workspace"}
                 </p>
               </div>
             </div>
             <button className="sm2-fullscreen-close-btn" onClick={() => setFullscreenChart(null)}>
-              ✕ Close
+              {t("analytics.close") || "✕ Close"}
             </button>
           </div>
 
           {/* ── Filter Bar ── */}
           <div className="sm2-fullscreen-filter-bar">
-            <span className="sm2-fs-filter-tag">FILTERS</span>
+            <span className="sm2-fs-filter-tag">{t("analytics.filters") || "FILTERS"}</span>
             <input
-              type="text" placeholder="Search staff name / HRMS…"
+              type="text" placeholder={t("analytics.searchPlaceholder") || "Search staff name / HRMS…"}
               value={fsSearch} onChange={e => setFsSearch(e.target.value)}
               className="sm2-fs-input"
             />
             <input type="date" value={fsStartDate} onChange={e => setFsStartDate(e.target.value)} className="sm2-fs-input" />
-            <span className="sm2-fs-label">to</span>
+            <span className="sm2-fs-label">{t("analytics.to") || "to"}</span>
             <input type="date" value={fsEndDate} onChange={e => setFsEndDate(e.target.value)} className="sm2-fs-input" />
             <select value={fsCategory} onChange={e => setFsCategory(e.target.value)} className="sm2-fs-select">
-              <option value="All">All Categories</option>
-              <option value="A">Category A</option>
-              <option value="B">Category B</option>
-              <option value="C">Category C</option>
-              <option value="D">Category D</option>
+              <option value="All">{t("dashboard.allCategories") || "All Categories"}</option>
+              <option value="A">{t("dashboard.colCategory") + " A" || "Category A"}</option>
+              <option value="B">{t("dashboard.colCategory") + " B" || "Category B"}</option>
+              <option value="C">{t("dashboard.colCategory") + " C" || "Category C"}</option>
+              <option value="D">{t("dashboard.colCategory") + " D" || "Category D"}</option>
             </select>
             <select value={fsRisk} onChange={e => setFsRisk(e.target.value)} className="sm2-fs-select">
-              <option value="All">All Risks</option>
-              <option value="Low">Low Risk</option>
-              <option value="Medium">Medium Risk</option>
-              <option value="High">High Risk</option>
+              <option value="All">{t("workflow.allPriorities") || "All Risks"}</option>
+              <option value="Low">{t("priority.low") + " " + (t("dashboard.colRiskLevel") || "Risk")}</option>
+              <option value="Medium">{t("priority.medium") + " " + (t("dashboard.colRiskLevel") || "Risk")}</option>
+              <option value="High">{t("priority.high") + " " + (t("dashboard.colRiskLevel") || "Risk")}</option>
             </select>
             <button onClick={() => { setFsSearch(""); setFsStartDate(""); setFsEndDate(""); setFsCategory("All"); setFsRisk("All"); }} className="sm2-fs-reset-btn">
-              Reset
+              {t("analytics.reset") || "Reset"}
             </button>
             <div className="sm2-fs-counter">
-              Showing <strong>{filteredFsPointsmen.length}</strong> of {pointsmen.length} staff
+              {t("analytics.showing") || "Showing"} <strong>{filteredFsPointsmen.length}</strong> {t("analytics.of") || "of"} {pointsmen.length} {t("analytics.staff") || "staff"}
             </div>
           </div>
 
@@ -1285,11 +1597,11 @@ function StationMasterModule({ user, onLogout }) {
             {/* KPI Summary Row */}
             <div className="sm2-fs-kpi-row">
               {[
-                { label: "Avg Score", value: filteredFsPointsmen.length ? Math.round(filteredFsPointsmen.reduce((s, p) => s + p.lastScore, 0) / filteredFsPointsmen.length) + "%" : "—", color: "#60a5fa", glowColor: "rgba(96,165,250,0.15)" },
-                { label: "Avg Safety", value: filteredFsPointsmen.length ? Math.round(filteredFsPointsmen.reduce((s, p) => s + p.safetyScore, 0) / filteredFsPointsmen.length) + "%" : "—", color: "#a78bfa", glowColor: "rgba(167,139,250,0.15)" },
-                { label: "High Risk", value: filteredFsPointsmen.filter(p => riskLevel(p) === "High").length, color: "#f87171", glowColor: "rgba(248,113,113,0.15)" },
-                { label: "Cat A Staff", value: filteredFsPointsmen.filter(p => getCat(p.lastScore) === "A").length, color: "#34d399", glowColor: "rgba(52,211,153,0.15)" },
-                { label: "Fit (PME)", value: filteredFsPointsmen.filter(p => p.pmeStatus === "Fit").length, color: "#fbbf24", glowColor: "rgba(251,191,36,0.15)" },
+                { label: t("dashboard.colAverageScore") || "Avg Score", value: filteredFsPointsmen.length ? Math.round(filteredFsPointsmen.reduce((s, p) => s + p.lastScore, 0) / filteredFsPointsmen.length) + "%" : "—", color: "#60a5fa", glowColor: "rgba(96,165,250,0.15)" },
+                { label: t("dashboard.colSafety") || "Avg Safety", value: filteredFsPointsmen.length ? Math.round(filteredFsPointsmen.reduce((s, p) => s + p.safetyScore, 0) / filteredFsPointsmen.length) + "%" : "—", color: "#a78bfa", glowColor: "rgba(167,139,250,0.15)" },
+                { label: t("dashboard.colHighRisk") || "High Risk", value: filteredFsPointsmen.filter(p => riskLevel(p) === "High").length, color: "#f87171", glowColor: "rgba(248,113,113,0.15)" },
+                { label: t("analytics.catAStaff") || "Cat A Staff", value: filteredFsPointsmen.filter(p => getCat(p.lastScore) === "A").length, color: "#34d399", glowColor: "rgba(52,211,153,0.15)" },
+                { label: t("analytics.fitPme") || "Fit (PME)", value: filteredFsPointsmen.filter(p => p.pmeStatus === "Fit").length, color: "#fbbf24", glowColor: "rgba(251,191,36,0.15)" },
               ].map(k => (
                 <div key={k.label} className="sm2-fs-kpi-card" style={{ "--glow": k.glowColor }}>
                   <div className="sm2-fs-kpi-value" style={{ color: k.color }}>{k.value}</div>
@@ -1301,9 +1613,9 @@ function StationMasterModule({ user, onLogout }) {
             {/* Large Chart */}
             <div className="sm2-fs-chart-container">
               <h3>
-                {fullscreenChart === "monthly" && "📈 Monthly Avg Score & Assessment Volume"}
-                {fullscreenChart === "safety" && "🛡️ Monthly Safety Compliance Avg (%)"}
-                {fullscreenChart === "performance" && "🏅 Staff Category Distribution"}
+                {fullscreenChart === "monthly" && (t("analytics.monthlyAvgChartTitle") || "📈 Monthly Avg Score & Assessment Volume")}
+                {fullscreenChart === "safety" && (t("analytics.safetyAvgChartTitle") || "🛡️ Monthly Safety Compliance Avg (%)")}
+                {fullscreenChart === "performance" && (t("analytics.staffCategoryChartTitle") || "🏅 Staff Category Distribution")}
               </h3>
               <div className="sm2-fs-chart-wrapper">
                 <ResponsiveContainer width="100%" height={320}>
@@ -1351,7 +1663,7 @@ function StationMasterModule({ user, onLogout }) {
             {/* Low Performers Deep-Dive Table */}
             <div className="sm2-fs-low-perf-section">
               <h3>
-                <span style={{ color: "#f87171", marginRight: 6 }}>⚠</span> Low Performing Staff — Direct Intervention Required
+                <span style={{ color: "#f87171", marginRight: 6 }}>⚠</span> {t("analytics.lowPerformingStaff") || "Low Performing Staff — Direct Intervention Required"}
               </h3>
               <div className="sm2-fs-grid">
                 {[...filteredFsPointsmen]
@@ -1373,19 +1685,19 @@ function StationMasterModule({ user, onLogout }) {
                             <div className="sm2-fs-card-id">{p.hrmsId}</div>
                           </div>
                           <span className="sm2-fs-card-cat" style={{ background: CAT_BG[cat], color: CAT_COLOR[cat] }}>
-                            Cat. {cat}
+                            {t("dashboard.colCategory") || "Cat."} {cat}
                           </span>
                         </div>
                         <div className="sm2-fs-card-meta-row">
                           <span className="sm2-fs-card-risk-badge" style={{
                             background: risk === "High" ? "rgba(248,113,113,0.15)" : risk === "Medium" ? "rgba(251,191,36,0.15)" : "rgba(52,211,153,0.15)",
                             color: rColor
-                          }}>{risk} Risk</span>
-                          <span className="sm2-fs-card-incident-lbl">{p.incidents} incident{p.incidents !== 1 ? "s" : ""}</span>
+                          }}>{t("priority." + risk.toLowerCase()) || risk} {t("dashboard.colRiskLevel") || "Risk"}</span>
+                          <span className="sm2-fs-card-incident-lbl">{p.incidents} {p.incidents !== 1 ? t("analytics.incidents") || "incidents" : t("analytics.incident") || "incident"}</span>
                         </div>
                         <div className="sm2-fs-card-progress-item">
                           <div className="sm2-fs-card-progress-lbl">
-                            <span>Score</span>
+                            <span>{t("dashboard.score") || "Score"}</span>
                             <span style={{ color: p.lastScore < 50 ? "#f87171" : "#fbbf24" }}>{p.lastScore}/100</span>
                           </div>
                           <div className="sm2-fs-card-progress-track">
@@ -1394,7 +1706,7 @@ function StationMasterModule({ user, onLogout }) {
                         </div>
                         <div className="sm2-fs-card-progress-item" style={{ marginTop: 10 }}>
                           <div className="sm2-fs-card-progress-lbl">
-                            <span>Safety Score</span>
+                            <span>{t("dashboard.colSafety") || "Safety Score"}</span>
                             <span style={{ color: p.safetyScore < 60 ? "#f87171" : "#a78bfa" }}>{p.safetyScore}%</span>
                           </div>
                           <div className="sm2-fs-card-progress-track">
@@ -1405,7 +1717,7 @@ function StationMasterModule({ user, onLogout }) {
                     );
                   })}
                 {filteredFsPointsmen.length === 0 && (
-                  <p style={{ color: "#64748b", fontSize: 13, gridColumn: "1/-1", textAlign: "center", padding: "24px 0" }}>No staff match the current filters.</p>
+                  <p style={{ color: "#64748b", fontSize: 13, gridColumn: "1/-1", textAlign: "center", padding: "24px 0" }}>{t("analytics.noStaffMatch") || "No staff match the current filters."}</p>
                 )}
               </div>
             </div>

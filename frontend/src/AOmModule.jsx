@@ -51,12 +51,21 @@ import {
   Mail,
   AlignJustify,
   Gauge,
-  UserCircle2
+  UserCircle2,
+  Bell,
+  ShieldAlert,
+  Sparkles
 } from "lucide-react";
+import { useLanguage } from "./utils/LanguageContext";
+import RiskIntelligenceDashboard from "./components/AOmModule/RiskIntelligenceDashboard";
 import CommonUserModal from "./components/CommonUserModal";
 import CommonPmePosition from "./components/CommonPmePosition";
 import CommonRefPosition from "./components/CommonRefPosition";
 import CommonCounselling from "./components/CommonCounselling";
+import WorkflowDashboard from "./components/WorkflowDashboard";
+import ExecutiveAnalytics from "./components/ExecutiveAnalytics";
+import AiCommandCenter from "./components/AiCommandCenter";
+import { getWorkflowStats } from "./services/workflowService";
 import {
   Bar,
   BarChart,
@@ -77,128 +86,13 @@ import "./sdom.css";
 import UserProfile from "./components/UserProfile";
 import CommonReports from "./components/CommonReports";
 import AOmDashboard from "./components/AOmModule/AOmDashboard";
-
-const MONTHLY_TREND = [
-  { month: "Dec'25", score: 81, safety: 80 },
-  { month: "Jan'26", score: 83, safety: 82 },
-  { month: "Feb'26", score: 85, safety: 85 },
-  { month: "Mar'26", score: 87, safety: 88 },
-  { month: "Apr'26", score: 89, safety: 91 },
-  { month: "May'26", score: 91, safety: 94 }
-];
-
-const ASSESSMENT_MONTHLY = [
-  { month: "Nov", approved: 380, pending: 60, rejected: 18, overdue: 12 },
-  { month: "Dec", approved: 410, pending: 55, rejected: 22, overdue: 15 },
-  { month: "Jan", approved: 440, pending: 70, rejected: 19, overdue: 10 },
-  { month: "Feb", approved: 460, pending: 65, rejected: 21, overdue: 9 },
-  { month: "Mar", approved: 490, pending: 58, rejected: 17, overdue: 8 },
-  { month: "Apr", approved: 520, pending: 68, rejected: 20, overdue: 11 }
-];
-
-const COMPLIANCE = [
-  { label: "Overall Safety Compliance", pct: 91, color: "#16a34a" },
-  { label: "PME Completion Rate", pct: 87, color: "#2563eb" },
-  { label: "REF Completion Rate", pct: 83, color: "#7c3aed" },
-  { label: "Incident Reporting Compliance", pct: 94, color: "#0891b2" },
-  { label: "Disciplinary Clean Record", pct: 96, color: "#16a34a" }
-];
+import { getAomDashboard, getAomStationSummary, getAomPerformanceSummary, getAomComplianceSummary } from "./services/aomService";
+import NotificationBell from "./components/NotificationBell";
+import LanguageSwitcher from "./components/LanguageSwitcher";
 
 const CAT_COLORS = { A: "#1E3A5F", B: "#2B6CB0", C: "#D69E2E", D: "#C53030" };
 const RISK_COLORS = { Low: "#2F855A", Medium: "#D69E2E", High: "#C53030" };
 const STATUS_COLORS = { Approved: "#2F855A", Pending: "#D69E2E", Rejected: "#C53030", Overdue: "#9B2C2C" };
-
-const generate96Stations = () => {
-  const divisionMap = {
-    Nagpur: ["NGP", "WR", "BD", "AK", "SEGM", "AJNI", "PLO", "DMN", "MZR", "SEG", "MKU", "JL", "CSN", "ET"],
-    Pune: ["PUNE", "LNL", "SVJR", "KK", "DAPD", "CCH", "PMP", "TGN", "DEHR", "KAD", "DD", "ANG", "KPG", "SNSI", "STR"],
-    Mumbai: ["CSMT", "BY", "DR", "CLA", "GC", "TNA", "DIVA", "DI", "KYN", "SHAD", "ABY", "AMR", "ULNR", "VLDI"],
-    Solapur: ["SUR", "KWV", "PVR", "LUR", "UMD", "BTW"],
-    Bhusawal: ["BSL", "NK", "MMR", "JL", "BAU", "KNW", "HD", "DVL"]
-  };
-
-  const stationsData = [];
-  const divisions = Object.keys(divisionMap);
-  const categories = ["A", "B", "C", "D"];
-  const risks = ["Low", "Medium", "High"];
-  const statuses = ["Approved", "Pending", "Completed"];
-
-  const baseNames = [
-    "Nagpur Main", "Wardha Junction", "Badnera Town", "Akola Junction", "Sewagram", "Ajni Central",
-    "Pulgaon", "Dhamangaon", "Murtajapur", "Shegaon", "Malkapur", "Jalgaon Junction", "Chalisgaon",
-    "Itarsi Jn", "Bhopal Junction", "Dongargarh", "Gondia Jn", "Durg Jn", "Raipur Jn", "Bilaspur Jn",
-    "Pune Junction", "Lonavala", "Shivajinagar", "Khadki", "Dapodi", "Chinchwad", "Pimpri",
-    "Taloja", "Dehu Road", "Khadala", "Daund Jn", "Ahmednagar", "Kopargaon", "Sainagar Shirdi",
-    "Satara", "Kolhapur", "Sangli", "Miraj Jn", "Londa", "Ghatprabha",
-    "CSMT Terminal", "Byculla", "Dadar Central", "Kurla Jn", "Ghatkopar", "Thane Main", "Diva Jn",
-    "Dombivli", "Kalyan Jn", "Shahad", "Ambivali", "Titwala", "Ulhasnagar", "Vithalwadi", "Badlapur",
-    "Vashi", "Karjat Jn", "Igatpuri", "Bhandup", "Mulund",
-    "Solapur Jn", "Kurduvadi Jn", "Pandharpur", "Latur Town", "Osmanabad", "Barsi Town",
-    "Bhusawal Jn", "Nashik Road", "Manmad Jn", "Burhanpur", "Khandwa Jn", "Harda", "Devlali",
-    "Khamgaon", "Pachora", "Nandurbar", "Amravati", "Chandrapur", "Ballarshah", "Wardha East",
-    "Sindi Town", "Butibori", "Kalmeshwar", "Katol", "Narkher", "Pandhurna", "Multai", "Amla Jn",
-    "Betul", "Ghoradongri", "Itarsi West", "Hoshangabad", "Budni", "Obaidullaganj", "Mandideep"
-  ];
-
-  for (let i = 0; i < 96; i++) {
-    const division = divisions[i % divisions.length];
-    const codeList = divisionMap[division];
-    const code = codeList[Math.floor(i / divisions.length) % codeList.length] + `_${10 + Math.floor(i / 10)}`;
-    const name = baseNames[i % baseNames.length];
-    const completed = 200 + ((i * 17) % 600);
-    const pending = 15 + ((i * 11) % 130);
-    const avgScore = 72 + ((i * 3) % 25);
-    const category = categories[i % categories.length];
-    const riskLevel = i % 7 === 0 ? "High" : i % 3 === 0 ? "Medium" : "Low";
-    const assessmentStatus = statuses[i % statuses.length];
-
-    const day = 10 + (i % 45);
-    const lastUpdatedDate = `2026-04-${day < 10 ? "0" + day : day}`;
-
-    stationsData.push({
-      id: `ST_${1001 + i}`,
-      stationName: name,
-      stationCode: code,
-      division,
-      zone: "CR",
-      completed,
-      pending,
-      avgScore,
-      category,
-      riskLevel,
-      assessmentStatus,
-      lastUpdatedDate
-    });
-  }
-  return stationsData;
-};
-
-const DASHBOARD_96_STATIONS = generate96Stations();
-
-const stationProgressData = [
-  { station: "Nagpur", completed: 450, pending: 100 },
-  { station: "Wardha", completed: 490, pending: 130 },
-  { station: "Badnera", completed: 530, pending: 160 },
-  { station: "Akola", completed: 570, pending: 190 },
-  { station: "Yavatmal", completed: 610, pending: 220 },
-  { station: "Parbhani", completed: 640, pending: 250 },
-  { station: "Parli Vaijnath", completed: 680, pending: 95 },
-  { station: "Latur", completed: 710, pending: 130 },
-  { station: "Vikarabad", completed: 750, pending: 160 },
-  { station: "Aurangabad", completed: 790, pending: 190 },
-  { station: "Pundlik", completed: 830, pending: 210 },
-  { station: "Jalna", completed: 860, pending: 240 },
-  { station: "Partur", completed: 440, pending: 90 },
-  { station: "Mudkhed", completed: 480, pending: 120 },
-  { station: "Visapur", completed: 510, pending: 150 }
-];
-
-const categoryData = [
-  { name: "Grade A", value: 14.6, color: "#57b35a" },
-  { name: "Grade B", value: 37.5, color: "#3f9be6" },
-  { name: "Grade C", value: 36.5, color: "#f5a623" },
-  { name: "Grade D", value: 11.5, color: "#e55a54" }
-];
 
 const sidebarItems = [
   { icon: Gauge, label: "Dashboard" },
@@ -213,52 +107,12 @@ const sidebarItems = [
   { icon: HeartHandshake, label: "Counselling" },
   { icon: Activity, label: "PME Position" },
   { icon: Award, label: "REF Position" },
+  { icon: ShieldAlert, label: "Predictive Risk" },
+  { icon: BarChart3, label: "Executive Analytics", key: "executive" },
   { icon: BarChart3, label: "Reports and Analytics" },
   { icon: UserCircle2, label: "My Profile" }
 ];
 
-const summaryCards = [
-  {
-    icon: Users,
-    iconClass: "icon-slate",
-    trend: "+2.4%",
-    value: "14,280",
-    title: "TOTAL EMPLOYEES",
-    subtitle: "Active Staff Count"
-  },
-  {
-    icon: UserCheck,
-    iconClass: "icon-green",
-    trend: "+1.5%",
-    value: "12,104",
-    title: "EVALUATIONS COMPLETED",
-    subtitle: "85% Global Rate"
-  },
-  {
-    icon: AlertCircle,
-    iconClass: "icon-orange",
-    trend: "Attention",
-    value: "482",
-    title: "PENDING APPROVALS",
-    subtitle: "Requires resolution",
-    trendAlert: true
-  },
-  {
-    icon: Star,
-    iconClass: "icon-blue",
-    value: "78.5",
-    title: "AVERAGE SCORE",
-    subtitle: "B-Grade Average"
-  },
-  {
-    icon: ShieldCheck,
-    iconClass: "icon-green",
-    value: "99.2%",
-    title: "SAFETY COMPLIANCE",
-    subtitle: "Divisional Audit",
-    status: "Standard Met"
-  }
-];
 
 const designationOptions = ["Pointsman", "Station Master", "Train Manager", "Station Supervisor", "Traffic Inspector"];
 const departmentOptions = ["Operations", "Administration", "Finance", "HR", "IT"];
@@ -271,7 +125,9 @@ const aomReadOnlyProfile = {
   division: "Central Division",
   reportingOfficer: "Super Admin - SA_1001",
   contact: "+91 99880 11223",
-  email: "aom.console@rail.in"
+  email: "aom.console@rail.in",
+  pmeStatus: "FIT (Medical Review) - Due: 2029-09-15",
+  refStatus: "COMPLETED (Safety Operations Seminar) - Due: 2027-04-22"
 };
 
 const initialUserFormData = {
@@ -344,146 +200,8 @@ const initialStationFilterData = {
   status: ""
 };
 
-const initialStations = [
-  {
-    id: 1,
-    stationName: "Nagpur Junction",
-    stationCode: "NGP",
-    zone: "Central Railway",
-    division: "Nagpur",
-    category: "A",
-    platforms: 8,
-    tracks: 14,
-    stationType: "Junction",
-    status: "Active",
-    createdBy: "SA_1001",
-    address: "Station Road, Sitabuldi",
-    city: "Nagpur",
-    state: "Maharashtra",
-    pincode: "440001",
-    stationMasterName: "A. Patil",
-    contactNumber: "9890011122",
-    emailId: "ngp.station@rail.in",
-    latitude: "21.1458",
-    longitude: "79.0882"
-  },
-  {
-    id: 2,
-    stationName: "Pune Junction",
-    stationCode: "PUNE",
-    zone: "Central Railway",
-    division: "Pune",
-    category: "A",
-    platforms: 6,
-    tracks: 12,
-    stationType: "Junction",
-    status: "Active",
-    createdBy: "SA_1001",
-    address: "Railway Station Rd, Agarkar Nagar",
-    city: "Pune",
-    state: "Maharashtra",
-    pincode: "411001",
-    stationMasterName: "R. Jadhav",
-    contactNumber: "9880012233",
-    emailId: "pune.station@rail.in",
-    latitude: "18.5284",
-    longitude: "73.8742"
-  },
-  {
-    id: 3,
-    stationName: "New Delhi",
-    stationCode: "NDLS",
-    zone: "Northern Railway",
-    division: "Delhi",
-    category: "A",
-    platforms: 16,
-    tracks: 24,
-    stationType: "Terminal",
-    status: "Active",
-    createdBy: "SA_1001",
-    address: "Bhavbhuti Marg, Ajmeri Gate",
-    city: "New Delhi",
-    state: "Delhi",
-    pincode: "110006",
-    stationMasterName: "M. Sharma",
-    contactNumber: "9870014455",
-    emailId: "ndls.station@rail.in",
-    latitude: "28.6436",
-    longitude: "77.2194"
-  }
-];
-
 const tiCategoryOptions = ["A", "B", "C", "D"];
 const tiAssessmentStatusOptions = ["Completed", "Pending"];
-
-const initialTrafficInspectors = [
-  {
-    id: 1,
-    name: "R. Khan",
-    employeeId: "TI_1001",
-    stationName: "Parbhani Junction",
-    tiArea: "TI PAR",
-    division: "TI PAR",
-    category: "A",
-    riskLevel: "Low",
-    lastScore: 88,
-    assessmentStatus: "Completed",
-    phone: "9890029911",
-    email: "rkhan@rail.in"
-  },
-  {
-    id: 2,
-    name: "A. Kulkarni",
-    employeeId: "TI_1002",
-    stationName: "Amla",
-    tiArea: "TI AMLA",
-    division: "TI AMLA",
-    category: "B",
-    riskLevel: "Medium",
-    lastScore: 77,
-    assessmentStatus: "Pending",
-    phone: "9890017788",
-    email: "akulkarni@rail.in"
-  },
-  {
-    id: 3,
-    name: "S. Verma",
-    employeeId: "TI_1003",
-    stationName: "Nagpur Junction",
-    tiArea: "TI NGP",
-    division: "TI NGP",
-    category: "A",
-    riskLevel: "Low",
-    lastScore: 91,
-    assessmentStatus: "Pending",
-    phone: "9873312211",
-    email: "sverma@rail.in"
-  }
-];
-
-const hrmsTiDirectory = [
-  {
-    hrmsId: "TI3201",
-    name: "S. Verma",
-    jurisdiction: "Delhi",
-    category: "TI",
-    assessmentStatus: "Pending",
-    division: "Delhi",
-    phone: "9873312211",
-    email: "sverma@rail.in"
-  },
-  {
-    hrmsId: "TI3202",
-    name: "M. Das",
-    jurisdiction: "Nagpur",
-    category: "Assistant TI",
-    assessmentStatus: "In Progress",
-    division: "Nagpur",
-    phone: "9890016644",
-    email: "mdas@rail.in"
-  }
-];
-
 const initialTiFormData = {
   name: "",
   employeeId: "",
@@ -492,133 +210,6 @@ const initialTiFormData = {
   assessmentStatus: "Pending"
 };
 
-const stationAverageScoreData = [
-  { station: "Nagpur", avgScore: 86 },
-  { station: "Pune", avgScore: 89 },
-  { station: "Delhi", avgScore: 84 },
-  { station: "Mumbai", avgScore: 88 },
-  { station: "Jalna", avgScore: 91 },
-  { station: "Parbhani", avgScore: 82 }
-];
-
-const initialPendingAssessments = [
-  {
-    id: "SM_1001",
-    title: "Station Master - SM_1001",
-    statusLabel: "Pending Approval",
-    assessedByLine: "Assessed by: TI/SS - on 2026-04-15",
-    employeeLine: "Employee: R. Jadhav | Division: Pune",
-    actionType: "approval"
-  },
-  {
-    id: "TM_1001",
-    title: "Train Manager - TM_1001",
-    statusLabel: "Pending Approval",
-    assessedByLine: "Assessed by: TI/SS - on 2026-04-14",
-    employeeLine: "Employee: V. Singh | Division: Mumbai",
-    actionType: "approval"
-  },
-  {
-    id: "TI_1001",
-    title: "Traffic Inspector - TI_1001",
-    statusLabel: "Pending Approval",
-    assessedByLine: "Assessed by: AOM/G - on 2026-04-13",
-    employeeLine: "Employee: A. Kulkarni | Division: Nagpur",
-    actionType: "approval"
-  },
-  {
-    id: "SS_1001",
-    title: "Station Supervisor - SS_1001",
-    statusLabel: "Pending Assessment",
-    assessedByLine: "Awaiting: Your Assessment - on 2026-04-12",
-    employeeLine: "Employee: P. Verma | Division: Delhi",
-    actionType: "assessment"
-  }
-];
-
-const initialApprovedAssessments = [
-  {
-    id: "SM_1002",
-    title: "Station Master - SM_1002",
-    detail: "Approved by: AOM/G - on 2026-04-09",
-    score: "Score: 92/100 - Grade: A"
-  },
-  {
-    id: "TM_1002",
-    title: "Train Manager - TM_1002",
-    detail: "Approved by: AOM/G - on 2026-04-08",
-    score: "Score: 88/100 - Grade: B"
-  },
-  {
-    id: "TI_1005",
-    title: "Traffic Inspector - TI_1005",
-    detail: "Approved by: AOM/G - on 2026-04-07",
-    score: "Score: 85/100 - Grade: B"
-  }
-];
-
-const initialReportRows = [
-  {
-    id: "PM_1001",
-    hrmsId: "PM_1001",
-    name: "K. Pawar",
-    designation: "Pointsman",
-    assessmentStatus: "Approved",
-    score: "85",
-    grade: "B",
-    lastAssessed: "2026-04-10"
-  },
-  {
-    id: "SM_1001",
-    hrmsId: "SM_1001",
-    name: "R. Jadhav",
-    designation: "Station Master",
-    assessmentStatus: "Approved",
-    score: "92",
-    grade: "A",
-    lastAssessed: "2026-04-09"
-  },
-  {
-    id: "TM_1001",
-    hrmsId: "TM_1001",
-    name: "V. Singh",
-    designation: "Train Manager",
-    assessmentStatus: "Approved",
-    score: "88",
-    grade: "B",
-    lastAssessed: "2026-04-08"
-  },
-  {
-    id: "TI_1001",
-    hrmsId: "TI_1001",
-    name: "A. Kulkarni",
-    designation: "Traffic Inspector",
-    assessmentStatus: "Approved",
-    score: "85",
-    grade: "B",
-    lastAssessed: "2026-04-07"
-  },
-  {
-    id: "SS_1001",
-    hrmsId: "SS_1001",
-    name: "P. Verma",
-    designation: "Station Supervisor",
-    assessmentStatus: "Pending",
-    score: "-",
-    grade: "-",
-    lastAssessed: "-"
-  },
-  {
-    id: "SM_1002",
-    hrmsId: "SM_1002",
-    name: "M. Sharma",
-    designation: "Station Master",
-    assessmentStatus: "Approved",
-    score: "90",
-    grade: "A",
-    lastAssessed: "2026-04-06"
-  }
-];
 
 const assessmentCriteria = [
   { key: "knowledgeOfRules", label: "Knowledge of Rules", marks: 25 },
@@ -630,9 +221,76 @@ const assessmentCriteria = [
 ];
 
 function AOmModule({ user, onLogout }) {
+  const { locale, changeLanguage, t } = useLanguage();
   const [activePage, setActivePage] = useState("Dashboard");
   const [pmModal, setPmModal] = useState(null);
   const [pmF, setPmF] = useState({ name: "", station: "All", cat: "All", risk: "All" });
+  const [workflowBadgeCount, setWorkflowBadgeCount] = useState(0);
+
+  // Fetch workflow stats periodically to update sidebar badge
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await getWorkflowStats();
+        const openEsc = parseInt(res?.escalations?.open_count || 0, 10);
+        const pendingRec = parseInt(res?.recommendations?.pending_count || 0, 10);
+        setWorkflowBadgeCount(openEsc + pendingRec);
+      } catch (err) {
+        console.warn("Failed to fetch workflow stats for badge:", err);
+      }
+    }
+    fetchStats();
+    const interval = setInterval(fetchStats, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ─── Live Dashboard State ───
+  const [aomDashFilters, setAomDashFilters] = useState({ station_id: null, risk_level: null });
+  const [aomDashStats, setAomDashStats] = useState(null);
+  const [aomStationSummary, setAomStationSummary] = useState([]);
+  const [aomPerformance, setAomPerformance] = useState({ monthly_trend: [], grade_stats: {}, detailed_performance: [] });
+  const [aomComplianceSummary, setAomComplianceSummary] = useState({ total_roster_count: 0, pme_compliant_count: 0, ref_compliant_count: 0, pme_compliance_pct: 0, ref_compliance_pct: 0, detailed_roster: [] });
+  const [aomDashLoading, setAomDashLoading] = useState(false);
+  const [aomDashError, setAomDashError] = useState(null);
+
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Poll every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch all 4 AOM dashboard APIs
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchDashboard() {
+      setAomDashLoading(true);
+      setAomDashError(null);
+      try {
+        const [dashData, stationData, perfData, compData] = await Promise.all([
+          getAomDashboard(aomDashFilters),
+          getAomStationSummary(),
+          getAomPerformanceSummary(aomDashFilters),
+          getAomComplianceSummary(aomDashFilters)
+        ]);
+        if (!cancelled) {
+          setAomDashStats(dashData);
+          setAomStationSummary(stationData || []);
+          setAomPerformance(perfData || { monthly_trend: [], grade_stats: {}, detailed_performance: [] });
+          setAomComplianceSummary(compData || { total_roster_count: 0, pme_compliant_count: 0, ref_compliant_count: 0, pme_compliance_pct: 0, ref_compliance_pct: 0, detailed_roster: [] });
+        }
+      } catch (err) {
+        if (!cancelled) setAomDashError(err.message || "Failed to load dashboard data.");
+      } finally {
+        if (!cancelled) setAomDashLoading(false);
+      }
+    }
+    fetchDashboard();
+    return () => { cancelled = true; };
+  }, [aomDashFilters, refreshTrigger]);
 
   const openPmAdd = () => {
     setPmModal({
@@ -1290,7 +948,7 @@ function AOmModule({ user, onLogout }) {
   const [appliedFilters, setAppliedFilters] = useState(initialFilterData);
   const [tableSearch, setTableSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [stations, setStations] = useState(initialStations);
+  const [stations, setStations] = useState([]);
   const [stationFormData, setStationFormData] = useState(initialStationFormData);
   const [stationFormErrors, setStationFormErrors] = useState({});
   const [pendingStationFilters, setPendingStationFilters] = useState(initialStationFilterData);
@@ -1317,8 +975,8 @@ function AOmModule({ user, onLogout }) {
   const [newStPlatforms, setNewStPlatforms] = useState(3);
   const [newStTracks, setNewStTracks] = useState(5);
   const [newStDailyFootfall, setNewStDailyFootfall] = useState(15000);
-  const [newStLatitude, setNewStLatitude] = useState("21.1500Â° N");
-  const [newStLongitude, setNewStLongitude] = useState("79.0900Â° E");
+  const [newStLatitude, setNewStLatitude] = useState("21.1500° N");
+  const [newStLongitude, setNewStLongitude] = useState("79.0900° E");
   const [newStContactNumber, setNewStContactNumber] = useState("+91-712-2560158");
   const [newStEmailId, setNewStEmailId] = useState("");
   const [newStLineConfig, setNewStLineConfig] = useState("Double Line");
@@ -1360,32 +1018,208 @@ function AOmModule({ user, onLogout }) {
     setZoomPopupPage(1);
   };
 
-  const aomPointsmenSeed = [
-    { id: 1, hrmsId: "PM_1001", name: "Ravi Kumar", gender: "Male", age: 38, doj: "2012-04-10", basePay: "â‚¹28,500", lastScore: 92, safetyScore: 95, totalAssessments: 12, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Approved", monitoringStatus: "Active", stationCode: "NGP", stationName: "Nagpur Junction" },
-    { id: 2, hrmsId: "PM_1102", name: "Sanjay Patil", gender: "Male", age: 34, doj: "2015-08-22", basePay: "â‚¹26,200", lastScore: 78, safetyScore: 80, totalAssessments: 9, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Pending", monitoringStatus: "On Duty", stationCode: "NGP", stationName: "Nagpur Junction" },
-    { id: 3, hrmsId: "PM_1103", name: "Deepak Nair", gender: "Male", age: 41, doj: "2009-11-05", basePay: "â‚¹31,000", lastScore: 48, safetyScore: 62, totalAssessments: 15, pmeStatus: "Fit", refStatus: "Pending", disciplinary: "Warning", incidents: 1, approvalStatus: "Approved", monitoringStatus: "Off Duty", stationCode: "PUNE", stationName: "Pune Junction" },
-    { id: 4, hrmsId: "PM_1104", name: "Ajay Sharma", gender: "Male", age: 29, doj: "2019-02-18", basePay: "â‚¹23,400", lastScore: 84, safetyScore: 88, totalAssessments: 6, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Pending", monitoringStatus: "Active", stationCode: "PUNE", stationName: "Pune Junction" },
-    { id: 5, hrmsId: "PM_1105", name: "Kunal Verma", gender: "Male", age: 36, doj: "2013-07-30", basePay: "â‚¹27,800", lastScore: 35, safetyScore: 55, totalAssessments: 11, pmeStatus: "Unfit", refStatus: "Pending", disciplinary: "Warning", incidents: 2, approvalStatus: "Rejected", monitoringStatus: "Absent", stationCode: "NGP", stationName: "Nagpur Junction" },
-    { id: 6, hrmsId: "PM_1106", name: "Priya Menon", gender: "Female", age: 31, doj: "2018-03-14", basePay: "â‚¹25,100", lastScore: 67, safetyScore: 74, totalAssessments: 7, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Approved", monitoringStatus: "On Duty", stationCode: "NDLS", stationName: "New Delhi" },
-    { id: 7, hrmsId: "PM_1107", name: "Ramesh Yadav", gender: "Male", age: 45, doj: "2005-09-01", basePay: "â‚¹34,600", lastScore: 82, safetyScore: 90, totalAssessments: 18, pmeStatus: "Fit", refStatus: "Cleared", disciplinary: "None", incidents: 0, approvalStatus: "Approved", monitoringStatus: "Off Duty", stationCode: "NDLS", stationName: "New Delhi" },
-    { id: 8, hrmsId: "PM_1108", name: "Sneha Iyer", gender: "Female", age: 28, doj: "2020-01-20", basePay: "â‚¹22,000", lastScore: 19, safetyScore: 40, totalAssessments: 3, pmeStatus: "Unfit", refStatus: "Pending", disciplinary: "Serious", incidents: 3, approvalStatus: "Rejected", monitoringStatus: "Absent", stationCode: "NDLS", stationName: "New Delhi" }
-  ];
+  // aomPointsmen: live data from performance summary (Pointsman role)
+  const [aomPointsmen, setAomPointsmen] = useState([]);
 
-  const [aomPointsmen, setAomPointsmen] = useState(aomPointsmenSeed);
-
-  const [aomStationMasters, setAomStationMasters] = useState(() => {
-    const saved = localStorage.getItem("aom_station_masters");
-    if (saved) return JSON.parse(saved);
-    return [
-      { id: "SM_1001", hrmsId: "SM_1001", name: "A. Patil", gender: "Male", age: 42, doj: "2010-05-15", basePay: "â‚¹56,000", designation: "Station Master", role: "sm", stationName: "Nagpur Junction", stationCode: "NGP", division: "Nagpur", zone: "Central Railway", category: "A", contactNumber: "9890011122", emailId: "ngp.station@rail.in", lastAssessDate: "2026-03-20", score: 85, pmeStatus: "Fit", refStatus: "Cleared" },
-      { id: "SM_1002", hrmsId: "SM_1002", name: "R. Jadhav", gender: "Male", age: 39, doj: "2012-08-22", basePay: "â‚¹54,000", designation: "Station Master", role: "sm", stationName: "Pune Junction", stationCode: "PUNE", division: "Pune", zone: "Central Railway", category: "A", contactNumber: "9880012233", emailId: "pune.station@rail.in", lastAssessDate: "2026-02-14", score: 72, pmeStatus: "Fit", refStatus: "Cleared" },
-      { id: "SM_1003", hrmsId: "SM_1003", name: "M. Sharma", gender: "Male", age: 45, doj: "2008-03-10", basePay: "â‚¹62,000", designation: "Station Master", role: "sm", stationName: "New Delhi", stationCode: "NDLS", division: "Delhi", zone: "Northern Railway", category: "A", contactNumber: "9876543210", emailId: "ndls.station@rail.in", lastAssessDate: "2026-03-12", score: 84, pmeStatus: "Fit", refStatus: "Cleared" }
-    ];
-  });
-
+  // Populate aomPointsmen when performance data arrives
   useEffect(() => {
-    localStorage.setItem("aom_station_masters", JSON.stringify(aomStationMasters));
-  }, [aomStationMasters]);
+    if (aomPerformance && aomPerformance.detailed_performance && aomPerformance.detailed_performance.length > 0) {
+      const mapped = aomPerformance.detailed_performance
+        .filter(e => (e.designation || "").toUpperCase().includes("POINTSMAN"))
+        .map(e => ({
+          id: e.employee_id,
+          hrmsId: e.hrms_id,
+          name: e.full_name || e.hrms_id,
+          gender: "N/A",
+          age: "N/A",
+          doj: "N/A",
+          basePay: "N/A",
+          lastScore: parseFloat(e.practical_score) || parseFloat(e.cbt_score) || 0,
+          safetyScore: parseFloat(e.overall_compliance_percentage) || 0,
+          totalAssessments: e.assessment_status ? 1 : 0,
+          pmeStatus: e.pme_status === "Valid" ? "Fit" : (e.pme_status === "Expired" ? "Unfit" : "N/A"),
+          refStatus: e.ref_status === "Valid" ? "Cleared" : (e.ref_status === "Expired" ? "Pending" : "N/A"),
+          disciplinary: "None",
+          incidents: 0,
+          approvalStatus: e.assessment_status || "N/A",
+          monitoringStatus: "Active",
+          stationCode: e.station_code || "N/A",
+          stationName: e.station_name || "N/A",
+          risk: e.risk_level || "High",
+          cat: e.grade_name || "N/A"
+        }));
+      setAomPointsmen(mapped);
+    } else {
+      setAomPointsmen([]);
+    }
+  }, [aomPerformance]);
+
+  const [aomStationMasters, setAomStationMasters] = useState([]);
+
+  // Map Station Masters
+  useEffect(() => {
+    if (aomPerformance && aomPerformance.detailed_performance && aomPerformance.detailed_performance.length > 0) {
+      const mapped = aomPerformance.detailed_performance
+        .filter(e => (e.designation || "").toUpperCase().includes("STATION MASTER"))
+        .map(e => ({
+          id: e.hrms_id || `SM_${e.employee_id}`,
+          hrmsId: e.hrms_id,
+          name: e.full_name || e.hrms_id,
+          gender: "N/A",
+          age: "N/A",
+          doj: "N/A",
+          basePay: "N/A",
+          designation: "Station Master",
+          role: "sm",
+          stationName: e.station_name || "N/A",
+          stationCode: e.station_code || "N/A",
+          division: "Nagpur",
+          zone: "Central Railway",
+          category: e.grade_name || "N/A",
+          contactNumber: e.mobile || "—",
+          emailId: `${e.hrms_id.toLowerCase()}@rail.in`,
+          lastAssessDate: e.pme_date || "—",
+          score: parseFloat(e.final_score) || 0,
+          pmeStatus: e.pme_status === "Valid" ? "Fit" : (e.pme_status === "Expired" ? "Unfit" : "N/A"),
+          refStatus: e.ref_status === "Valid" ? "Cleared" : (e.ref_status === "Expired" ? "Pending" : "N/A")
+        }));
+      setAomStationMasters(mapped);
+    } else {
+      setAomStationMasters([]);
+    }
+  }, [aomPerformance]);
+
+  // Map Superintendents
+  useEffect(() => {
+    if (aomPerformance && aomPerformance.detailed_performance && aomPerformance.detailed_performance.length > 0) {
+      const mapped = aomPerformance.detailed_performance
+        .filter(e => (e.designation || "").toUpperCase().includes("SUPERINTENDENT") || (e.designation || "").toUpperCase().includes("SUPERVISOR"))
+        .map(e => ({
+          id: e.employee_id,
+          employeeId: e.hrms_id,
+          name: e.full_name || e.hrms_id,
+          role: "ss",
+          designation: "Station Superintendent",
+          station: e.station_name || "N/A",
+          division: "Nagpur",
+          zone: "Central Railway",
+          cat: e.grade_name || "N/A",
+          risk: e.risk_level || "High",
+          score: parseFloat(e.final_score) || 0,
+          contact: e.mobile || "—",
+          email: `${e.hrms_id.toLowerCase()}@rail.in`,
+          lastDate: e.pme_date || "—",
+          status: e.assessment_status || "Approved"
+        }));
+      setAomSuperintendents(mapped);
+    } else {
+      setAomSuperintendents([]);
+    }
+  }, [aomPerformance]);
+
+  // Map Train Managers
+  useEffect(() => {
+    if (aomPerformance && aomPerformance.detailed_performance && aomPerformance.detailed_performance.length > 0) {
+      const mapped = aomPerformance.detailed_performance
+        .filter(e => (e.designation || "").toUpperCase().includes("TRAIN MANAGER"))
+        .map(e => ({
+          id: e.employee_id,
+          employeeId: e.hrms_id,
+          name: e.full_name || e.hrms_id,
+          role: "tm",
+          designation: "Train Manager",
+          station: e.station_name || "N/A",
+          division: "Nagpur",
+          zone: "Central Railway",
+          cat: e.grade_name || "N/A",
+          risk: e.risk_level || "High",
+          score: parseFloat(e.final_score) || 0,
+          contact: e.mobile || "—",
+          email: `${e.hrms_id.toLowerCase()}@rail.in`,
+          lastDate: e.pme_date || "—",
+          status: e.assessment_status || "Approved",
+          workLocation: "Nagpur Depot",
+          reportingSm: "NGP-BSL Section",
+          shift: "Goods Train Beat"
+        }));
+      setAomTrainManagers(mapped);
+    } else {
+      setAomTrainManagers([]);
+    }
+  }, [aomPerformance]);
+
+  // Map Traffic Inspectors
+  useEffect(() => {
+    if (aomPerformance && aomPerformance.detailed_performance && aomPerformance.detailed_performance.length > 0) {
+      const mapped = aomPerformance.detailed_performance
+        .filter(e => (e.designation || "").toUpperCase().includes("TRAFFIC INSPECTOR"))
+        .map(e => ({
+          id: e.employee_id,
+          name: e.full_name || e.hrms_id,
+          employeeId: e.hrms_id,
+          stationName: e.station_name || "Division HQ",
+          tiArea: `TI ${e.station_code || "NGP"}`,
+          division: "Nagpur",
+          category: e.grade_name || "N/A",
+          riskLevel: e.risk_level || "High",
+          lastScore: parseFloat(e.final_score) || 0,
+          assessmentStatus: e.assessment_status === "Approved" ? "Completed" : "Pending",
+          phone: e.mobile || "—",
+          email: `${e.hrms_id.toLowerCase()}@rail.in`
+        }));
+      setTrafficInspectors(mapped);
+    } else {
+      setTrafficInspectors([]);
+    }
+  }, [aomPerformance]);
+
+  // Map Stations
+  useEffect(() => {
+    if (aomStationSummary && aomStationSummary.length > 0) {
+      const mapped = aomStationSummary.map(st => ({
+        id: st.station_id,
+        stationName: st.station_name,
+        stationCode: st.station_code,
+        zone: st.zone || "Central Railway",
+        division: st.division || "Nagpur",
+        category: st.category || "A",
+        platforms: 3,
+        tracks: 5,
+        stationType: "Junction",
+        status: "Active",
+        createdBy: "SA_1001",
+        address: "Station Road",
+        city: st.station_name,
+        state: "Maharashtra",
+        pincode: "440001",
+        stationMasterName: "",
+        contactNumber: "+91-712-2560158",
+        emailId: `station.${(st.station_code || "NGP").toLowerCase().split('_')[0]}@cr.railnet.gov.in`,
+        latitude: "21.1458",
+        longitude: "79.0882"
+      }));
+      setStations(mapped);
+    } else {
+      setStations([]);
+    }
+  }, [aomStationSummary]);
+
+  // hrmsTiDirectory: derived dynamically
+  const hrmsTiDirectory = useMemo(() => {
+    if (!aomPerformance || !aomPerformance.detailed_performance) return [];
+    return aomPerformance.detailed_performance
+      .filter(e => (e.designation || "").toUpperCase().includes("TRAFFIC INSPECTOR"))
+      .map(e => ({
+        hrmsId: e.hrms_id,
+        name: e.full_name,
+        jurisdiction: e.station_name || "Division HQ",
+        category: e.grade_name || "TI",
+        assessmentStatus: e.assessment_status === "Approved" ? "Completed" : "Pending",
+        division: "Nagpur",
+        phone: e.mobile || "—",
+        email: `${e.hrms_id.toLowerCase()}@rail.in`
+      }));
+  }, [aomPerformance]);
 
   const [smModal, setSmModal] = useState(null);
   const [ssModal, setSsModal] = useState(null);
@@ -1493,7 +1327,7 @@ function AOmModule({ user, onLogout }) {
   const [stationDetailId, setStationDetailId] = useState(null);
   const [isStationEditMode, setIsStationEditMode] = useState(false);
   const [tiSearch, setTiSearch] = useState("");
-  const [trafficInspectors, setTrafficInspectors] = useState(initialTrafficInspectors);
+  const [trafficInspectors, setTrafficInspectors] = useState([]);
   const [tiFormData, setTiFormData] = useState(initialTiFormData);
   const [tiFormErrors, setTiFormErrors] = useState({});
   const [tiAddMode, setTiAddMode] = useState("form");
@@ -1505,9 +1339,9 @@ function AOmModule({ user, onLogout }) {
   const [tiShiftDrafts, setTiShiftDrafts] = useState({});
   const [smShiftDrafts, setSmShiftDrafts] = useState({});
   const [selectedTIForStationMasters, setSelectedTIForStationMasters] = useState(null);
-  const [pendingAssessments, setPendingAssessments] = useState(initialPendingAssessments);
-  const [approvedAssessments, setApprovedAssessments] = useState(initialApprovedAssessments);
-  const [reportRows, setReportRows] = useState(initialReportRows);
+  const [pendingAssessments, setPendingAssessments] = useState([]);
+  const [approvedAssessments, setApprovedAssessments] = useState([]);
+  const [reportRows, setReportRows] = useState([]);
   const [reportSearchQuery, setReportSearchQuery] = useState("");
   const [reportDesignation, setReportDesignation] = useState("All Designations");
   const [repF, setRepF] = useState({ search: "", role: "All", station: "All", cat: "All", risk: "All", ti: "All" });
@@ -1580,18 +1414,7 @@ function AOmModule({ user, onLogout }) {
   const [tiAssessmentFormOpen, setTiAssessmentFormOpen] = useState(null); // hrmsId of TI being assessed
   const [tiAssessmentAnswers, setTiAssessmentAnswers] = useState({});
 
-  const [aomSuperintendents, setAomSuperintendents] = useState(() => {
-    const saved = localStorage.getItem("aom_superintendents");
-    if (saved) return JSON.parse(saved);
-    return [
-      { id: 1, employeeId: "SS_001", name: "R. Desai", role: "ss", designation: "Station Superintendent", station: "Nagpur Junction", division: "Nagpur", zone: "Central Railway", cat: "A", risk: "Low", score: 92, contact: "9999911111", email: "rdesai@rail.in", lastDate: "2026-04-18", status: "Approved" },
-      { id: 2, employeeId: "SS_002", name: "M. Kulkarni", role: "ss", designation: "Station Superintendent", station: "Parbhani Junction", division: "Nagpur", zone: "Central Railway", cat: "A", risk: "Low", score: 87, contact: "9999922222", email: "mkulkarni@rail.in", lastDate: "2026-04-10", status: "Approved" }
-    ];
-  });
-
-  useEffect(() => {
-    localStorage.setItem("aom_superintendents", JSON.stringify(aomSuperintendents));
-  }, [aomSuperintendents]);
+  const [aomSuperintendents, setAomSuperintendents] = useState([]);
   /* ─────────────── AOM SS ASSESSMENT CRITERIA ─────────────── */
   const AOM_SS_CRITERIA = [
     {
@@ -1633,11 +1456,15 @@ function AOmModule({ user, onLogout }) {
 
   const [aomSsList, setAomSsList] = useState(() => {
     const saved = localStorage.getItem("aom_ss_assess_list");
-    if (saved) return JSON.parse(saved);
-    return [
+    let list = saved ? JSON.parse(saved) : [
       { id: "ASSA_1001", name: "R. Desai", hrmsId: "SS_001", station: "Nagpur Junction", lastDate: "2026-04-18", status: "Pending" },
       { id: "ASSA_1002", name: "M. Kulkarni", hrmsId: "SS_002", station: "Parbhani Junction", lastDate: "2026-04-10", status: "Pending" },
     ];
+    return list.map(item => {
+      if (item.status === "Approved") return item;
+      const active = localStorage.getItem(`ss_test_activated_${item.hrmsId}`) === "true";
+      return { ...item, status: active ? "Exam Sent" : "Pending" };
+    });
   });
   useEffect(() => { localStorage.setItem("aom_ss_assess_list", JSON.stringify(aomSsList)); }, [aomSsList]);
 
@@ -1698,18 +1525,7 @@ function AOmModule({ user, onLogout }) {
   };
 
 
-  const [aomTrainManagers, setAomTrainManagers] = useState(() => {
-    const saved = localStorage.getItem("aom_train_managers");
-    if (saved) return JSON.parse(saved);
-    return [
-      { id: 1, employeeId: "TM_3001", name: "V. Sharma", role: "tm", designation: "Train Manager", station: "Nagpur Junction", division: "Nagpur", zone: "Central Railway", cat: "A", risk: "Low", score: 89, contact: "9999988888", email: "vsharma@rail.in", lastDate: "2026-04-14", status: "Approved", workLocation: "Nagpur Depot", reportingSm: "NGP-BSL Section", shift: "Goods Train Beat" },
-      { id: 2, employeeId: "TM_3002", name: "P. Jadhav", role: "tm", designation: "Train Manager", station: "Amla Junction", division: "Nagpur", zone: "Central Railway", cat: "C", risk: "High", score: 52, contact: "9999999999", email: "pjadhav@rail.in", lastDate: "2026-03-10", status: "Rejected", workLocation: "Nagpur Depot", reportingSm: "NGP-BSL Section", shift: "Goods Train Beat" }
-    ];
-  });
-
-  useEffect(() => {
-    localStorage.setItem("aom_train_managers", JSON.stringify(aomTrainManagers));
-  }, [aomTrainManagers]);
+  const [aomTrainManagers, setAomTrainManagers] = useState([]);
 
   const allEmployees = useMemo(() => {
     return [
@@ -3591,42 +3407,66 @@ function AOmModule({ user, onLogout }) {
   const renderAddStationModal = () => {
     if (!showAddStation) return null;
     return (
-      <div className="sdom-modal-overlay" style={{ zIndex: 99999, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)" }}>
-        <div className="sdom-modal" style={{ width: "800px", maxWidth: "95%", borderRadius: "16px", padding: "28px", display: "flex", flexDirection: "column", maxHeight: "90vh", overflowY: "auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", borderBottom: "1px solid #e2e8f0", paddingBottom: "12px" }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800, color: "#0B1F3A", display: "flex", alignItems: "center", gap: "8px" }}>
-                <Building2 size={24} style={{ color: "#2563eb" }} /> Add New Railway Station
-              </h3>
-              <p style={{ margin: "4px 0 0 0", fontSize: "0.8rem", color: "#64748b" }}>Create a comprehensive official record with infrastructure & technical parameters.</p>
+      <div className="sdom-modal-overlay" style={{ zIndex: 99999, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)" }} onClick={e => e.target === e.currentTarget && setShowAddStation(false)}>
+        <div className="sdom-modal" style={{ width: "900px", maxWidth: "95vw" }}>
+          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{
+                background: "linear-gradient(135deg, #0d2c4d 0%, #1e40af 100%)",
+                width: "56px",
+                height: "56px",
+                borderRadius: "14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 12px rgba(13, 44, 77, 0.2)",
+                color: "#ffffff"
+              }}>
+                <Building2 size={28} />
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontSize: "22px", fontWeight: "800", color: "#0d2c4d", letterSpacing: "-0.5px" }}>
+                  ADD NEW RAILWAY STATION
+                </h2>
+                <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#64748b", fontWeight: "500" }}>
+                  Create a comprehensive official record with infrastructure & technical parameters.
+                </p>
+              </div>
             </div>
             <button type="button" onClick={() => setShowAddStation(false)} style={{ background: "none", border: "none", fontSize: "28px", cursor: "pointer", color: "#94a3b8", lineHeight: 1, padding: 0 }}>&times;</button>
           </div>
+          <div style={{ height: '1px', background: '#d5dfeb', margin: '16px 0 24px 0' }}></div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
 
             {/* SECTION 1: IDENTITY */}
             <div>
-              <h4 style={{ margin: "0 0 12px 0", fontSize: "0.9rem", fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.05em", borderLeft: "3px solid #2563eb", paddingLeft: "8px" }}>1. Station Identity & Jurisdiction</h4>
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0d2c4d', margin: '0 0 10px', fontSize: '15px', fontWeight: '800' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0d2c4d', display: 'inline-block' }}></span>
+                1. Station Identity & Jurisdiction
+              </h4>
+              <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
+              
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Station Name *</label>
+                <div className="sdom-modal-field">
+                  <label>Station Name *</label>
                   <input type="text" value={newStName} onChange={e => setNewStName(e.target.value)} placeholder="e.g. Wardha Junction" />
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Station Code *</label>
+                <div className="sdom-modal-field">
+                  <label>Station Code *</label>
                   <input type="text" value={newStCode} onChange={e => setNewStCode(e.target.value)} placeholder="e.g. WR" />
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Assigned TI Area *</label>
+                <div className="sdom-modal-field">
+                  <label>Assigned TI Area *</label>
                   <select value={newStTi} onChange={e => setNewStTi(e.target.value)}>
                     <option value="TI NGP">TI NGP (Nagpur)</option>
                     <option value="TI PAR">TI PAR (Parasia)</option>
                     <option value="TI AMLA">TI AMLA (Amla)</option>
                   </select>
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Railway Division *</label>
+                <div className="sdom-modal-field">
+                  <label>Railway Division *</label>
                   <select value={newStDivision} onChange={e => setNewStDivision(e.target.value)}>
                     <option value="Nagpur">Nagpur Division</option>
                     <option value="Pune">Pune Division</option>
@@ -3635,8 +3475,8 @@ function AOmModule({ user, onLogout }) {
                     <option value="Bhusawal">Bhusawal Division</option>
                   </select>
                 </div>
-                <div className="sdom-filter-field" style={{ gridColumn: "span 2" }}>
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Railway Zone *</label>
+                <div className="sdom-modal-field" style={{ gridColumn: "span 2" }}>
+                  <label>Railway Zone *</label>
                   <select value={newStZone} onChange={e => setNewStZone(e.target.value)}>
                     <option value="CR">Central Railway (CR)</option>
                     <option value="WR">Western Railway (WR)</option>
@@ -3650,18 +3490,23 @@ function AOmModule({ user, onLogout }) {
 
             {/* SECTION 2: TECHNICAL & INFRASTRUCTURE */}
             <div>
-              <h4 style={{ margin: "0 0 12px 0", fontSize: "0.9rem", fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.05em", borderLeft: "3px solid #2563eb", paddingLeft: "8px" }}>2. Technical Infrastructure & Systems</h4>
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0d2c4d', margin: '0 0 10px', fontSize: '15px', fontWeight: '800' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0d2c4d', display: 'inline-block' }}></span>
+                2. Technical Infrastructure & Systems
+              </h4>
+              <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
+              
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Number of Platforms *</label>
+                <div className="sdom-modal-field">
+                  <label>Number of Platforms *</label>
                   <input type="number" min="1" max="24" value={newStPlatforms} onChange={e => setNewStPlatforms(Math.max(1, parseInt(e.target.value) || 1))} />
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Operational Tracks *</label>
+                <div className="sdom-modal-field">
+                  <label>Operational Tracks *</label>
                   <input type="number" min="1" max="48" value={newStTracks} onChange={e => setNewStTracks(Math.max(1, parseInt(e.target.value) || 1))} />
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Line Configuration *</label>
+                <div className="sdom-modal-field">
+                  <label>Line Configuration *</label>
                   <select value={newStLineConfig} onChange={e => setNewStLineConfig(e.target.value)}>
                     <option value="Single Line">Single Line</option>
                     <option value="Double Line">Double Line</option>
@@ -3669,16 +3514,16 @@ function AOmModule({ user, onLogout }) {
                     <option value="Quadruple Line">Quadruple Line</option>
                   </select>
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Electrification Status *</label>
+                <div className="sdom-modal-field">
+                  <label>Electrification Status *</label>
                   <select value={newStElectrified} onChange={e => setNewStElectrified(e.target.value)}>
                     <option value="Electrified AC 25kV">Electrified AC 25kV</option>
                     <option value="Under Electrification">Under Electrification</option>
                     <option value="Non-Electrified">Non-Electrified</option>
                   </select>
                 </div>
-                <div className="sdom-filter-field" style={{ gridColumn: "span 2" }}>
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Signaling System Type *</label>
+                <div className="sdom-modal-field" style={{ gridColumn: "span 2" }}>
+                  <label>Signaling System Type *</label>
                   <select value={newStSignaling} onChange={e => setNewStSignaling(e.target.value)}>
                     <option value="Electronic Interlocking (EI)">Electronic Interlocking (EI)</option>
                     <option value="Route Relay Interlocking (RRI)">Route Relay Interlocking (RRI)</option>
@@ -3690,12 +3535,17 @@ function AOmModule({ user, onLogout }) {
               </div>
             </div>
 
-            {/* SECTION 3: LOGISTICS & LOGISTICAL CLASS */}
+            {/* SECTION 3: LOGISTICS & OPERATING PROFILE */}
             <div>
-              <h4 style={{ margin: "0 0 12px 0", fontSize: "0.9rem", fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.05em", borderLeft: "3px solid #2563eb", paddingLeft: "8px" }}>3. Logistics & Operating Profile</h4>
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0d2c4d', margin: '0 0 10px', fontSize: '15px', fontWeight: '800' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0d2c4d', display: 'inline-block' }}></span>
+                3. Logistics & Operating Profile
+              </h4>
+              <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
+              
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Station Category *</label>
+                <div className="sdom-modal-field">
+                  <label>Station Category *</label>
                   <select value={newStCategory} onChange={e => setNewStCategory(e.target.value)}>
                     <option value="A">Category A (Major Junctions)</option>
                     <option value="B">Category B (Intermediate Stations)</option>
@@ -3703,8 +3553,8 @@ function AOmModule({ user, onLogout }) {
                     <option value="D">Category D (Halts & Flag Stations)</option>
                   </select>
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Operating Class *</label>
+                <div className="sdom-modal-field">
+                  <label>Operating Class *</label>
                   <select value={newStClass} onChange={e => setNewStClass(e.target.value)}>
                     <option value="Special Class">Special Class</option>
                     <option value="Class A">Class A Station</option>
@@ -3712,8 +3562,8 @@ function AOmModule({ user, onLogout }) {
                     <option value="Class C">Class C Station</option>
                   </select>
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Station Type *</label>
+                <div className="sdom-modal-field">
+                  <label>Station Type *</label>
                   <select value={newStType} onChange={e => setNewStType(e.target.value)}>
                     <option value="Junction">Junction Station</option>
                     <option value="Terminal">Terminal Station</option>
@@ -3722,8 +3572,8 @@ function AOmModule({ user, onLogout }) {
                     <option value="Wayside Station">Wayside Station</option>
                   </select>
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Average Daily Passenger Footfall *</label>
+                <div className="sdom-modal-field">
+                  <label>Average Daily Passenger Footfall *</label>
                   <input type="number" min="0" value={newStDailyFootfall} onChange={e => setNewStDailyFootfall(Math.max(0, parseInt(e.target.value) || 0))} placeholder="e.g. 15000" />
                 </div>
               </div>
@@ -3731,22 +3581,27 @@ function AOmModule({ user, onLogout }) {
 
             {/* SECTION 4: LOCATION & CONTACTS */}
             <div>
-              <h4 style={{ margin: "0 0 12px 0", fontSize: "0.9rem", fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.05em", borderLeft: "3px solid #2563eb", paddingLeft: "8px" }}>4. Geographic Location & Official Communications</h4>
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0d2c4d', margin: '0 0 10px', fontSize: '15px', fontWeight: '800' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0d2c4d', display: 'inline-block' }}></span>
+                4. Geographic Location & Official Communications
+              </h4>
+              <div style={{ height: '1px', background: '#d5dfeb', marginBottom: '16px' }}></div>
+              
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Latitude *</label>
-                  <input type="text" value={newStLatitude} onChange={e => setNewStLatitude(e.target.value)} placeholder="e.g. 21.1500Â° N" />
+                <div className="sdom-modal-field">
+                  <label>Latitude *</label>
+                  <input type="text" value={newStLatitude} onChange={e => setNewStLatitude(e.target.value)} placeholder="e.g. 21.1500° N" />
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Longitude *</label>
-                  <input type="text" value={newStLongitude} onChange={e => setNewStLongitude(e.target.value)} placeholder="e.g. 79.0900Â° E" />
+                <div className="sdom-modal-field">
+                  <label>Longitude *</label>
+                  <input type="text" value={newStLongitude} onChange={e => setNewStLongitude(e.target.value)} placeholder="e.g. 79.0900° E" />
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Official Station Contact *</label>
+                <div className="sdom-modal-field">
+                  <label>Official Station Contact *</label>
                   <input type="text" value={newStContactNumber} onChange={e => setNewStContactNumber(e.target.value)} placeholder="e.g. +91-712-2560158" />
                 </div>
-                <div className="sdom-filter-field">
-                  <label style={{ fontWeight: 600, fontSize: "0.78rem", color: "#475569" }}>Official Email ID (Optional)</label>
+                <div className="sdom-modal-field">
+                  <label>Official Email ID (Optional)</label>
                   <input type="email" value={newStEmailId} onChange={e => setNewStEmailId(e.target.value)} placeholder="e.g. station.master@cr.railnet.gov.in" />
                 </div>
               </div>
@@ -4790,16 +4645,16 @@ function AOmModule({ user, onLogout }) {
   const renderChartZoomModal = () => {
     if (!isChartZoomModalOpen) return null;
 
-    // Filter math logic on DASHBOARD_96_STATIONS
-    const filtered = DASHBOARD_96_STATIONS.filter(st => {
+    // Filter math logic on unifiedStations
+    const filtered = unifiedStations.filter(st => {
       const q = zoomPopupSearch.trim().toLowerCase();
-      const matchesSearch = !q || st.stationName.toLowerCase().includes(q) || st.stationCode.toLowerCase().includes(q);
+      const matchesSearch = !q || st.name.toLowerCase().includes(q) || st.code.toLowerCase().includes(q);
 
       const matchesZone = zoomPopupZone === "All" || st.zone === zoomPopupZone;
       const matchesDivision = zoomPopupDivision === "All" || st.division === zoomPopupDivision;
 
-      const matchesName = zoomPopupStationName === "All" || !zoomPopupStationName.trim() || st.stationName.toLowerCase().includes(zoomPopupStationName.toLowerCase());
-      const matchesCode = zoomPopupStationCode === "All" || !zoomPopupStationCode.trim() || st.stationCode.toLowerCase().includes(zoomPopupStationCode.toLowerCase());
+      const matchesName = zoomPopupStationName === "All" || !zoomPopupStationName.trim() || st.name.toLowerCase().includes(zoomPopupStationName.toLowerCase());
+      const matchesCode = zoomPopupStationCode === "All" || !zoomPopupStationCode.trim() || st.code.toLowerCase().includes(zoomPopupStationCode.toLowerCase());
 
       const matchesCategory = zoomPopupCategory === "All" || st.category === zoomPopupCategory;
       const matchesRisk = zoomPopupRisk === "All" || st.riskLevel === zoomPopupRisk;
@@ -4826,11 +4681,11 @@ function AOmModule({ user, onLogout }) {
     );
 
     const modalChartData = paginated.map(st => ({
-      station: st.stationCode,
-      name: st.stationName,
-      completed: st.completed,
+      station: st.code,
+      name: st.name,
+      completed: st.pmCount + st.smCount,
       pending: st.pending,
-      avgScore: st.avgScore
+      avgScore: st.score
     }));
 
     const catA = paginated.filter(s => s.category === "A").length;
@@ -5371,85 +5226,8 @@ function AOmModule({ user, onLogout }) {
   };
 
   const renderEmployeeManagement = () => {
-    // 1. Dynamic Master Employee List Compilation
-    const allEmployees = [
-      ...aomPointsmen.map(p => ({
-        hrmsId: p.hrmsId,
-        name: p.name,
-        gender: p.gender,
-        age: p.age,
-        doj: p.doj,
-        basePay: p.basePay,
-        designation: "Pointsman",
-        stationName: p.stationName,
-        stationCode: p.stationCode,
-        division: p.stationCode === "NGP" ? "Nagpur" : p.stationCode === "PUNE" ? "Pune" : "Mumbai",
-        zone: "CR",
-        category: getPmCat(p.lastScore),
-        riskLevel: getPmRisk(p),
-        assessmentStatus: p.approvalStatus,
-        lastScore: p.lastScore,
-        safetyScore: p.safetyScore,
-        totalAssessments: p.totalAssessments,
-        lastAssessedDate: p.hrmsId === "PM_1001" ? "2026-03-28" :
-          p.hrmsId === "PM_1102" ? "2026-03-10" :
-            p.hrmsId === "PM_1103" ? "2026-02-15" :
-              p.hrmsId === "PM_1104" ? "2026-03-18" :
-                p.hrmsId === "PM_1105" ? "2026-01-20" :
-                  p.hrmsId === "PM_1106" ? "2026-03-05" :
-                    p.hrmsId === "PM_1107" ? "2026-03-20" :
-                      p.hrmsId === "PM_1108" ? "2026-02-01" : "—",
-        monitoringStatus: deactivatedUserIds.has(p.hrmsId) ? "Deactivated" : (p.monitoringStatus || "Active")
-      })),
-      ...stationMastersDirectory.map((sm, idx) => {
-        const smHrmsId = `SM_${1001 + idx}`;
-        return {
-          hrmsId: smHrmsId,
-          name: sm.name,
-          gender: "Male",
-          age: 42,
-          doj: "2010-05-15",
-          basePay: "â‚¹56,000",
-          designation: "Station Master",
-          stationName: sm.stationName,
-          stationCode: sm.stationCode,
-          division: sm.division,
-          zone: sm.zone || "CR",
-          category: sm.category || "A",
-          riskLevel: idx % 3 === 0 ? "Medium" : "Low",
-          assessmentStatus: idx % 2 === 0 ? "Approved" : "Pending",
-          lastScore: 85 - (idx * 4),
-          safetyScore: 92 - (idx * 2),
-          totalAssessments: 10,
-          lastAssessedDate: "2026-04-12",
-          monitoringStatus: deactivatedUserIds.has(smHrmsId) ? "Deactivated" : (idx % 3 === 0 ? "On Duty" : "Active")
-        };
-      }),
-      ...trafficInspectors.map((ti, idx) => ({
-        hrmsId: ti.employeeId,
-        name: ti.name,
-        gender: "Male",
-        age: 48,
-        doj: "2006-11-20",
-        basePay: "â‚¹68,000",
-        designation: "Traffic Inspector",
-        stationName: "Division HQ",
-        stationCode: "HQ",
-        division: ti.division || "Nagpur",
-        zone: "CR",
-        category: ti.category || "Senior TI",
-        riskLevel: "Low",
-        assessmentStatus: ti.assessmentStatus === "Completed" ? "Approved" : "Pending",
-        lastScore: 88,
-        safetyScore: 95,
-        totalAssessments: 8,
-        lastAssessedDate: "2026-03-15",
-        monitoringStatus: deactivatedUserIds.has(ti.employeeId) ? "Deactivated" : "Active"
-      }))
-    ];
-
-    // Unique filter options computed dynamically
-    const uniqueDesignations = ["All", "Pointsman", "Station Master", "Traffic Inspector"];
+    // 1. Using Dynamic Master Employee List from Parent
+    const uniqueDesignations = ["All", ...Array.from(new Set(allEmployees.map(e => e.designation)))];
     const uniqueStations = ["All", ...Array.from(new Set(allEmployees.map(e => e.stationName)))];
     const uniqueDivisions = ["All", "Nagpur", "Pune", "Mumbai"];
     const uniqueZones = ["All", "CR"];
@@ -6121,7 +5899,7 @@ function AOmModule({ user, onLogout }) {
     // If a profile detail is being viewed
     if (selectedRoleEmployee && selectedRoleEmployee._roleKey === roleKey) {
       const s = selectedRoleEmployee;
-      const scoreData = MONTHLY_TREND.map((m, i) => ({ month: m.month, score: Math.max(50, (s.lastScore || 80) - 10 + i * 2) }));
+      const scoreData = s.lastScore ? [{ month: "Latest", score: s.lastScore }] : [];
       const roleLabel = { pointsmen: "Pointsman", sm: "Station Master", ss: "Station Superintendent", tm: "Train Manager", ti: "Traffic Inspector" }[roleKey] || title;
       return (
         <div className="sdom-fade">
@@ -6204,16 +5982,20 @@ function AOmModule({ user, onLogout }) {
             <div className="sdom-chart-card">
               <div className="sdom-chart-title">Score Trend</div>
               <div className="sdom-chart-subtitle">Assessment score progression</div>
-              <div style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={scoreData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="month" fontSize={11} />
-                    <YAxis domain={[40, 100]} fontSize={11} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={3} dot={{ r: 5 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {scoreData && scoreData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={scoreData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="month" fontSize={11} />
+                      <YAxis domain={[40, 100]} fontSize={11} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={3} dot={{ r: 5 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ color: "#64748b", fontSize: "0.9rem", fontWeight: 500 }}>No Data Available</div>
+                )}
               </div>
             </div>
           </div>
@@ -6447,8 +6229,8 @@ function AOmModule({ user, onLogout }) {
                   };
 
                   const renderStatusBadge = (status) => {
-                    const bgMap = { Approved: "#dcfce7", Completed: "#dcfce7", Pending: "#fff7ed", "In Progress": "#fef08a", Rejected: "#fee2e2" };
-                    const fgMap = { Approved: "#16a34a", Completed: "#16a34a", Pending: "#ea580c", "In Progress": "#ca8a04", Rejected: "#dc2626" };
+                    const bgMap = { Approved: "#dcfce7", Completed: "#dcfce7", Active: "#dcfce7", Pending: "#fff7ed", "In Progress": "#fef08a", Rejected: "#fee2e2", Expired: "#fee2e2", Overdue: "#fee2e2" };
+                    const fgMap = { Approved: "#16a34a", Completed: "#16a34a", Active: "#16a34a", Pending: "#ea580c", "In Progress": "#ca8a04", Rejected: "#dc2626", Expired: "#dc2626", Overdue: "#dc2626" };
                     const text = status === "Completed" ? "APPROVED" : status.toUpperCase();
                     return (
                       <span style={{
@@ -6624,46 +6406,46 @@ function AOmModule({ user, onLogout }) {
   }, [allEmployees]);
 
   const unifiedStations = useMemo(() => {
-    return DASHBOARD_96_STATIONS.map(st => {
-      const stStaff = unifiedStaff.filter(s => isStationMatch(s.station, st.stationName || st.name));
+    return aomStationSummary.map(st => {
+      const stStaff = unifiedStaff.filter(s => isStationMatch(s.station, st.station_name));
       const pmCount = stStaff.filter(s => s.role === "pointsmen").length;
       const smCount = stStaff.filter(s => s.role === "sm").length;
-      const safety = Math.min(100, Math.max(60, 95 - st.pending));
+      const safety = parseFloat(st.overall_compliance_pct) || 0;
       const highRisk = stStaff.filter(s => s.risk === "High").length;
       return {
-        id: st.id,
-        name: st.stationName,
-        code: st.stationCode,
+        id: st.station_id,
+        name: st.station_name,
+        code: st.station_code,
         ti: st.division === "Nagpur" ? "TI NGP" : st.division === "Pune" ? "TI PAR" : "TI AMLA",
-        smCount: smCount || 5,
-        pmCount: pmCount || 20,
-        score: st.avgScore,
+        smCount: smCount,
+        pmCount: pmCount,
+        score: parseFloat(st.avg_score) || 0,
         safety,
-        highRisk: highRisk || (st.riskLevel === "High" ? 4 : st.riskLevel === "Medium" ? 2 : 0),
-        pending: st.pending,
-        stationName: st.stationName,
-        stationCode: st.stationCode,
+        highRisk: highRisk,
+        pending: parseInt(st.pending) || 0,
+        stationName: st.station_name,
+        stationCode: st.station_code,
         division: st.division,
         zone: st.zone || "CR",
-        category: st.category,
-        riskLevel: st.riskLevel,
-        assessmentStatus: st.assessmentStatus,
-        lastUpdatedDate: st.lastUpdatedDate,
-        stationClass: st.stationClass || "Class B",
-        stationType: st.stationType || "Junction",
-        signalingType: st.signalingType || "Route Relay Interlocking (RRI)",
-        platforms: st.platforms || 3,
-        tracks: st.tracks || 5,
-        dailyFootfall: st.dailyFootfall || 15000,
-        latitude: st.latitude || "21.1500Â° N",
-        longitude: st.longitude || "79.0900Â° E",
-        contactNumber: st.contactNumber || "+91-712-2560158",
-        emailId: st.emailId || `station.${(st.stationCode || st.id || "NGP").toLowerCase().split('_')[0]}@cr.railnet.gov.in`,
-        lineConfig: st.lineConfig || "Double Line",
-        electrified: st.electrified || "Electrified AC 25kV"
+        category: st.category || "A",
+        riskLevel: highRisk > 0 ? "High" : "Low",
+        assessmentStatus: st.pending > 0 ? "Pending" : "Completed",
+        lastUpdatedDate: st.last_updated_date || todayIso(),
+        stationClass: "Class B",
+        stationType: "Junction",
+        signalingType: "Route Relay Interlocking (RRI)",
+        platforms: 3,
+        tracks: 5,
+        dailyFootfall: 15000,
+        latitude: "21.1500° N",
+        longitude: "79.0900° E",
+        contactNumber: "+91-712-2560158",
+        emailId: `station.${(st.station_code || "NGP").toLowerCase().split('_')[0]}@cr.railnet.gov.in`,
+        lineConfig: "Double Line",
+        electrified: "Electrified AC 25kV"
       };
     });
-  }, [DASHBOARD_96_STATIONS, unifiedStaff]);
+  }, [aomStationSummary, unifiedStaff]);
 
   const ROLE_MAP = {
     pointsmen: "Pointsman",
@@ -6690,14 +6472,16 @@ function AOmModule({ user, onLogout }) {
   const handleAddStation = () => {
     if (!newStName || !newStCode) return;
     const newSt = {
-      id: "ST_" + Date.now(),
-      stationName: newStName,
-      stationCode: newStCode.toUpperCase(),
+      station_id: "ST_" + Date.now(),
+      station_name: newStName,
+      station_code: newStCode.toUpperCase(),
       division: newStDivision,
       zone: newStZone,
-      completed: 250,
-      pending: 10,
-      avgScore: 82,
+      completed: 0,
+      pending: 0,
+      avg_score: 0,
+      overall_compliance_pct: 0,
+      total_employees: 0,
       category: newStCategory,
       riskLevel: "Low",
       assessmentStatus: "Approved",
@@ -6708,19 +6492,19 @@ function AOmModule({ user, onLogout }) {
       platforms: parseInt(newStPlatforms) || 1,
       tracks: parseInt(newStTracks) || 1,
       dailyFootfall: parseInt(newStDailyFootfall) || 5000,
-      latitude: newStLatitude || "21.1500Â° N",
-      longitude: newStLongitude || "79.0900Â° E",
+      latitude: newStLatitude || "21.1500° N",
+      longitude: newStLongitude || "79.0900° E",
       contactNumber: newStContactNumber || "+91-712-2560158",
       emailId: newStEmailId || `station.${newStCode.toLowerCase().trim()}@cr.railnet.gov.in`,
       lineConfig: newStLineConfig,
       electrified: newStElectrified
     };
-    DASHBOARD_96_STATIONS.push(newSt);
+    setAomStationSummary(prev => [...prev, newSt]);
     setShowAddStation(false);
   };
 
   function renderStaffDetail(s) {
-    const scoreData = MONTHLY_TREND.map((m, i) => ({ month: m.month, score: Math.max(50, s.score - 10 + i * 2) }));
+    const scoreData = s.score ? [{ month: "Latest", score: s.score }] : [];
     return (
       <div className="sdom-fade">
         <div style={{ marginBottom: 24 }}>
@@ -6789,16 +6573,20 @@ function AOmModule({ user, onLogout }) {
           <div className="sdom-chart-card">
             <div className="sdom-chart-title">Score Trend</div>
             <div className="sdom-chart-subtitle">Monthly performance tracking for this employee</div>
-            <div style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={scoreData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" fontSize={11} />
-                  <YAxis domain={[40, 100]} fontSize={11} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={3} dot={{ r: 5 }} />
-                </LineChart>
-              </ResponsiveContainer>
+            <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {scoreData && scoreData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={scoreData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="month" fontSize={11} />
+                    <YAxis domain={[40, 100]} fontSize={11} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={3} dot={{ r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ color: "#64748b", fontSize: "0.9rem", fontWeight: 500 }}>No Data Available</div>
+              )}
             </div>
           </div>
         </div>
@@ -6899,7 +6687,7 @@ function AOmModule({ user, onLogout }) {
               { label: "Line Configuration", val: st.lineConfig || "Double Line", icon: <AlignJustify size={16} /> },
               { label: "Electrification", val: st.electrified || "Electrified AC 25kV", icon: <Zap size={16} /> },
               { label: "Daily Avg Footfall", val: `${(st.dailyFootfall || 15000).toLocaleString()} Passengers`, icon: <Users size={16} /> },
-              { label: "Latitude & Longitude", val: `${st.latitude || "21.1500Â° N"} / ${st.longitude || "79.0900Â° E"}`, icon: <MapPin size={16} /> },
+              { label: "Latitude & Longitude", val: `${st.latitude || "21.1500° N"} / ${st.longitude || "79.0900° E"}`, icon: <MapPin size={16} /> },
               { label: "Official Contact", val: st.contactNumber || "+91-712-2560158", icon: <Phone size={16} /> },
               { label: "Official Email ID", val: st.emailId || `station.${(st.code || "NGP").toLowerCase().split('_')[0]}@cr.railnet.gov.in`, icon: <Mail size={16} /> },
             ].map((item, idx) => (
@@ -7058,8 +6846,8 @@ function AOmModule({ user, onLogout }) {
             setNewStPlatforms(3);
             setNewStTracks(5);
             setNewStDailyFootfall(15000);
-            setNewStLatitude("21.1500Â° N");
-            setNewStLongitude("79.0900Â° E");
+            setNewStLatitude("21.1500° N");
+            setNewStLongitude("79.0900° E");
             setNewStContactNumber("+91-712-2560158");
             setNewStEmailId("");
             setNewStLineConfig("Double Line");
@@ -7263,21 +7051,23 @@ function AOmModule({ user, onLogout }) {
       case "Dashboard": {
         return (
           <AOmDashboard
+            aomDashStats={aomDashStats}
+            aomStationSummary={aomStationSummary}
+            aomPerformance={aomPerformance}
+            aomComplianceSummary={aomComplianceSummary}
+            aomDashLoading={aomDashLoading}
+            aomDashError={aomDashError}
+            aomDashFilters={aomDashFilters}
+            onFilterChange={setAomDashFilters}
+            onRefresh={() => setRefreshTrigger(prev => prev + 1)}
             aomPointsmen={aomPointsmen}
             stationMastersDirectory={stationMastersDirectory}
-            aomSuperintendents={aomSuperintendents}
-            aomTrainManagers={aomTrainManagers}
             trafficInspectors={trafficInspectors}
             stations={stations}
-            stationProgressData={stationProgressData}
-            stationAverageScoreData={stationAverageScoreData}
-            DASHBOARD_96_STATIONS={DASHBOARD_96_STATIONS}
-            MONTHLY_TREND={MONTHLY_TREND}
-            COMPLIANCE={COMPLIANCE}
-            ASSESSMENT_MONTHLY={ASSESSMENT_MONTHLY}
             handleChartClick={handleChartClick}
             handlePieClick={handlePieClick}
             setActivePage={setActivePage}
+            profileData={aomReadOnlyProfile}
           />
         );
       }
@@ -8199,7 +7989,7 @@ function AOmModule({ user, onLogout }) {
         );
 
       case "User Management": {
-        const uniqueStationsList = Array.from(new Set(DASHBOARD_96_STATIONS.map(s => s.stationName))).sort();
+        const uniqueStationsList = Array.from(new Set(unifiedStations.map(s => s.name || s.stationName).filter(Boolean))).sort();
 
         return (
           <div className="user-management-page">
@@ -9108,7 +8898,7 @@ function AOmModule({ user, onLogout }) {
           const knowledge = isMcqCompleted ? 25 : 0;
 
           return (
-            <section className="sm2-card animate-fade-in" style={{ padding: "24px" }}>
+            <section className="ti2-card animate-fade-in" style={{ padding: "24px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px" }}>
               {/* Header */}
               <div className="sm2-card-hdr" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                 <div>
@@ -9116,15 +8906,15 @@ function AOmModule({ user, onLogout }) {
                     Assessment — {name}
                   </h2>
                   <p style={{ margin: "4px 0 0 0", fontSize: "12.5px", color: "#64748b" }}>
-                    {hrmsId} Â· {division} Division
+                    {hrmsId} · {division} Division
                   </p>
                 </div>
                 <button
-                  className="sm2-ghost-btn"
+                  className="sdom-btn-outline"
                   style={{ display: "flex", alignItems: "center", gap: "6px", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", padding: "8px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", color: "#475569" }}
                   onClick={() => setOpenAssessmentId(null)}
                 >
-                  â† Back
+                  ← Back
                 </button>
               </div>
 
@@ -9407,14 +9197,14 @@ function AOmModule({ user, onLogout }) {
                       Save as Draft
                     </button>
                     <button
-                      className="sm2-ghost-btn"
+                      className="sdom-btn-outline"
                       style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "1px solid #fca5a5", background: "#fef2f2", cursor: "pointer", color: "#dc2626" }}
                       onClick={() => handleRejectAssessment(activeAssessment.id)}
                     >
                       Reject
                     </button>
                     <button
-                      className="sm2-primary-btn"
+                      className="sdom-btn-primary"
                       style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "none", background: "#2563eb", color: "#ffffff", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
                       onClick={() => handleApproveAssessment(activeAssessment.id)}
                     >
@@ -9440,13 +9230,37 @@ function AOmModule({ user, onLogout }) {
           const SS_CAT_BG = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
           const SS_CAT_CLR = { A: "#16a34a", B: "#2563eb", C: "#d97706", D: "#dc2626" };
           return (
-            <section className="sm2-card animate-fade-in" style={{ padding: "24px" }}>
+            <section className="ti2-card animate-fade-in" style={{ padding: "24px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                 <div>
                   <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: 0 }}>Assessment — {ssItem?.name}</h2>
                   <p style={{ margin: "4px 0 0 0", fontSize: "12.5px", color: "#64748b" }}>{ssItem?.hrmsId} · Station Superintendent · {ssItem?.station}</p>
                 </div>
-                <button style={{ border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", padding: "8px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", color: "#475569" }} onClick={() => setActiveAomSsId(null)}>Back</button>
+                <button className="sdom-btn-outline" style={{ border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", padding: "8px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", color: "#475569" }} onClick={() => setActiveAomSsId(null)}>← Back</button>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    border: "none",
+                    background: localStorage.getItem(`ss_test_activated_${ssItem?.hrmsId}`) === "true" ? "#fef2f2" : "#2563eb",
+                    color: localStorage.getItem(`ss_test_activated_${ssItem?.hrmsId}`) === "true" ? "#dc2626" : "#ffffff",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+                  }}
+                  onClick={() => {
+                    const nextVal = localStorage.getItem(`ss_test_activated_${ssItem?.hrmsId}`) !== "true";
+                    localStorage.setItem(`ss_test_activated_${ssItem?.hrmsId}`, nextVal ? "true" : "false");
+                    setAomSsList(prev => prev.map(s => s.id === ssItem.id ? { ...s, status: nextVal ? "Exam Sent" : "Pending" } : s));
+                  }}
+                >
+                  {localStorage.getItem(`ss_test_activated_${ssItem?.hrmsId}`) === "true" ? "Deactivate Safety Competency Exam" : "Activate Safety Competency Exam"}
+                </button>
               </div>
               {AOM_SS_CRITERIA.map((sec, si) => {
                 const secArr = ssForm[sec.key] || Array(sec.count).fill("No");
@@ -9501,8 +9315,8 @@ function AOmModule({ user, onLogout }) {
                 <div style={{ marginTop: "16px", background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0", padding: "12px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", textAlign: "center" }}>Assessment Approved and Locked</div>
               ) : (
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
-                  <button style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", color: "#334155" }} onClick={() => alert("Saved as draft!")}>Save as Draft</button>
-                  <button style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "none", background: "#2563eb", color: "#fff", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }} onClick={() => submitAomSsAssessment(activeAomSsId)}>Approve &amp; Lock Assessment</button>
+                  <button className="sdom-btn-outline" style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", color: "#334155" }} onClick={() => alert("Saved as draft!")}>Save as Draft</button>
+                  <button className="sdom-btn-primary" style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: "700", border: "none", background: "#2563eb", color: "#fff", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }} onClick={() => submitAomSsAssessment(activeAomSsId)}>Approve &amp; Lock Assessment</button>
                 </div>
               )}
             </section>
@@ -9548,138 +9362,109 @@ function AOmModule({ user, onLogout }) {
 
         return (
           <div className="ti2-page-body animate-fade-in" style={{ padding: "24px", background: "#f8fafc", minHeight: "100%", width: "100%", boxSizing: "border-box" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <div>
-                <h1 style={{ fontSize: "28px", fontWeight: "800", color: "#0f172a", margin: "0 0 4px" }}>
-                  Assessments — Traffic Inspectors
-                </h1>
-                <p style={{ margin: 0, fontSize: "14px", color: "#64748b", fontWeight: "500" }}>
-                  Traffic Inspectors pending assessment. Open the form to conduct a structured evaluation.
-                </p>
-              </div>
-            </div>
-
-            {/* Role Tab Switcher */}
-            <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-              {[{ key: "TI", label: "Traffic Inspectors" }, { key: "SS", label: "Station Superintendents" }].map(tab => (
-                <button key={tab.key}
-                  onClick={() => { setAssessmentRoleTab(tab.key); setActiveAomSsId(null); setOpenAssessmentId(null); }}
-                  style={{
-                    padding: "8px 20px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", cursor: "pointer",
-                    border: assessmentRoleTab === tab.key ? "none" : "1px solid #cbd5e1",
-                    background: assessmentRoleTab === tab.key ? "#0f172a" : "#ffffff",
-                    color: assessmentRoleTab === tab.key ? "#ffffff" : "#475569"
-                  }}>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* SS Roster Table */}
-            {assessmentRoleTab === "SS" && (
-              <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1.5px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
-                      {["STATION SUPERINTENDENT", "HRMS ID", "STATION", "LAST ASSESSED", "SCORE", "STATUS", "ACTION"].map(h => (
-                        <th key={h} style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: h === "ACTION" ? "right" : "left" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aomSsList.map(ss => {
-                      const catBg = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
-                      const catClr = { A: "#16a34a", B: "#2563eb", C: "#d97706", D: "#dc2626" };
-                      return (
-                        <tr key={ss.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                          <td style={{ padding: "14px 16px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                              <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#1e3a8a", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>{ss.name.charAt(0)}</div>
-                              <div>
-                                <div style={{ fontWeight: "700", color: "#0f172a", fontSize: "14px" }}>{ss.name}</div>
-                                <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "2px" }}>Station Superintendent</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ padding: "14px 16px", color: "#475569", fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>{ss.hrmsId}</td>
-                          <td style={{ padding: "14px 16px", color: "#334155", fontSize: "13px", fontWeight: "500" }}>{ss.station}</td>
-                          <td style={{ padding: "14px 16px", color: "#64748b", fontSize: "13px", fontWeight: "500" }}>{ss.lastDate || "—"}</td>
-                          <td style={{ padding: "14px 16px", color: "#0f172a", fontWeight: "800", fontSize: "14px" }}>
-                            {ss.score != null ? <span>{ss.score}/100 {ss.category && <span style={{ marginLeft: "6px", background: catBg[ss.category], color: catClr[ss.category], borderRadius: "4px", padding: "2px 6px", fontSize: "11px", fontWeight: "700" }}>Cat {ss.category}</span>}</span> : "—"}
-                          </td>
-                          <td style={{ padding: "14px 16px" }}>
-                            <span style={{ background: ss.status === "Approved" ? "#dcfce7" : "#f1f5f9", color: ss.status === "Approved" ? "#166534" : "#475569", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700" }}>{ss.status}</span>
-                          </td>
-                          <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                            <button onClick={() => openAomSsForm(ss.id)} style={{ background: ss.status === "Approved" ? "#2563eb" : "#16a34a", border: "none", color: "#fff", padding: "6px 14px", borderRadius: "8px", cursor: "pointer", fontWeight: "700", fontSize: "12px" }}>
-                              {ss.status === "Approved" ? "View Form" : "Open Form"}
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {aomSsList.length === 0 && (
-                      <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>No Station Superintendents found.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {assessmentRoleTab === "TI" && (
-              <>
-                {/* KPI Cards */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "16px", marginBottom: "24px" }}>
-                  {[
-                    { label: `Total Traffic Inspectors`, value: totalTIs, subtitle: "In your jurisdiction", icon: Users, bg: "#ffffff", color: "#475569", valColor: "#0f172a" },
-                    { label: "Pending Assessments", value: pendingCount, subtitle: "Awaiting completion", icon: ClipboardCheck, bg: "#ffffff", color: "#ea580c", valColor: "#ea580c" },
-                    { label: "Completed This Month", value: completedCount, subtitle: "Assessments done", icon: CheckCircle, bg: "#ffffff", color: "#16a34a", valColor: "#16a34a" },
-                    { label: "Rejected", value: rejectedCount, subtitle: "Needs review", icon: AlertTriangle, bg: "#ffffff", color: "#dc2626", valColor: "#dc2626" },
-                    { label: "Last Updated", value: lastUpdatedDate, subtitle: "Recent activity", icon: Calendar, bg: "#ffffff", color: "#64748b", valColor: "#0f172a" }
-                  ].map((stat, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        background: "#ffffff",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "16px",
-                        padding: "20px",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "16px"
-                      }}
-                    >
-                      <div style={{ width: "40px", height: "40px", borderRadius: "8px", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: stat.color, flexShrink: 0 }}>
-                        <stat.icon size={20} />
-                      </div>
-                      <div>
-                        <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-                          <span style={{ fontSize: "22px", fontWeight: "800", color: stat.valColor }}>{stat.value}</span>
-                        </div>
-                        <div style={{ fontSize: "12px", fontWeight: "700", color: "#334155", marginTop: "2px" }}>{stat.label}</div>
-                        <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "1px" }}>{stat.subtitle}</div>
-                      </div>
-                    </div>
-                  ))}
+            <section className="ti2-card animate-fade-in" style={{ padding: "24px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <div>
+                  <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+                    {assessmentRoleTab === "TI" ? "Assessments — Traffic Inspectors" : "Assessments — Station Superintendents"}
+                  </h2>
+                  <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#64748b", fontWeight: "500" }}>
+                    {assessmentRoleTab === "TI"
+                      ? "Traffic Inspectors pending assessment. Open the form to conduct a structured evaluation."
+                      : "Station Superintendents pending assessment. Open the form to conduct a structured evaluation."}
+                  </p>
                 </div>
+              </div>
 
-                {/* Filters Section */}
-                <div
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "16px",
-                    padding: "20px",
-                    marginBottom: "24px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
-                  }}
-                >
-                  <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr auto", gap: "16px", alignItems: "end" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
-                        Search Traffic Inspector
-                      </label>
+              {/* Role Tab Switcher */}
+              <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+                {[{ key: "TI", label: "Traffic Inspectors" }, { key: "SS", label: "Station Superintendents" }].map(tab => (
+                  <button key={tab.key}
+                    onClick={() => { setAssessmentRoleTab(tab.key); setActiveAomSsId(null); setOpenAssessmentId(null); }}
+                    className={assessmentRoleTab === tab.key ? "sdom-btn-primary" : "sdom-btn-outline"}
+                    style={{
+                      padding: "8px 20px", borderRadius: "8px", fontWeight: "700", fontSize: "13px", cursor: "pointer",
+                      border: assessmentRoleTab === tab.key ? "none" : "1px solid #cbd5e1",
+                      background: assessmentRoleTab === tab.key ? "#0f172a" : "#ffffff",
+                      color: assessmentRoleTab === tab.key ? "#ffffff" : "#475569"
+                    }}>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* SS Roster Table */}
+              {assessmentRoleTab === "SS" && (
+                <div className="sdom-table-wrap" style={{ border: "1px solid #e2e8f0", borderRadius: "8px" }}>
+                  <table className="sdom-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1.5px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
+                        {["STATION SUPERINTENDENT", "HRMS ID", "STATION", "LAST ASSESSED", "SCORE", "STATUS", "ACTION"].map(h => (
+                          <th key={h} style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: h === "ACTION" ? "right" : "left" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aomSsList.map(ss => {
+                        const catBg = { A: "#dcfce7", B: "#dbeafe", C: "#fef3c7", D: "#fee2e2" };
+                        const catClr = { A: "#16a34a", B: "#2563eb", C: "#d97706", D: "#dc2626" };
+                        return (
+                          <tr key={ss.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                            <td style={{ padding: "14px 16px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#1e3a8a", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>{ss.name.charAt(0)}</div>
+                                <div>
+                                  <div style={{ fontWeight: "700", color: "#0f172a", fontSize: "14px" }}>{ss.name}</div>
+                                  <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "2px" }}>Station Superintendent</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: "14px 16px", color: "#475569", fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>{ss.hrmsId}</td>
+                            <td style={{ padding: "14px 16px", color: "#334155", fontSize: "13px", fontWeight: "500" }}>{ss.station}</td>
+                            <td style={{ padding: "14px 16px", color: "#64748b", fontSize: "13px", fontWeight: "500" }}>{ss.lastDate || "—"}</td>
+                            <td style={{ padding: "14px 16px", color: "#0f172a", fontWeight: "800", fontSize: "14px" }}>
+                              {ss.score != null ? <span>{ss.score}/100 {ss.category && <span style={{ marginLeft: "6px", background: catBg[ss.category], color: catClr[ss.category], borderRadius: "4px", padding: "2px 6px", fontSize: "11px", fontWeight: "700" }}>Cat {ss.category}</span>}</span> : "—"}
+                            </td>
+                            <td style={{ padding: "14px 16px" }}>
+                              <span className={`sdom-badge ${ss.status === "Approved" ? "sdom-badge-success" : "sdom-badge-neutral"}`} style={{ padding: "4px 8px" }}>
+                                {ss.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                              <button
+                                onClick={() => openAomSsForm(ss.id)}
+                                className={ss.status === "Approved" ? "sdom-btn-outline" : "sdom-btn-primary"}
+                                style={{
+                                  padding: "6px 12px",
+                                  borderRadius: "6px",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  cursor: "pointer",
+                                  border: ss.status === "Approved" ? "1px solid #cbd5e1" : "none",
+                                  background: ss.status === "Approved" ? "#ffffff" : "#2563eb",
+                                  color: ss.status === "Approved" ? "#0f172a" : "#ffffff"
+                                }}
+                              >
+                                {ss.status === "Approved" ? "View Form" : "Open Form"}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {aomSsList.length === 0 && (
+                        <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>No Station Superintendents found.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {assessmentRoleTab === "TI" && (
+                <>
+                  {/* Filters Section */}
+                  <div style={{ background: "#f8fafc", borderRadius: "12px", padding: "16px", marginBottom: "20px", border: "1px solid #e2e8f0", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "end" }}>
+                    <div style={{ position: "relative", flex: "1 1 200px" }}>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Search Traffic Inspector</label>
                       <div style={{ position: "relative" }}>
                         <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
                         <input
@@ -9687,35 +9472,17 @@ function AOmModule({ user, onLogout }) {
                           placeholder="Name or HRMS ID..."
                           value={assessSearch}
                           onChange={(e) => setAssessSearch(e.target.value)}
-                          style={{
-                            width: "100%",
-                            padding: "10px 12px 10px 36px",
-                            borderRadius: "8px",
-                            border: "1px solid #cbd5e1",
-                            fontSize: "13px",
-                            fontWeight: "500",
-                            color: "#0f172a",
-                            boxSizing: "border-box"
-                          }}
+                          style={{ width: "100%", padding: "10px 12px 10px 36px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "500", boxSizing: "border-box" }}
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Station</label>
+                    <div style={{ flex: "1 1 150px" }}>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Station Placement</label>
                       <select
                         value={assessStation}
                         onChange={(e) => setAssessStation(e.target.value)}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: "8px",
-                          border: "1px solid #cbd5e1",
-                          fontSize: "13px",
-                          fontWeight: "500",
-                          color: "#0f172a",
-                          boxSizing: "border-box"
-                        }}
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "500", boxSizing: "border-box" }}
                       >
                         <option value="All">All Stations</option>
                         {uniqueStationsList.filter(x => x !== "All").map(st => (
@@ -9724,23 +9491,14 @@ function AOmModule({ user, onLogout }) {
                       </select>
                     </div>
 
-                    <div>
+                    <div style={{ flex: "1 1 150px" }}>
                       <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Exam Status</label>
                       <select
                         value={assessStatus}
                         onChange={(e) => setAssessStatus(e.target.value)}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: "8px",
-                          border: "1px solid #cbd5e1",
-                          fontSize: "13px",
-                          fontWeight: "500",
-                          color: "#0f172a",
-                          boxSizing: "border-box"
-                        }}
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", fontWeight: "500", boxSizing: "border-box" }}
                       >
-                        <option value="All">All Status</option>
+                        <option value="All">All Statuses</option>
                         <option value="Pending">Pending</option>
                         <option value="Exam Sent">Exam Sent</option>
                         <option value="Exam Taken">Exam Taken</option>
@@ -9750,275 +9508,239 @@ function AOmModule({ user, onLogout }) {
                       </select>
                     </div>
 
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>Last Assessed</label>
-                      <div style={{ position: "relative" }}>
-                        <Calendar size={14} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
-                        <input
-                          type="date"
-                          value={assessDate}
-                          onChange={(e) => setAssessDate(e.target.value)}
-                          style={{
-                            width: "100%",
-                            padding: "10px 36px 10px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid #cbd5e1",
-                            fontSize: "13px",
-                            fontWeight: "500",
-                            color: "#0f172a",
-                            boxSizing: "border-box"
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "10px" }}>
+                    <div style={{ flexShrink: 0 }}>
                       <button
                         onClick={() => { setAssessSearch(""); setAssessStation("All"); setAssessStatus("All"); setAssessDate(""); }}
-                        style={{
-                          background: "#ffffff",
-                          border: "1px solid #cbd5e1",
-                          padding: "10px 16px",
-                          borderRadius: "8px",
-                          fontSize: "13px",
-                          fontWeight: "700",
-                          color: "#475569",
-                          cursor: "pointer"
-                        }}
+                        className="sdom-btn-outline"
+                        style={{ padding: "10px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: "700", border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a", cursor: "pointer" }}
                       >
-                        Reset
-                      </button>
-                      <button
-                        style={{
-                          background: "#0f172a",
-                          border: "none",
-                          padding: "10px 20px",
-                          borderRadius: "8px",
-                          fontSize: "13px",
-                          fontWeight: "700",
-                          color: "#ffffff",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          cursor: "pointer"
-                        }}
-                      >
-                        <Filter size={14} /> Apply Filters
+                        Reset Filters
                       </button>
                     </div>
                   </div>
-                </div>
 
-                {/* Roster Table */}
-                <div
-                  style={{
-                    background: "#ffffff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "16px",
-                    padding: "24px",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
-                  }}
-                >
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead>
-                        <tr style={{ borderBottom: "1.5px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
-                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                            TRAFFIC INSPECTOR
-                          </th>
-                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>HRMS ID</th>
-                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>STATION</th>
-                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>LAST ASSESSED</th>
-                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>SCORE</th>
-                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>EXAM STATUS</th>
-                          <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "right" }}>ACTION</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredTiList.map((item) => {
-                          const stationCode = stationCodeMap[item.stationName] || "STN";
+                  {/* Roster Table */}
+                  <div className="sdom-table-wrap" style={{ border: "1px solid #e2e8f0", borderRadius: "8px" }}>
+                    <div style={{ overflowX: "auto" }}>
+                      <table className="sdom-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1.5px solid #e2e8f0", background: "#f8fafc", textAlign: "left" }}>
+                            <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                              TRAFFIC INSPECTOR
+                            </th>
+                            <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>HRMS ID</th>
+                            <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>STATION</th>
+                            <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>LAST ASSESSED</th>
+                            <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>SCORE</th>
+                            <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>EXAM STATUS</th>
+                            <th style={{ padding: "12px 16px", fontSize: "11px", color: "#475569", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "right" }}>ACTION</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredTiList.map((item) => {
+                            const stationCode = stationCodeMap[item.stationName] || "STN";
 
-                          const examStatusBadgeStyle = (status) => {
-                            if (status === "Exam Sent") return { bg: "#f3e8ff", color: "#6b21a8" };
-                            if (status === "Exam Taken") return { bg: "#dcfce7", color: "#166534" };
-                            if (status === "Submitted") return { bg: "#dbeafe", color: "#2563eb" };
-                            if (status === "Rejected") return { bg: "#fee2e2", color: "#dc2626" };
-                            if (status === "Approved") return { bg: "#dcfce7", color: "#166534" };
-                            return { bg: "#f1f5f9", color: "#475569" };
-                          };
+                            const statusClass = 
+                              item.status === "Approved" ? "sdom-badge-success" :
+                              item.status === "Exam Taken" ? "sdom-badge-success" :
+                              item.status === "Submitted" ? "sdom-badge-warning" :
+                              item.status === "Exam Sent" ? "sdom-badge-warning" :
+                              item.status === "Rejected" ? "sdom-badge-danger" : "sdom-badge-neutral";
 
-                          const statusColors = examStatusBadgeStyle(item.status);
-
-                          return (
-                            <tr key={item.id || item.employeeId} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                              <td style={{ padding: "14px 16px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                  <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#1e3a8a", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>
-                                    {item.name.charAt(0)}
+                            return (
+                              <tr key={item.id || item.employeeId} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                <td style={{ padding: "14px 16px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#1e3a8a", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" }}>
+                                      {item.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                      <div style={{ fontWeight: "700", color: "#0f172a", fontSize: "14px" }}>{item.name}</div>
+                                      <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "2px" }}>Traffic Inspector</div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <div style={{ fontWeight: "700", color: "#0f172a", fontSize: "14px" }}>{item.name}</div>
-                                    <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "500", marginTop: "2px" }}>Senior Scale</div>
+                                </td>
+                                <td style={{ padding: "14px 16px", color: "#475569", fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>
+                                  {item.employeeId}
+                                </td>
+                                <td style={{ padding: "14px 16px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span style={{ color: "#334155", fontSize: "13px", fontWeight: "500" }}>{item.stationName}</span>
+                                    <span style={{ background: "#eff6ff", color: "#2563eb", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: "700" }}>
+                                      {stationCode}
+                                    </span>
                                   </div>
-                                </div>
-                              </td>
-                              <td style={{ padding: "14px 16px", color: "#475569", fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>
-                                {item.employeeId}
-                              </td>
-                              <td style={{ padding: "14px 16px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                  <span style={{ color: "#334155", fontSize: "13px", fontWeight: "500" }}>{item.stationName}</span>
-                                  <span style={{ background: "#eff6ff", color: "#2563eb", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: "700" }}>
-                                    {stationCode}
-                                  </span>
-                                </div>
-                              </td>
-                              <td style={{ padding: "14px 16px", color: "#64748b", fontSize: "13px", fontWeight: "500" }}>
-                                {item.lastAssessed || "—"}
-                              </td>
-                              <td style={{ padding: "14px 16px", color: "#0f172a", fontWeight: "800", fontSize: "14px" }}>
-                                {item.score ? `${item.score}/100` : "—"}
-                              </td>
-                              <td style={{ padding: "14px 16px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                  <span style={{ background: statusColors.bg, color: statusColors.color, padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700" }}>
-                                    {item.status}
-                                  </span>
-                                  {item.status === "Exam Sent" && (
-                                    <span style={{ background: "#f3e8ff", color: "#6b21a8", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
-                                      <Clock size={12} /> Waiting for Response
+                                </td>
+                                <td style={{ padding: "14px 16px", color: "#64748b", fontSize: "13px", fontWeight: "500" }}>
+                                  {item.lastAssessed || "—"}
+                                </td>
+                                <td style={{ padding: "14px 16px", color: "#0f172a", fontWeight: "800", fontSize: "14px" }}>
+                                  {item.score ? `${item.score}/100` : "—"}
+                                </td>
+                                <td style={{ padding: "14px 16px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span className={`sdom-badge ${statusClass}`} style={{ padding: "4px 8px" }}>
+                                      {item.status}
                                     </span>
-                                  )}
-                                  {item.status === "Rejected" && (
-                                    <span style={{ background: "#fee2e2", color: "#dc2626", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
-                                      <AlertTriangle size={12} /> Needs Review
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                                <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "flex-end" }}>
-                                  {(item.status === "Pending" || item.status === "Rejected") && (
-                                    <>
+                                  </div>
+                                </td>
+                                <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                                  <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "flex-end" }}>
+                                    {(item.status === "Pending" || item.status === "Rejected") && (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            localStorage.setItem(`ti_exam_assigned_${item.employeeId}`, "true");
+                                            const exists = pendingAssessments.some(p => p.id === item.employeeId);
+                                            if (!exists) {
+                                              setPendingAssessments(prev => [{
+                                                id: item.employeeId,
+                                                title: `Traffic Inspector - ${item.employeeId}`,
+                                                statusLabel: "Pending Assessment",
+                                                assessedByLine: `Awaiting: Your Assessment - on ${todayIso()}`,
+                                                employeeLine: `Employee: ${item.name} | Division: ${item.division || "Nagpur"}`,
+                                                actionType: "assessment"
+                                              }, ...prev]);
+                                            }
+                                            alert(`Exam assigned and sent to Traffic Inspector ${item.name || ""}.`);
+                                            setAssessmentActionNotice(`Exam assigned to ${item.name}.`);
+                                          }}
+                                          className="sdom-btn-primary"
+                                          style={{
+                                            background: "#7c3aed",
+                                            border: "none",
+                                            color: "#ffffff",
+                                            padding: "6px 12px",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            fontWeight: "700",
+                                            fontSize: "12px"
+                                          }}
+                                        >
+                                          Send Access
+                                        </button>
+                                        <button
+                                          onClick={() => openTiForm(item)}
+                                          className="sdom-btn-outline"
+                                          style={{
+                                            background: "#ffffff",
+                                            border: "1px solid #cbd5e1",
+                                            color: "#0f172a",
+                                            padding: "6px 12px",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            fontWeight: "700",
+                                            fontSize: "12px"
+                                          }}
+                                        >
+                                          Open Form
+                                        </button>
+                                      </>
+                                    )}
+                                    {item.status === "Exam Sent" && (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            localStorage.setItem(`ti_exam_taken_${item.employeeId}`, "true");
+                                            alert(`Mock sync: Traffic Inspector ${item.name} completed the online exam.`);
+                                            setAssessmentActionNotice(`Online exam completed by ${item.name}.`);
+                                          }}
+                                          className="sdom-btn-primary"
+                                          style={{
+                                            background: "#2563eb",
+                                            border: "none",
+                                            color: "#ffffff",
+                                            padding: "6px 12px",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            fontWeight: "700",
+                                            fontSize: "12px"
+                                          }}
+                                        >
+                                          Simulate Exam Taken
+                                        </button>
+                                        <button
+                                          onClick={() => openTiForm(item)}
+                                          className="sdom-btn-outline"
+                                          style={{
+                                            background: "#ffffff",
+                                            border: "1px solid #cbd5e1",
+                                            color: "#0f172a",
+                                            padding: "6px 12px",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            fontWeight: "700",
+                                            fontSize: "12px"
+                                          }}
+                                        >
+                                          Open Form
+                                        </button>
+                                      </>
+                                    )}
+                                    {item.status === "Exam Taken" && (
                                       <button
-                                        onClick={() => {
-                                          localStorage.setItem(`ti_exam_assigned_${item.employeeId}`, "true");
-                                          // Add an item to pendingAssessments if it doesn't exist
-                                          const exists = pendingAssessments.some(p => p.id === item.employeeId);
-                                          if (!exists) {
-                                            setPendingAssessments(prev => [{
-                                              id: item.employeeId,
-                                              title: `Traffic Inspector - ${item.employeeId}`,
-                                              statusLabel: "Pending Assessment",
-                                              assessedByLine: `Awaiting: Your Assessment - on ${todayIso()}`,
-                                              employeeLine: `Employee: ${item.name} | Division: ${item.division || "Nagpur"}`,
-                                              actionType: "assessment"
-                                            }, ...prev]);
-                                          }
-                                          alert(`Exam assigned and sent to Traffic Inspector ${item.name || ""}.`);
-                                          setAssessmentActionNotice(`Exam assigned to ${item.name}.`);
-                                        }}
+                                        onClick={() => openTiForm(item)}
+                                        className="sdom-btn-primary"
                                         style={{
-                                          background: "#7c3aed",
+                                          background: "#16a34a",
                                           border: "none",
                                           color: "#ffffff",
-                                          padding: "6px 12px",
-                                          borderRadius: "8px",
+                                          padding: "6px 16px",
+                                          borderRadius: "6px",
                                           cursor: "pointer",
                                           fontWeight: "700",
                                           fontSize: "12px"
                                         }}
                                       >
-                                        Send Access
+                                        Start Assessment
                                       </button>
+                                    )}
+                                    {item.status === "Submitted" && (
+                                      <>
+                                        <button
+                                          onClick={() => openTiForm(item)}
+                                          className="sdom-btn-outline"
+                                          style={{
+                                            background: "#ffffff",
+                                            border: "1px solid #cbd5e1",
+                                            color: "#0f172a",
+                                            padding: "6px 12px",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            fontWeight: "700",
+                                            fontSize: "12px"
+                                          }}
+                                        >
+                                          View Form
+                                        </button>
+                                        <button
+                                          onClick={() => openTiForm(item)}
+                                          className="sdom-btn-primary"
+                                          style={{
+                                            background: "#ea580c",
+                                            border: "none",
+                                            color: "#ffffff",
+                                            padding: "6px 12px",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            fontWeight: "700",
+                                            fontSize: "12px"
+                                          }}
+                                        >
+                                          Edit
+                                        </button>
+                                      </>
+                                    )}
+                                    {item.status === "Approved" && (
                                       <button
                                         onClick={() => openTiForm(item)}
+                                        className="sdom-btn-outline"
                                         style={{
                                           background: "#ffffff",
                                           border: "1px solid #cbd5e1",
-                                          padding: "5px 12px",
-                                          borderRadius: "8px",
-                                          fontSize: "12px",
-                                          fontWeight: "700",
-                                          color: "#475569",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: "4px",
-                                          cursor: "pointer"
-                                        }}
-                                      >
-                                        Open Form <ExternalLink size={12} />
-                                      </button>
-                                    </>
-                                  )}
-                                  {item.status === "Exam Sent" && (
-                                    <>
-                                      <button
-                                        onClick={() => {
-                                          localStorage.setItem(`ti_exam_taken_${item.employeeId}`, "true");
-                                          alert(`Mock sync: Traffic Inspector ${item.name} completed the online exam.`);
-                                          setAssessmentActionNotice(`Online exam completed by ${item.name}.`);
-                                        }}
-                                        style={{
-                                          background: "#2563eb",
-                                          border: "none",
-                                          color: "#ffffff",
+                                          color: "#0f172a",
                                           padding: "6px 12px",
-                                          borderRadius: "8px",
-                                          cursor: "pointer",
-                                          fontWeight: "700",
-                                          fontSize: "12px"
-                                        }}
-                                      >
-                                        Simulate Exam Taken
-                                      </button>
-                                      <button
-                                        onClick={() => openTiForm(item)}
-                                        style={{
-                                          background: "#ffffff",
-                                          border: "1px solid #cbd5e1",
-                                          padding: "5px 12px",
-                                          borderRadius: "8px",
-                                          fontSize: "12px",
-                                          fontWeight: "700",
-                                          color: "#475569",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: "4px",
-                                          cursor: "pointer"
-                                        }}
-                                      >
-                                        Open Form <ExternalLink size={12} />
-                                      </button>
-                                    </>
-                                  )}
-                                  {item.status === "Exam Taken" && (
-                                    <button
-                                      onClick={() => openTiForm(item)}
-                                      style={{
-                                        background: "#16a34a",
-                                        border: "none",
-                                        color: "#ffffff",
-                                        padding: "6px 16px",
-                                        borderRadius: "8px",
-                                        cursor: "pointer",
-                                        fontWeight: "700",
-                                        fontSize: "12px"
-                                      }}
-                                    >
-                                      Start Assessment
-                                    </button>
-                                  )}
-                                  {item.status === "Submitted" && (
-                                    <>
-                                      <button
-                                        onClick={() => openTiForm(item)}
-                                        style={{
-                                          background: "#2563eb",
-                                          border: "none",
-                                          color: "#ffffff",
-                                          padding: "6px 12px",
-                                          borderRadius: "8px",
+                                          borderRadius: "6px",
                                           cursor: "pointer",
                                           fontWeight: "700",
                                           fontSize: "12px"
@@ -10026,118 +9748,86 @@ function AOmModule({ user, onLogout }) {
                                       >
                                         View Form
                                       </button>
-                                      <button
-                                        onClick={() => openTiForm(item)}
-                                        style={{
-                                          background: "#ea580c",
-                                          border: "none",
-                                          color: "#ffffff",
-                                          padding: "6px 12px",
-                                          borderRadius: "8px",
-                                          cursor: "pointer",
-                                          fontWeight: "700",
-                                          fontSize: "12px"
-                                        }}
-                                      >
-                                        Edit
-                                      </button>
-                                    </>
-                                  )}
-                                  {item.status === "Approved" && (
-                                    <button
-                                      onClick={() => openTiForm(item)}
-                                      style={{
-                                        background: "#2563eb",
-                                        border: "none",
-                                        color: "#ffffff",
-                                        padding: "6px 12px",
-                                        borderRadius: "8px",
-                                        cursor: "pointer",
-                                        fontWeight: "700",
-                                        fontSize: "12px"
-                                      }}
-                                    >
-                                      View Form
-                                    </button>
-                                  )}
-                                </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {filteredTiList.length === 0 && (
+                            <tr>
+                              <td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#64748b", fontSize: "14px", fontWeight: "500" }}>
+                                No Traffic Inspectors match your current filters.
                               </td>
                             </tr>
-                          );
-                        })}
-                        {filteredTiList.length === 0 && (
-                          <tr>
-                            <td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#64748b", fontSize: "14px", fontWeight: "500" }}>
-                              No Traffic Inspectors match your current filters.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
 
-                  {/* Pagination Info */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px", borderTop: "1px solid #f1f5f9", paddingTop: "16px" }}>
-                    <div style={{ fontSize: "13px", color: "#64748b", fontWeight: "500" }}>
-                      Showing 1 to {filteredTiList.length} of {filteredTiList.length} entries
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <button
-                        disabled
-                        style={{
-                          background: "#ffffff",
-                          border: "1px solid #cbd5e1",
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "6px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#cbd5e1",
-                          cursor: "not-allowed"
-                        }}
-                      >
-                        &lt;
-                      </button>
-                      <button
-                        style={{
-                          background: "#0f172a",
-                          border: "none",
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "6px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#ffffff",
-                          fontWeight: "700",
-                          fontSize: "13px"
-                        }}
-                      >
-                        1
-                      </button>
-                      <button
-                        disabled
-                        style={{
-                          background: "#ffffff",
-                          border: "1px solid #cbd5e1",
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "6px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#cbd5e1",
-                          cursor: "not-allowed"
-                        }}
-                      >
-                        &gt;
-                      </button>
+                    {/* Pagination Info */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px", borderTop: "1px solid #f1f5f9", paddingTop: "16px" }}>
+                      <div style={{ fontSize: "13px", color: "#64748b", fontWeight: "500" }}>
+                        Showing 1 to {filteredTiList.length} of {filteredTiList.length} entries
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <button
+                          disabled
+                          style={{
+                            background: "#ffffff",
+                            border: "1px solid #cbd5e1",
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#cbd5e1",
+                            cursor: "not-allowed"
+                          }}
+                        >
+                          &lt;
+                        </button>
+                        <button
+                          style={{
+                            background: "#0f172a",
+                            border: "none",
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#ffffff",
+                            fontWeight: "700",
+                            fontSize: "13px"
+                          }}
+                        >
+                          1
+                        </button>
+                        <button
+                          disabled
+                          style={{
+                            background: "#ffffff",
+                            border: "1px solid #cbd5e1",
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#cbd5e1",
+                            cursor: "not-allowed"
+                          }}
+                        >
+                          &gt;
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </section>
           </div>
         );
       }
@@ -10548,6 +10238,17 @@ function AOmModule({ user, onLogout }) {
           />
         );
 
+
+
+      case "Predictive Risk":
+        return <RiskIntelligenceDashboard />;
+
+      case "Executive Analytics":
+        return <ExecutiveAnalytics user={user} role="AOM" />;
+
+      case "AI Safety Copilot":
+        return <AiCommandCenter user={user} role="AOM" />;
+
       default:
         return (
           <div className="page-header">
@@ -10571,15 +10272,24 @@ function AOmModule({ user, onLogout }) {
           <h1>Indian Railway Evaluation System</h1>
         </div>
         <div className="topbar-right">
+          <div style={{ marginRight: "16px", display: "flex", alignItems: "center" }}>
+            <NotificationBell />
+          </div>
+
+          {/* Language Selector Component */}
+          <div style={{ marginRight: "16px", display: "flex", alignItems: "center" }}>
+            <LanguageSwitcher />
+          </div>
+
           <div className="admin-badge">
             <div className="avatar">{user.hrmsId.substring(0, 2).toUpperCase()}</div>
             <div>
-              <strong>AOM Console</strong>
-              <span>Zonal Headquarters</span>
+              <strong>{t("sidebar.aomConsole") || "AOM Console"}</strong>
+              <span>{t("layout.zonalHeadquarters") || "Zonal Headquarters"}</span>
             </div>
           </div>
           <button className="logout-btn" type="button" onClick={onLogout}>
-            <LogOut size={16} /> Logout
+            <LogOut size={16} /> {t("layout.logout")}
           </button>
         </div>
       </header>
@@ -10598,6 +10308,29 @@ function AOmModule({ user, onLogout }) {
                     item.label === "Approvals" ? activePage === "Approvals" :
                       activePage === item.label;
 
+            const keyMap = {
+              "Dashboard": "dashboard",
+              "Pointsmen": "pointsmen",
+              "Station Masters": "stationMasters",
+              "Station Superintendents": "stationSuperintendents",
+              "Train Managers": "trainManagers",
+              "Traffic Inspectors": "trafficInspectors",
+              "Stations": "stations",
+              "Approvals": "approvals",
+              "Assessments": "assessments",
+              "Counselling": "counselling",
+              "PME Position": "pmePosition",
+              "REF Position": "refPosition",
+              "Safety Alerts": "safetyalerts",
+              "Predictive Risk": "predictiverisk",
+              "Workflow Automation": "workflowautomation",
+              "Executive Analytics": "executiveanalytics",
+              "AI Safety Copilot": "aisafetycopilot",
+              "Reports and Analytics": "reportsandanalytics",
+              "My Profile": "myprofile"
+            };
+            const sidebarKey = keyMap[item.label] || item.label.toLowerCase();
+
             return (
               <button
                 key={item.label}
@@ -10606,7 +10339,21 @@ function AOmModule({ user, onLogout }) {
                 onClick={() => handleSidebarClick(item.label)}
               >
                 <Icon size={19} />
-                <span>{item.label}</span>
+                <span>{t("sidebar." + sidebarKey) || item.label}</span>
+                {item.label === "Workflow Automation" && workflowBadgeCount > 0 && (
+                  <span style={{
+                    marginLeft: "auto",
+                    background: "#ef4444",
+                    color: "white",
+                    fontSize: "10px",
+                    fontWeight: "bold",
+                    padding: "2px 6px",
+                    borderRadius: "10px",
+                    lineHeight: 1
+                  }}>
+                    {workflowBadgeCount}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -10614,7 +10361,7 @@ function AOmModule({ user, onLogout }) {
 
         <main className="main-content">
           <div className="category-legend-row">
-            <span className="category-legend-label">Category Legend</span>
+            <span className="category-legend-label">{t("layout.categoryLegend") || "Category Legend"}</span>
             <div className="category-legend-circles">
               {[
                 { key: "A", className: "category-a" },

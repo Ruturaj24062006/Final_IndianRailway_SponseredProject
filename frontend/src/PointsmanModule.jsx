@@ -29,7 +29,8 @@ import {
   Trash2,
   Volume2,
   VolumeX,
-  Plus
+  Plus,
+  HeartHandshake
 } from "lucide-react";
 import {
   LineChart,
@@ -49,30 +50,25 @@ import PointsmanDashboard from "./components/PointsmanModule/PointsmanDashboard"
 import UserProfile from "./components/UserProfile";
 import MyAssessment from './components/MyAssessment';
 import PointsmanSafety from "./components/PointsmanModule/PointsmanSafety";
+import { getPointsmanDashboard } from "./services/pointsmanService";
+import { getEmployeeProfile, getEmployeeHistory, getEmployeeAuditLogs, getSafetyReports, createSafetyReport } from "./services/employeeService";
+import { getExamStatus, startExam, submitAnswer, submitExam } from "./services/examService";
+import NotificationBell from "./components/NotificationBell";
+import LanguageSwitcher from "./components/LanguageSwitcher";
+import { getEmployeeCounselling } from "./services/phase16Service";
+import { useLanguage } from "./utils/LanguageContext";
 
+const TEST_NAME = "Pointsman Periodic Assessment";
 
 /* ─── Navigation ─── */
 const navItems = [
   { key: "dashboard",    label: "Dashboard",     icon: Gauge },
   { key: "myAssessment", label: "My Assessment",  icon: FileBarChart2 },
+  { key: "pme",          label: "PME Status",     icon: Activity },
+  { key: "ref",          label: "REF Course",     icon: RefreshCw },
+  { key: "counselling",  label: "Counselling",    icon: HeartHandshake },
   { key: "profile",      label: "Profile",        icon: UserCircle2 }
 ];
-
-/* ─── Static profile data with requested fields ─── */
-const pointsmanProfile = {
-  name: "Ravi Kumar",
-  hrmsId: "PM_1001",
-  stationName: "Nagpur Junction (NGP)",
-  designation: "Pointsman Grade I",
-  mobileNumber: "+91 98989 11223",
-  pmeStatus: "FIT (Periodic Medical Exam) - Due: 2028-10-15",
-  refStatus: "COMPLETED (Refresher Course) - Due: 2027-04-12",
-  trainingStatus: "ACTIVE (Safety & Shunting Certified)",
-  currentCategory: "A",
-  department: "Operations",
-  reportingOfficer: "S. Deshmukh (Station Master)",
-  joiningDate: "2018-06-15"
-};
 
 /* ─── Helper: Score → Category ─── */
 function getCategory(score) {
@@ -103,147 +99,6 @@ const formatQuarterPeriod = (periodStr) => {
     case 4: return `01 Oct ${year} – 31 Dec ${year}`;
     default: return periodStr;
   }
-};
-
-/* ─── Seed history — ONE test type repeated ─── */
-const TEST_NAME = "Pointsman Periodic Assessment";
-
-// Helper to generate correct/incorrect response array for seeded history
-function generateMockResponses(score) {
-  const correctCount = Math.round((score / 100) * 25);
-  const arr = Array(25).fill(null);
-  const indices = Array.from({ length: 25 }, (_, i) => i);
-  // shuffle indices
-  for (let i = indices.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [indices[i], indices[j]] = [indices[j], indices[i]];
-  }
-  const correctIndices = new Set(indices.slice(0, correctCount));
-  for (let i = 0; i < 25; i++) {
-    const q = testQuestions[i];
-    if (correctIndices.has(i)) {
-      arr[i] = q.answer; // correct
-    } else {
-      arr[i] = (q.answer + 1) % 4; // incorrect
-    }
-  }
-  return arr;
-}
-
-/* ─── 25 MCQ questions ─── */
-const rawQuestions = [
-  { text: "A signal shows double yellow. The driver should:", options: ["Proceed at full speed", "Prepare to stop at next signal", "Stop immediately", "Sound horn continuously"], answer: 1, explanation: "A double yellow aspect is an attention signal, warning the driver that they are approaching a signal showing a restrictive aspect (single yellow or red) and must prepare to stop." },
-  { text: "When a track circuit fails, the pointsman must:", options: ["Ignore it and proceed", "Immediately inform the station master", "Wait for someone else to act", "Close the station"], answer: 1, explanation: "Any signal or track circuit failure is a safety hazard. The pointsman must notify the Station Master immediately so that proper block working or manual pilot-in procedures can be initiated." },
-  { text: "The safe distance to stand from a moving train is:", options: ["0.5 metres", "1 metre", "2 metres", "5 metres"], answer: 2, explanation: "To avoid aerodynamic suction and flying ballast, personnel must maintain a safe distance of at least 2 metres from any moving rail vehicle." },
-  { text: "A 'Line Clear' token must be:", options: ["Carried by the guard", "Exchanged only at block stations", "Kept at the engine", "Kept at the signal box"], answer: 1, explanation: "In single line token working territory, the authority to proceed is a tangible token that must only be exchanged at designated block stations under the SM's authority." },
-  { text: "Points must be clipped and padlocked when:", options: ["A train is expected", "Maintenance is not needed", "No train is expected for 8 hours", "During night only"], answer: 0, explanation: "For maximum protection during non-interlocked working or defect conditions, points must be physically clipped and padlocked for the authorized route before a train is received." },
-  { text: "Which colour indicates a 'Stop' signal?", options: ["Green", "Yellow", "Red", "White"], answer: 2, explanation: "Red is the universal danger aspect indicating a mandatory stop before the signal." },
-  { text: "An emergency brake application mid-section requires:", options: ["Driver to restart immediately", "Informing the guard and station master", "Reversing to the last station", "Disconnecting the coupling"], answer: 1, explanation: "An unexpected emergency halt requires immediate coordination with the train guard and the adjacent station masters to protect the block section." },
-  { text: "A detonator placed on the track signals the driver to:", options: ["Increase speed", "Stop and proceed cautiously", "Reverse immediately", "Ignore it"], answer: 1, explanation: "A detonator explosion is an audible warning. The loco pilot must stop immediately, investigate, and then proceed with extreme caution at restricted speed." },
-  { text: "Fixed signals are distinguished from working signals by:", options: ["Being painted blue", "Having no moving parts", "Being placed lower", "Flashing continuously"], answer: 1, explanation: "Fixed signals are permanent trackside landmarks or boards (like warning boards) that do not have active moving arms or shifting light aspects." },
-  { text: "The whistle code for 'Stop' is:", options: ["One long", "Two short", "Three short", "One short"], answer: 0, explanation: "One long continuous blast of the engine whistle is the standard operational code signaling a stop or warning." },
-  { text: "When shunting, the speed limit in station limits is:", options: ["15 km/h", "25 km/h", "30 km/h", "50 km/h"], answer: 0, explanation: "Standard shunting speed is strictly capped at 15 km/h to allow pointsmen and shunting staff to safely switch tracks and prevent high-impact collisions." },
-  { text: "A fouling mark indicates:", options: ["The limit of safe track clearance", "A defective rail", "Speed restriction end", "Gradient change"], answer: 0, explanation: "A fouling mark is a physical block placed between two converging tracks indicating the limit up to which vehicles can stand without obstructing movements on the adjacent line." },
-  { text: "Who authorises working on a live track?", options: ["The nearest pointsman", "The gang mate", "The station master with permit", "Any senior staff"], answer: 2, explanation: "Safety rules forbid working on active tracks without an official block permit and authorization issued by the Station Master on duty." },
-  { text: "Verbal communication during train operations must be:", options: ["Quick and informal", "Clear, loud, and repeated back", "Whispered to avoid panic", "Written only"], answer: 1, explanation: "To prevent fatal misunderstandings, all verbal shunting commands and line instructions must be clearly spoken and actively repeated back by the receiver." },
-  { text: "A Point Indicator showing 'Normal' means:", options: ["Points are in reverse position", "Points are in normal position", "Points are defective", "No train is expected"], answer: 1, explanation: "A point indicator operates in correspondence with the switch rail position. A 'Normal' display confirms that the points are set for the straight/main line." },
-  { text: "In fog, the frequency of detonator placement is:", options: ["Every 500 metres", "Every 1 km", "Every signal", "At engine only"], answer: 2, explanation: "During dense fog or thick weather, additional detonators are placed at the distant signal limits to warn incoming loco pilots of their proximity to the station." },
-  { text: "When a train passes, the pointsman should:", options: ["Walk along the track", "Stand at least 2 m away and observe", "Record speed", "Signal with a flag immediately"], answer: 1, explanation: "Pointsmen are required to perform visual inspection of passing trains (checking for hot axles, hanging parts, or sparks) while standing at a safe distance." },
-  { text: "A green hand signal during shunting means:", options: ["Stop", "Proceed", "Caution", "Reverse"], answer: 1, explanation: "A green flag or green hand lamp signal indicates authorization to proceed with the shunting movement." },
-  { text: "Interlocking ensures that:", options: ["Signals and points cannot be in conflicting positions", "Only one train can enter the yard", "Points are locked at all times", "Signals always show green"], answer: 0, explanation: "Interlocking is a safety arrangement of signals, points, and other appliances, operated mechanically or electrically, preventing conflicting routes from being cleared simultaneously." },
-  { text: "A 'Caution Order' issued to a driver must be:", options: ["Signed and returned to station master", "Kept by the driver until destination", "Torn after reading", "Radioed to control"], answer: 0, explanation: "A caution order contains temporary speed restrictions. The driver must sign and acknowledge receipt, returning the counterfoil to the SM." },
-  { text: "The correct way to hold a flag when giving an 'All Right' signal is:", options: ["Waving it rapidly overhead", "Held steadily by the side", "Stretched horizontally at arm's length", "Pointing at the engine"], answer: 2, explanation: "An 'All Right' signal is presented by holding the green flag steadily stretched horizontally at arm's length towards the passing train." },
-  { text: "Trap points are used to:", options: ["Increase train speed", "Prevent unauthorized entry into main line", "Derail a runaway vehicle away from the main line", "Signal an emergency stop"], answer: 2, explanation: "Trap points are safety switches designed to derail any runaway carriage or vehicle shifting unauthorizedly towards a busy passenger running line, protecting main line movements." },
-  { text: "The SWR (Station Working Rules) must be revised:", options: ["Every 5 years", "As and when changes occur", "Only by the GM", "Never once issued"], answer: 1, explanation: "SWR rules must be amended immediately whenever physical layouts, signaling systems, or operating block instruments are modified at the station." },
-  { text: "Before restoring points to normal after engineering work, the pointsman must:", options: ["Inform the driver", "Check that the track is clear and inform station master", "Replace detonators", "Wait for green signal"], answer: 1, explanation: "Safety requires the pointsman to visually verify that the track switches are free of tools, ballast, or staff before notifying the SM to normalise the routing." },
-  { text: "If a signal cannot be lowered, the driver should be given:", options: ["A red flag and stopped", "A 'T/369' caution memo and proceed at 15 km/h", "Permission to proceed at full speed", "A verbal confirmation only"], answer: 1, explanation: "A defective signal requires a physical authorization memo (T/369-3b) handed to the driver, authorizing them to pass the signal at danger at restricted speed." }
-];
-
-const testQuestions = rawQuestions.map((q, i) => ({ id: i + 1, ...q }));
-
-const initialHistory = [
-  {
-    id: 1,
-    date: "2026-03-10",
-    name: TEST_NAME,
-    assessmentPeriod: "March 2026",
-    totalScore: 84,
-    sections: [
-      { title: "Signal Rules", marks: 17, outOf: 20 },
-      { title: "Track Handling", marks: 16, outOf: 20 },
-      { title: "Communication", marks: 17, outOf: 20 },
-      { title: "Safety Response", marks: 17, outOf: 20 },
-      { title: "Operational Judgement", marks: 17, outOf: 20 }
-    ],
-    responses: generateMockResponses(84)
-  },
-  {
-    id: 2,
-    date: "2026-02-10",
-    name: TEST_NAME,
-    assessmentPeriod: "February 2026",
-    totalScore: 76,
-    sections: [
-      { title: "Signal Rules", marks: 15, outOf: 20 },
-      { title: "Track Handling", marks: 16, outOf: 20 },
-      { title: "Communication", marks: 14, outOf: 20 },
-      { title: "Safety Response", marks: 13, outOf: 20 },
-      { title: "Operational Judgement", marks: 18, outOf: 20 }
-    ],
-    responses: generateMockResponses(76)
-  },
-  {
-    id: 3,
-    date: "2026-01-10",
-    name: TEST_NAME,
-    assessmentPeriod: "January 2026",
-    totalScore: 88,
-    sections: [
-      { title: "Signal Rules", marks: 18, outOf: 20 },
-      { title: "Track Handling", marks: 18, outOf: 20 },
-      { title: "Communication", marks: 17, outOf: 20 },
-      { title: "Safety Response", marks: 18, outOf: 20 },
-      { title: "Operational Judgement", marks: 17, outOf: 20 }
-    ],
-    responses: generateMockResponses(88)
-  },
-  {
-    id: 4,
-    date: "2025-12-10",
-    name: TEST_NAME,
-    assessmentPeriod: "December 2025",
-    totalScore: 68,
-    sections: [
-      { title: "Signal Rules", marks: 13, outOf: 20 },
-      { title: "Track Handling", marks: 14, outOf: 20 },
-      { title: "Communication", marks: 14, outOf: 20 },
-      { title: "Safety Response", marks: 14, outOf: 20 },
-      { title: "Operational Judgement", marks: 13, outOf: 20 }
-    ],
-    responses: generateMockResponses(68)
-  },
-  {
-    id: 5,
-    date: "2025-11-10",
-    name: TEST_NAME,
-    assessmentPeriod: "November 2025",
-    totalScore: 72,
-    sections: [
-      { title: "Signal Rules", marks: 15, outOf: 20 },
-      { title: "Track Handling", marks: 14, outOf: 20 },
-      { title: "Communication", marks: 14, outOf: 20 },
-      { title: "Safety Response", marks: 15, outOf: 20 },
-      { title: "Operational Judgement", marks: 14, outOf: 20 }
-    ],
-    responses: generateMockResponses(72)
-  }
-];
-
-/* ─── Single active test for the current month ─── */
-const currentTestSeed = {
-  id: "CT-APR-2026",
-  name: TEST_NAME,
-  period: "April 2026"
 };
 
 /* ─── Pie chart custom label ─── */
@@ -316,16 +171,21 @@ function stopAlarmSound() {
 
 /* ─── Main component ─── */
 function PointsmanModule({ user, onLogout }) {
-  const fullName = user?.name && user.name !== "Pointsman User" ? user.name : pointsmanProfile.name;
-  const employeeId = user?.hrmsId || pointsmanProfile.hrmsId;
+  const { locale, changeLanguage, t } = useLanguage();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [questionBankCount, setQuestionBankCount] = useState(0);
+  const [cbtAttempt, setCbtAttempt] = useState(null);
+  const [examQuestions, setExamQuestions] = useState([]);
+  const [lastSavedResponses, setLastSavedResponses] = useState(() => Array(25).fill(null));
 
   const [activeNav, setActiveNav] = useState("dashboard");
   const [screenMode, setScreenMode] = useState("default");
   
-  const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem(`pm_history_${employeeId}`);
-    return saved ? JSON.parse(saved) : initialHistory;
-  });
+  const [history, setHistory] = useState([]);
   
   const [historyDateSearch, setHistoryDateSearch] = useState("");
   const [historySortOrder, setHistorySortOrder] = useState("date-desc");
@@ -334,37 +194,15 @@ function PointsmanModule({ user, onLogout }) {
 
   // My Assessment state (mirrors SM module)
   const [myAssessSelected, setMyAssessSelected] = useState(null);
-  const [pmMcqTest, setPmMcqTest] = useState(() => {
-    const saved = localStorage.getItem(`pm_mcq_test_${employeeId}`);
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [testAssigned, setTestAssigned] = useState(() => {
-    const saved = localStorage.getItem(`pm_test_assigned_${employeeId}`);
-    if (saved === null) {
-      localStorage.setItem(`pm_test_assigned_${employeeId}`, "Assigned");
-      return "Assigned";
-    }
-    return saved;
-  });
+  const [pmMcqTest, setPmMcqTest] = useState(null);
+
   const [pmActiveQIdx, setPmActiveQIdx] = useState(0);
   const [pmTestResponses, setPmTestResponses] = useState(() => Array(25).fill(null));
-  
-  const [currentTest, setCurrentTest] = useState(() => {
-    const saved = localStorage.getItem(`pm_current_test_${employeeId}`);
-    if (saved) return JSON.parse(saved);
-    const mcqResult = localStorage.getItem(`pm_mcq_test_${employeeId}`);
-    if (mcqResult && JSON.parse(mcqResult).completed) {
-      return null;
-    }
-    return currentTestSeed;
-  });
-  
-  const [activeTest, setActiveTest] = useState(null);
-  const [responses, setResponses] = useState(Array(25).fill(null));
-  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [statusText, setStatusText] = useState("");
 
   /* ─── Extra State Additions ─── */
+  const [counsellingList, setCounsellingList] = useState([]);
+
   // 1. MCQ Timer (30 minutes = 1800 seconds)
   const [assessmentTimeLeft, setAssessmentTimeLeft] = useState(1800);
   const [isAssessmentTimerRunning, setIsAssessmentTimerRunning] = useState(false);
@@ -374,20 +212,11 @@ function PointsmanModule({ user, onLogout }) {
 
   // 3. Real-Time Notifications
   const [bellDropdownOpen, setBellDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "danger", message: "CRITICAL: PME Medical examination scheduled on 2026-06-10.", time: "10 mins ago", read: false },
-    { id: 2, type: "warning", message: "Safety Directive: New speed restriction (15km/h) active at Siding Points 12B.", time: "2 hours ago", read: false },
-    { id: 3, type: "info", message: "Circular Update: SWR (Station Working Rules) Amendment v4.2 published.", time: "1 day ago", read: true },
-    { id: 4, type: "success", message: "Training status updated: Periodic Shunting Refresher completed.", time: "3 days ago", read: true }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   // 4. Audit Activity Logs
   const [profileSubTab, setProfileSubTab] = useState("details"); // "details" | "audit"
-  const [activityLogs, setActivityLogs] = useState([
-    { id: 1, timestamp: "2026-05-27 10:00:12", category: "Auth", action: "User session initialized (IP: 10.244.15.68)", user: "Ravi Kumar" },
-    { id: 2, timestamp: "2026-05-27 10:01:45", category: "Profile", action: "PME & REF health profile retrieved", user: "Ravi Kumar" },
-    { id: 3, timestamp: "2026-05-27 10:03:10", category: "System", action: "Audited dashboard integrity checklist successfully", user: "Ravi Kumar" }
-  ]);
+  const [activityLogs, setActivityLogs] = useState([]);
 
   // 5. Emergency Alert & Siren State
   const [emergencyActive, setEmergencyActive] = useState(false);
@@ -398,10 +227,7 @@ function PointsmanModule({ user, onLogout }) {
 
   // 6. Safety Reports
   const [safetySubTab, setSafetySubTab] = useState("track"); // "track" | "incident" | "history"
-  const [safetyReports, setSafetyReports] = useState([
-    { id: 101, type: "Track Defect", defect: "Rail Joint Crack", location: "KM 104/2 Near Gate", severity: "High - Urgent Action", status: "RESOLVED", date: "2026-05-24", desc: "Visible hair crack on joint fishplate." },
-    { id: 102, type: "Abnormal Incident", defect: "Hot Axle Exchanged Flag", location: "Line 1 Main", severity: "Medium - Investigating", status: "UNDER REPAIR", date: "2026-05-26", desc: "Detected sparks during all-right hand signal. Notified Station Master." }
-  ]);
+  const [safetyReports, setSafetyReports] = useState([]);
 
   // File Upload State Mock
   const [attachedFiles, setAttachedFiles] = useState([]);
@@ -420,8 +246,113 @@ function PointsmanModule({ user, onLogout }) {
   const [incidentTime, setIncidentTime] = useState("");
   const [incidentAction, setIncidentAction] = useState("");
 
+  const fullName = profileData?.full_name || dashboardData?.full_name || user?.name || "Pointsman User";
+  const employeeId = profileData?.hrms_id || dashboardData?.hrms_id || user?.hrmsId || "N/A";
+
+  const testAssigned = useMemo(() => {
+    if (!dashboardData) return "Not Assigned";
+    return dashboardData.assessment_status || "Not Assigned";
+  }, [dashboardData]);
+
   // Track user notifications unread count
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [dash, profile] = await Promise.all([
+        getPointsmanDashboard(),
+        getEmployeeProfile()
+      ]);
+      setDashboardData(dash);
+      setProfileData(profile);
+
+      try {
+        const examStatus = await getExamStatus();
+        if (examStatus) {
+          setQuestionBankCount(examStatus.question_count || 0);
+          if (examStatus.has_active_attempt && examStatus.active_attempt) {
+            const examData = await startExam();
+            if (examData && examData.questions) {
+              setCbtAttempt(examData);
+              const mappedQuestions = examData.questions.map(q => ({
+                id: q.id,
+                text: q.question_text,
+                options: [q.option_a, q.option_b, q.option_c, q.option_d],
+                marks: q.marks || 4
+              }));
+              setExamQuestions(mappedQuestions);
+              
+              const initialResponses = examData.questions.map(q => {
+                if (!q.selected_answer) return null;
+                const ans = q.selected_answer.trim().toUpperCase();
+                if (ans === 'A') return 0;
+                if (ans === 'B') return 1;
+                if (ans === 'C') return 2;
+                if (ans === 'D') return 3;
+                return null;
+              });
+              setPmTestResponses(initialResponses);
+              setLastSavedResponses(initialResponses);
+              setScreenMode("takeTest");
+            }
+          }
+        }
+      } catch (examErr) {
+        console.warn("Could not check CBT exam status:", examErr);
+      }
+
+      try {
+        const histData = await getEmployeeHistory();
+        if (histData) {
+          setHistory(histData);
+        }
+      } catch (histErr) {
+        console.warn("Could not fetch employee assessment history from DB:", histErr);
+      }
+
+      try {
+        const logsData = await getEmployeeAuditLogs();
+        if (logsData) {
+          setActivityLogs(logsData);
+        }
+      } catch (logsErr) {
+        console.warn("Could not fetch employee audit logs from DB:", logsErr);
+      }
+
+      try {
+        const safetyData = await getSafetyReports();
+        if (safetyData) {
+          setSafetyReports(safetyData);
+        }
+      } catch (safetyErr) {
+        console.warn("Could not fetch safety reports from DB:", safetyErr);
+      }
+
+      if (profile && profile.id) {
+        try {
+          const counData = await getEmployeeCounselling(profile.id);
+          setCounsellingList(counData || []);
+        } catch (counErr) {
+          console.warn("Could not fetch pointsman counselling logs:", counErr);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching pointsman dashboard:", err);
+      setError(err.message || "Failed to load dashboard data. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+
+
 
   /* ─── EFFECT: Secure Session CountDown ─── */
   useEffect(() => {
@@ -449,7 +380,7 @@ function PointsmanModule({ user, onLogout }) {
           if (prev <= 1) {
             clearInterval(timer);
             setIsAssessmentTimerRunning(false);
-            submitTest(true); // force auto-submit!
+            handleSubmitTestAttempt(); // force auto-submit!
             return 0;
           }
           return prev - 1;
@@ -458,13 +389,37 @@ function PointsmanModule({ user, onLogout }) {
     }
     return () => clearInterval(timer);
   }, [isAssessmentTimerRunning, assessmentTimeLeft]);
+
+  /* ─── EFFECT: Autosave CBT Answers in Real-Time ─── */
+  useEffect(() => {
+    if (!cbtAttempt || !cbtAttempt.attempt_id) return;
+    
+    let changed = false;
+    for (let i = 0; i < pmTestResponses.length; i++) {
+      if (pmTestResponses[i] !== lastSavedResponses[i]) {
+        changed = true;
+        const answerValue = pmTestResponses[i];
+        const charAnswer = answerValue === 0 ? 'A' : answerValue === 1 ? 'B' : answerValue === 2 ? 'C' : answerValue === 3 ? 'D' : null;
+        
+        if (charAnswer && examQuestions[i]) {
+          const questionId = examQuestions[i].id;
+          submitAnswer(cbtAttempt.attempt_id, questionId, charAnswer)
+            .catch(err => console.error("Error autosaving answer:", err));
+        }
+      }
+    }
+    if (changed) {
+      setLastSavedResponses([...pmTestResponses]);
+    }
+  }, [pmTestResponses, cbtAttempt, examQuestions, lastSavedResponses]);
+
   /* ─── Derived metrics ─── */
   const latestScore = history.length ? history[0].totalScore : null;
-  const latestCategory = latestScore !== null ? getCategory(latestScore) : "—";
+  const latestCategory = latestScore !== null ? getCategory(latestScore) : (dashboardData?.category_grade || "—");
   const averageScore = history.length
     ? Math.round(history.reduce((s, i) => s + i.totalScore, 0) / history.length)
     : 0;
-  const answeredCount = responses.filter(v => v !== null).length;
+  const answeredCount = pmTestResponses.filter(v => v !== null).length;
   const completionRate = Math.round((answeredCount / 25) * 100);
 
   /* ─── Dynamic Performance Summary ─── */
@@ -516,11 +471,118 @@ function PointsmanModule({ user, onLogout }) {
     return list;
   }, [history, historyDateSearch, historySortOrder]);
 
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#f1f5f9" }}>
+        <style>{`
+          @keyframes pm-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ border: "4px solid #cbd5e1", borderTop: "4px solid #2563eb", borderRadius: "50%", width: "40px", height: "40px", animation: "pm-spin 1s linear infinite", margin: "0 auto 16px" }}></div>
+          <p style={{ color: "#475569", fontWeight: "600", fontSize: "14px", fontFamily: "'Poppins', sans-serif" }}>Loading Pointsman Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#f1f5f9", padding: "20px" }}>
+        <div className="login-card" style={{ maxWidth: "450px", width: "100%", textAlign: "center", padding: "40px", border: "1px solid #fed7aa" }}>
+          <div className="login-header">
+            <div className="logo-badge" style={{ backgroundColor: "#ef4444", margin: "0 auto 20px" }}>⚠️</div>
+            <h1 style={{ color: "#ef4444", fontSize: "22px", margin: "10px 0 5px", fontFamily: "'Poppins', sans-serif" }}>Connection Error</h1>
+            <p style={{ color: "#475569", fontSize: "14px", lineHeight: "1.6", margin: "15px 0 25px", fontFamily: "'Poppins', sans-serif" }}>
+              {error}
+            </p>
+          </div>
+          <button 
+            className="login-button" 
+            onClick={fetchDashboardData} 
+            style={{ 
+              backgroundColor: "#2563eb", 
+              color: "white", 
+              padding: "12px 24px", 
+              border: "none", 
+              borderRadius: "10px", 
+              fontSize: "14px", 
+              fontWeight: "700", 
+              cursor: "pointer", 
+              width: "100%",
+              marginBottom: "12px",
+              fontFamily: "'Poppins', sans-serif"
+            }}
+          >
+            Retry Connection
+          </button>
+          <button 
+            className="login-button" 
+            onClick={() => { stopAlarmSound(); onLogout(); }} 
+            style={{ 
+              backgroundColor: "#475569", 
+              color: "white", 
+              padding: "12px 24px", 
+              border: "none", 
+              borderRadius: "10px", 
+              fontSize: "14px", 
+              fontWeight: "700", 
+              cursor: "pointer", 
+              width: "100%",
+              fontFamily: "'Poppins', sans-serif"
+            }}
+          >
+            Logout / Reset Session
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dashboardData) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#f1f5f9", padding: "20px" }}>
+        <div className="login-card" style={{ maxWidth: "450px", width: "100%", textAlign: "center", padding: "40px", border: "1px solid #cbd5e1" }}>
+          <div className="login-header">
+            <div className="logo-badge" style={{ backgroundColor: "#64748b", margin: "0 auto 20px" }}>ℹ️</div>
+            <h1 style={{ color: "#475569", fontSize: "22px", margin: "10px 0 5px", fontFamily: "'Poppins', sans-serif" }}>No Data Available</h1>
+            <p style={{ color: "#64748b", fontSize: "14px", lineHeight: "1.6", margin: "15px 0 25px", fontFamily: "'Poppins', sans-serif" }}>
+              No dashboard data was found for this user account.
+            </p>
+          </div>
+          <button 
+            className="login-button" 
+            onClick={() => { stopAlarmSound(); onLogout(); }} 
+            style={{ 
+              backgroundColor: "#475569", 
+              color: "white", 
+              padding: "12px 24px", 
+              border: "none", 
+              borderRadius: "10px", 
+              fontSize: "14px", 
+              fontWeight: "700", 
+              cursor: "pointer", 
+              width: "100%",
+              fontFamily: "'Poppins', sans-serif"
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   /* ─── Navigation ─── */
   const goToNavPage = (key) => {
     setActiveNav(key);
     setScreenMode("default");
     setStatusText("");
+    if (key === "dashboard" || key === "myAssessment") {
+      fetchDashboardData();
+    }
   };
 
   const openScorecard = (record) => {
@@ -553,141 +615,109 @@ function PointsmanModule({ user, onLogout }) {
   };
 
   /* ─── My Assessment Test Actions (mirrors SM) ─── */
-  const startTestAttempt = () => {
-    setPmActiveQIdx(0);
-    setPmTestResponses(Array(25).fill(null));
-    setScreenMode("takeTest");
+  const startTestAttempt = async () => {
+    const isActivated = dashboardData?.assessment_status === "Active";
+    if (!isActivated) {
+      alert("Competency Exam is locked. Please request your Station Master to activate it.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const examData = await startExam();
+      setCbtAttempt(examData);
+      
+      const mappedQuestions = examData.questions.map(q => ({
+        id: q.id,
+        text: q.question_text,
+        options: [q.option_a, q.option_b, q.option_c, q.option_d],
+        marks: q.marks || 4
+      }));
+      setExamQuestions(mappedQuestions);
+      
+      const initialResponses = examData.questions.map(q => {
+        if (!q.selected_answer) return null;
+        const ans = q.selected_answer.trim().toUpperCase();
+        if (ans === 'A') return 0;
+        if (ans === 'B') return 1;
+        if (ans === 'C') return 2;
+        if (ans === 'D') return 3;
+        return null;
+      });
+      setPmTestResponses(initialResponses);
+      setLastSavedResponses(initialResponses);
+      setPmActiveQIdx(0);
+      setScreenMode("takeTest");
+    } catch (err) {
+      console.error("Error starting exam:", err);
+      alert(err.message || "Failed to start exam. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmitTestAttempt = () => {
-    const correctCount = pmTestResponses.filter((r, idx) => r === testQuestions[idx].answer).length;
-    const percentage = Math.round((correctCount / 25) * 100);
-    const passStatus = percentage >= 60 ? "PASSED" : "FAILED";
-    const today = new Date().toISOString().slice(0, 10);
-    const testResult = {
-      completed: true,
-      correctCount,
-      responses: [...pmTestResponses],
-      submittedDate: today,
-      percentage,
-      passStatus
-    };
-    localStorage.setItem(`pm_mcq_test_${employeeId}`, JSON.stringify(testResult));
-    setPmMcqTest(testResult);
-    localStorage.setItem(`pm_test_assigned_${employeeId}`, "Completed");
-    setTestAssigned("Completed");
-    const record = {
-      id: Date.now(),
-      date: today,
-      assessmentPeriod: "Q2 2026",
-      name: TEST_NAME,
-      assessedBy: "Online Self-Exam",
-      totalScore: correctCount * 4,
-      sections: [
+  const handleSubmitTestAttempt = async () => {
+    try {
+      if (!cbtAttempt || !cbtAttempt.attempt_id) {
+        throw new Error("No active exam session found.");
+      }
+      setLoading(true);
+      const submitData = await submitExam(cbtAttempt.attempt_id);
+      
+      const correctCount = submitData.correct_answers;
+      const percentage = submitData.score_percentage;
+      const passStatus = submitData.result;
+      const today = new Date().toISOString().slice(0, 10);
+      
+      const testResult = {
+        completed: true,
+        correctCount,
+        responses: [...pmTestResponses],
+        submittedDate: today,
+        percentage,
+        passStatus
+      };
+      
+      setPmMcqTest(testResult);
+      
+      const sections = [
         { title: "Signal Rules",          marks: 0, outOf: 20 },
         { title: "Track Handling",         marks: 0, outOf: 20 },
         { title: "Communication",          marks: 0, outOf: 20 },
         { title: "Safety Response",        marks: 0, outOf: 20 },
         { title: "Operational Judgement",  marks: 0, outOf: 20 }
-      ],
-      responses: [...pmTestResponses],
-      approvalStatus: "Completed",
-      isOnlineExam: true
-    };
-    const newHistory = [record, ...history];
-    setHistory(newHistory);
-    localStorage.setItem(`pm_history_${employeeId}`, JSON.stringify(newHistory));
-    setScreenMode("default");
-    setStatusText(`Assessment submitted! Score: ${percentage}% (${correctCount}/25). Status: Completed.`);
-  };
-
-  /* ─── Test Actions ─── */
-  const handleReattempt = () => {
-    localStorage.removeItem(`pm_mcq_test_${employeeId}`);
-    localStorage.setItem(`pm_current_test_${employeeId}`, JSON.stringify(currentTestSeed));
-    setCurrentTest(currentTestSeed);
-    setActiveTest(currentTestSeed);
-    setResponses(Array(25).fill(null));
-    setCurrentQuestion(0);
-    setStatusText("New CBT shunting safety test session initialized.");
-    setActiveNav("current");
-    setScreenMode("attempt");
-    logActivity("Assessment", "Periodic CBT assessment re-attempt session started.");
-    triggerNotification("info", "New shunting safety CBT competency exam session active.");
-  };
-
-  const startTest = () => {
-    setActiveTest(currentTest || currentTestSeed);
-    setResponses(Array(25).fill(null));
-    setCurrentQuestion(0);
-    setStatusText("");
-    setIsAssessmentTimerRunning(false);
-    setActiveNav("current");
-    setScreenMode("attempt");
-    logActivity("Assessment", "Periodic assessment test started.");
-  };
-
-  const handleSelectOption = (idx) => {
-    setResponses(prev => { const n = [...prev]; n[currentQuestion] = idx; return n; });
-  };
-
-  const evaluateTest = () => {
-    let correct = 0;
-    const sec = [0, 0, 0, 0, 0];
-    responses.forEach((r, i) => {
-      const si = Math.floor(i / 5);
-      if (r === testQuestions[i].answer) { correct++; sec[si] += 4; }
-    });
-    const sections = [
-      "Signal Rules", 
-      "Track Handling", 
-      "Communication", 
-      "Safety Response", 
-      "Operational Judgement"
-    ].map((title, i) => ({ title, marks: sec[i], outOf: 20 }));
-    return { totalScore: correct * 4, sections };
-  };
-
-  const submitTest = (isAutoSubmit = false) => {
-    setIsAssessmentTimerRunning(false);
-    const { totalScore, sections } = evaluateTest();
-    const today = new Date().toISOString().slice(0, 10);
-    const record = {
-      id: Date.now(),
-      date: today,
-      name: TEST_NAME,
-      assessmentPeriod: activeTest ? activeTest.period : "April 2026",
-      totalScore,
-      sections,
-      responses: [...responses]
-    };
-    const newHistory = [record, ...history];
-    setHistory(newHistory);
-    localStorage.setItem(`pm_history_${employeeId}`, JSON.stringify(newHistory));
-    
-    setCurrentTest(null);
-    localStorage.setItem(`pm_current_test_${employeeId}`, JSON.stringify(null));
-
-    // Save MCQ result for Station Master
-    const correctCount = Math.round(totalScore / 4);
-    const percentage = Math.round((correctCount / 25) * 100);
-    const mcqResult = {
-      completed: true,
-      correctCount: correctCount,
-      submittedDate: today,
-      percentage: percentage
-    };
-    localStorage.setItem(`pm_mcq_test_${employeeId}`, JSON.stringify(mcqResult));
-
-    setSelectedRecord(record);
-    setActiveTest(null);
-    setActiveNav("history");
-    setScreenMode("scorecard");
-    
-    const label = isAutoSubmit ? "Auto-submitted (Time Expired)" : "Submitted Successfully";
-    setStatusText(`Assessment evaluation completed! ${label}.`);
-    logActivity("Assessment", `Submitted test with score ${totalScore}% (Cat. ${getCategory(totalScore)})`);
-    triggerNotification("success", `Assessment complete! Score: ${totalScore}/100. Grade: Category ${getCategory(totalScore)}`);
+      ];
+      
+      let remainingCorrect = correctCount;
+      for (let i = 0; i < 5; i++) {
+        const allocated = Math.min(5, remainingCorrect);
+        sections[i].marks = allocated * 4;
+        remainingCorrect -= allocated;
+      }
+      
+      const record = {
+        id: submitData.attempt_id || Date.now(),
+        date: today,
+        assessmentPeriod: "Q2 2026",
+        name: TEST_NAME,
+        assessedBy: "Online Self-Exam",
+        totalScore: percentage,
+        sections,
+        responses: [...pmTestResponses],
+        approvalStatus: "Completed",
+        isOnlineExam: true
+      };
+      
+      setCbtAttempt(null);
+      setScreenMode("default");
+      setStatusText(`Assessment submitted! Score: ${percentage}% (${correctCount}/25). Status: Completed.`);
+      
+      await fetchDashboardData();
+    } catch (err) {
+      console.error("Error submitting exam:", err);
+      alert(err.message || "Failed to submit exam. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ─── Secure Session Actions ─── */
@@ -714,68 +744,82 @@ function PointsmanModule({ user, onLogout }) {
   };
 
   /* ─── Form Submission: Track Issue ─── */
-  const submitTrackIssue = (e) => {
+  const submitTrackIssue = async (e) => {
     e.preventDefault();
     if (!trackLocation.trim() || !trackDesc.trim()) {
       alert("Please fill in location and description details.");
       return;
     }
-    const newReport = {
-      id: Date.now(),
-      type: "Track Defect",
-      defect: trackDefect,
-      location: `${trackLine} - KM ${trackLocation}`,
-      severity: trackSeverity,
-      status: "PENDING MASTER ACTION",
-      date: new Date().toISOString().slice(0, 10),
-      desc: trackDesc,
-      attachments: [...attachedFiles]
-    };
-    setSafetyReports(prev => [newReport, ...prev]);
     
-    logActivity("Safety", `Safety track defect reported: ${trackDefect} at KM ${trackLocation}`);
-    triggerNotification("danger", `SAFETY REPORT SUBMITTED: Defect: ${trackDefect} | Loc: KM ${trackLocation}`);
-    
-    // Reset
-    setTrackLocation("");
-    setTrackDesc("");
-    setAttachedFiles([]);
-    setFileInputKey(Date.now());
-    setSafetySubTab("history");
-    setStatusText("Safety report logged. Forwarded to Station Master & P-Way inspector.");
+    try {
+      const payload = {
+        type: "Track Defect",
+        defect: trackDefect,
+        location: `${trackLine} - KM ${trackLocation}`,
+        severity: trackSeverity,
+        description: trackDesc
+      };
+      
+      const newReport = await createSafetyReport(payload);
+      setSafetyReports(prev => [newReport, ...prev]);
+      
+      try {
+        const logsData = await getEmployeeAuditLogs();
+        if (logsData) setActivityLogs(logsData);
+      } catch (e) {}
+
+      triggerNotification("danger", `SAFETY REPORT SUBMITTED: Defect: ${trackDefect} | Loc: KM ${trackLocation}`);
+      
+      // Reset
+      setTrackLocation("");
+      setTrackDesc("");
+      setAttachedFiles([]);
+      setFileInputKey(Date.now());
+      setSafetySubTab("history");
+      setStatusText("Safety report logged. Forwarded to Station Master & P-Way inspector.");
+    } catch (err) {
+      alert("Failed to submit track defect report: " + err.message);
+    }
   };
 
   /* ─── Form Submission: Incident ─── */
-  const submitIncidentReport = (e) => {
+  const submitIncidentReport = async (e) => {
     e.preventDefault();
     if (!incidentTrain.trim() || !incidentAction.trim()) {
       alert("Please enter Train Number and Actions taken.");
       return;
     }
-    const newReport = {
-      id: Date.now(),
-      type: "Abnormal Incident",
-      defect: incidentType,
-      location: `Train ${incidentTrain} (${incidentTime || "Current"})`,
-      severity: "High - Immediate Action",
-      status: "STATION INVESTIGATION ACTIVE",
-      date: new Date().toISOString().slice(0, 10),
-      desc: incidentAction,
-      attachments: [...attachedFiles]
-    };
-    setSafetyReports(prev => [newReport, ...prev]);
-    
-    logActivity("Safety", `Abnormal incident logged: ${incidentType} in Train ${incidentTrain}`);
-    triggerNotification("warning", `INCIDENT ALERT: ${incidentType} detected on Train ${incidentTrain}.`);
-    
-    // Reset
-    setIncidentTrain("");
-    setIncidentAction("");
-    setIncidentTime("");
-    setAttachedFiles([]);
-    setFileInputKey(Date.now());
-    setSafetySubTab("history");
-    setStatusText("Abnormal incident report logged and dispatched to Division Controller.");
+
+    try {
+      const payload = {
+        type: "Abnormal Incident",
+        defect: incidentType,
+        location: `Train ${incidentTrain} (${incidentTime || "Current"})`,
+        severity: "High - Immediate Action",
+        description: incidentAction
+      };
+      
+      const newReport = await createSafetyReport(payload);
+      setSafetyReports(prev => [newReport, ...prev]);
+
+      try {
+        const logsData = await getEmployeeAuditLogs();
+        if (logsData) setActivityLogs(logsData);
+      } catch (e) {}
+      
+      triggerNotification("warning", `INCIDENT ALERT: ${incidentType} detected on Train ${incidentTrain}.`);
+      
+      // Reset
+      setIncidentTrain("");
+      setIncidentAction("");
+      setIncidentTime("");
+      setAttachedFiles([]);
+      setFileInputKey(Date.now());
+      setSafetySubTab("history");
+      setStatusText("Abnormal incident report logged and dispatched to Division Controller.");
+    } catch (err) {
+      alert("Failed to submit incident report: " + err.message);
+    }
   };
 
   /* ─── Emergency Broadcast Actions ─── */
@@ -837,13 +881,13 @@ function PointsmanModule({ user, onLogout }) {
       testAssigned={testAssigned}
       mcqTest={pmMcqTest}
       startTestAttempt={startTestAttempt}
-      handleReattempt={handleReattempt}
       notifications={notifications}
       unreadNotificationsCount={unreadNotificationsCount}
       bellDropdownOpen={bellDropdownOpen}
       setBellDropdownOpen={setBellDropdownOpen}
       markAllNotificationsRead={markAllNotificationsRead}
       setActiveNav={setActiveNav}
+      profileData={profileData || dashboardData}
     />
   );
 
@@ -854,7 +898,7 @@ function PointsmanModule({ user, onLogout }) {
       latestCategory={latestCategory}
       latestScore={latestScore}
       history={history}
-      profileData={pointsmanProfile}
+      profileData={dashboardData}
     />
   );
 
@@ -865,13 +909,12 @@ function PointsmanModule({ user, onLogout }) {
       myAssessSelected={myAssessSelected}
       setMyAssessSelected={setMyAssessSelected}
       performanceSummaryText={performanceSummaryText}
-      testQuestions={testQuestions}
+      testQuestions={examQuestions}
       testAssigned={testAssigned}
       mcqTest={pmMcqTest}
       startTestAttempt={startTestAttempt}
       history={history}
       openScorecard={openScorecard}
-      handleReattempt={handleReattempt}
       activeQIdx={pmActiveQIdx}
       setActiveQIdx={setPmActiveQIdx}
       testResponses={pmTestResponses}
@@ -881,7 +924,10 @@ function PointsmanModule({ user, onLogout }) {
       setScreenMode={setScreenMode}
       fullName={fullName}
       employeeId={employeeId}
-      profileData={pointsmanProfile}
+      profileData={dashboardData}
+      questionBankCount={questionBankCount}
+      assessmentStatus={dashboardData?.assessment_status || "Not Assigned"}
+      assessmentDetails={dashboardData?.assessment_details || null}
     />
   );
 
@@ -918,6 +964,215 @@ function PointsmanModule({ user, onLogout }) {
     />
   );
 
+  const renderPmePage = () => {
+    const pmeStatus = profileData?.pme_status || "FIT";
+    const pmeDate = profileData?.pme_date || "—";
+    const pmeDueDate = profileData?.pme_next_due_date || "—";
+    const pmeRemarks = profileData?.pme_remarks || "Cleared normal vision and BP tests.";
+
+    return (
+      <div className="sdom-fade pm-pme-page" style={{ padding: "24px", color: "#1e293b" }}>
+        <div className="pm-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <div>
+              <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0f172a", margin: 0 }}>Periodic Medical Examination (PME) Status</h2>
+              <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#64748b" }}>Official record of medical wellness checks and fitness clearances for safety-critical shunting duties.</p>
+            </div>
+            <span style={{
+              background: pmeStatus === "FIT" || pmeStatus === "Fit" ? "#dcfce7" : "#fee2e2",
+              color: pmeStatus === "FIT" || pmeStatus === "Fit" ? "#16a34a" : "#dc2626",
+              padding: "6px 16px",
+              borderRadius: "20px",
+              fontWeight: "800",
+              fontSize: "14px",
+              textTransform: "uppercase"
+            }}>
+              {pmeStatus}
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", marginBottom: "24px" }}>
+            <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "16px" }}>
+              <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Last Exam Date</div>
+              <div style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", marginTop: "4px" }}>{pmeDate}</div>
+            </div>
+            <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "16px" }}>
+              <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Next Due Date</div>
+              <div style={{ fontSize: "18px", fontWeight: "800", color: "#ea580c", marginTop: "4px" }}>{pmeDueDate}</div>
+            </div>
+            <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "16px" }}>
+              <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Medical Standard</div>
+              <div style={{ fontSize: "18px", fontWeight: "800", color: "#2563eb", marginTop: "4px" }}>A-2 Classification</div>
+            </div>
+          </div>
+
+          <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "10px", padding: "16px", marginBottom: "24px" }}>
+            <h4 style={{ margin: "0 0 8px 0", fontSize: "14px", fontWeight: "800", color: "#0f172a" }}>Medical Examiner Remarks</h4>
+            <p style={{ margin: 0, fontSize: "14px", color: "#475569", lineHeight: "1.6" }}>{pmeRemarks || "No examiner remarks logged. Clear for active shunting and track locking operations."}</p>
+          </div>
+
+          <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "20px" }}>
+            <h4 style={{ margin: "0 0 12px 0", fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>Safety Compliance Checklist</h4>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              {[
+                { test: "Visual Acuity Check", desc: "Passed Distant/Near Vision standards (6/6 in both eyes without glasses)", status: "COMPLETED" },
+                { test: "Color Blindness Examination", desc: "Ishihara test passed. Normal color perception confirmed.", status: "COMPLETED" },
+                { test: "Blood Pressure & Sugar Check", desc: "BP and blood sugar values fall within operational limits.", status: "COMPLETED" },
+                { test: "General Physical Examination", desc: "Fully fit for manual points operation and outdoor physical yard shunting.", status: "COMPLETED" }
+              ].map((item, idx) => (
+                <div key={idx} style={{ display: "flex", gap: "12px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "12px" }}>
+                  <div style={{ color: "#16a34a", fontWeight: "800", fontSize: "16px" }}>✓</div>
+                  <div>
+                    <div style={{ fontWeight: "700", fontSize: "13px", color: "#0f172a" }}>{item.test}</div>
+                    <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRefPage = () => {
+    const refStatus = profileData?.ref_status || "Cleared";
+    const refDate = profileData?.ref_date || "—";
+    const refDueDate = profileData?.ref_next_due_date || "—";
+    const refRemarks = profileData?.ref_remarks || "Completed points safety training at ZRTI.";
+
+    return (
+      <div className="sdom-fade pm-ref-page" style={{ padding: "24px", color: "#1e293b" }}>
+        <div className="pm-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <div>
+              <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0f172a", margin: 0 }}>Refresher (REF) Training Course Details</h2>
+              <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#64748b" }}>Mandatory periodic refresher training curriculum for active Pointsman staff.</p>
+            </div>
+            <span style={{
+              background: refStatus === "Cleared" || refStatus === "FIT" || refStatus === "Fit" ? "#dcfce7" : "#fee2e2",
+              color: refStatus === "Cleared" || refStatus === "FIT" || refStatus === "Fit" ? "#16a34a" : "#dc2626",
+              padding: "6px 16px",
+              borderRadius: "20px",
+              fontWeight: "800",
+              fontSize: "14px",
+              textTransform: "uppercase"
+            }}>
+              {refStatus}
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", marginBottom: "24px" }}>
+            <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "16px" }}>
+              <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Last Course Completion</div>
+              <div style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", marginTop: "4px" }}>{refDate}</div>
+            </div>
+            <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "16px" }}>
+              <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Retraining Due Date</div>
+              <div style={{ fontSize: "18px", fontWeight: "800", color: "#ea580c", marginTop: "4px" }}>{refDueDate}</div>
+            </div>
+            <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "16px" }}>
+              <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Training Institute</div>
+              <div style={{ fontSize: "18px", fontWeight: "800", color: "#2563eb", marginTop: "4px" }}>ZRTI, Bhusawal (CR)</div>
+            </div>
+          </div>
+
+          <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "10px", padding: "16px", marginBottom: "24px" }}>
+            <h4 style={{ margin: "0 0 8px 0", fontSize: "14px", fontWeight: "800", color: "#0f172a" }}>Instructor Assessment & Remarks</h4>
+            <p style={{ margin: 0, fontSize: "14px", color: "#475569", lineHeight: "1.6" }}>{refRemarks || "Passed refresher practical assessments on yard shunting safety, interlocking codes, and block operations with distinction."}</p>
+          </div>
+
+          <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "20px" }}>
+            <h4 style={{ margin: "0 0 12px 0", fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>Course Syllabus Completion Status</h4>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              {[
+                { module: "Station Working Rules (SWR)", desc: "Deep review of points layout, trap points, and shunting constraints for Nagpur Junction.", pct: 100 },
+                { module: "Emergency Procedures", desc: "Handling derailment risks, hot axle detection, reporting defects, visual checks.", pct: 100 },
+                { module: "Hand Signals and Communication", desc: "Correct usage of flags, tri-color hand lamps, walkie-talkie communication protocols.", pct: 100 },
+                { module: "Points Locking & Clamp Placement", desc: "Practical locking of point switches during interlocking failures.", pct: 100 }
+              ].map((item, idx) => (
+                <div key={idx} style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", fontSize: "13px", color: "#0f172a" }}>
+                    <span>{item.module}</span>
+                    <span style={{ color: "#16a34a" }}>{item.pct}%</span>
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px", lineHeight: "1.4" }}>{item.desc}</div>
+                  <div style={{ height: "4px", background: "#e2e8f0", borderRadius: "2px", marginTop: "8px" }}>
+                    <div style={{ height: "100%", width: `${item.pct}%`, background: "#16a34a", borderRadius: "2px" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCounsellingPage = () => {
+    return (
+      <div className="sdom-fade pm-counselling-page" style={{ padding: "24px", color: "#1e293b" }}>
+        <div className="pm-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
+          <div style={{ marginBottom: "20px" }}>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0f172a", margin: 0 }}>Counselling Logbook</h2>
+            <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#64748b" }}>Assigned safety counseling sessions, correction notes, and guidance history log from station supervisors.</p>
+          </div>
+
+          <div className="pm-table-wrap" style={{ overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "12px", fontWeight: "800", color: "#475569" }}>Counselling Date</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "12px", fontWeight: "800", color: "#475569" }}>Counselling Officer</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "12px", fontWeight: "800", color: "#475569" }}>Topics / Reason</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "12px", fontWeight: "800", color: "#475569" }}>Remarks / Safety Advice</th>
+                  <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "12px", fontWeight: "800", color: "#475569" }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {counsellingList.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: "32px", textAlign: "center", color: "#64748b", fontStyle: "italic" }}>
+                      No safety counselling records found. Your safety compliance index is currently fully satisfactory.
+                    </td>
+                  </tr>
+                ) : (
+                  counsellingList.map((c) => {
+                    const cDate = c.counselling_date ? new Date(c.counselling_date).toISOString().slice(0, 10) : "—";
+                    return (
+                      <tr key={c.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <td style={{ padding: "12px 16px", fontWeight: "700", fontSize: "13px", color: "#0f172a" }}>{cDate}</td>
+                        <td style={{ padding: "12px 16px", fontSize: "13px", color: "#334155" }}>
+                          <strong>{c.counsellor_name || "—"}</strong>
+                          <div style={{ fontSize: "11px", color: "#64748b" }}>{c.counsellor_designation || "Counsellor"}</div>
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: "13px", color: "#0f172a", fontWeight: "700" }}>{c.reason || "—"}</td>
+                        <td style={{ padding: "12px 16px", fontSize: "13px", color: "#475569", lineHeight: "1.4" }}>{c.remarks || "—"}</td>
+                        <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                          <span style={{
+                            background: c.status === "Completed" || c.status === "Closed" ? "#dcfce7" : "#fef3c7",
+                            color: c.status === "Completed" || c.status === "Closed" ? "#16a34a" : "#d97706",
+                            padding: "4px 10px",
+                            borderRadius: "12px",
+                            fontSize: "11px",
+                            fontWeight: "800",
+                            textTransform: "uppercase"
+                          }}>
+                            {c.status || "Open"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   /* ─── Content dispatcher ─── */
   const renderBodyContent = () => {
     if (screenMode === "takeTest") return renderMyAssessment();
@@ -925,6 +1180,12 @@ function PointsmanModule({ user, onLogout }) {
     if (activeNav === "profile") return renderProfilePage();
     if (activeNav === "myAssessment") return renderMyAssessment();
     if (activeNav === "safety") return renderSafetyPage();
+    if (activeNav === "pme") return renderPmePage();
+    if (activeNav === "ref") return renderRefPage();
+    if (activeNav === "counselling") return renderCounsellingPage();
+    if (activeNav === "myAssessment") return renderMyAssessment();
+    if (activeNav === "safety") return renderSafetyPage();
+
     return renderDashboardPage();
   };
 
@@ -938,16 +1199,22 @@ function PointsmanModule({ user, onLogout }) {
       {emergencyActive && (
         <div className="pm-emergency-siren-banner">
           <div className="siren-message">
-            <span className="siren-light animate-flash">🚨 ALERT</span>
-            <strong>MANDATORY EMERGENCY BROADCAST ACTIVE: {emergencyType} detected at {emergencyLocation}! All train & siding movements are frozen immediately.</strong>
+            <span className="siren-light animate-flash">🚨 {t("emergency.alert") || "ALERT"}</span>
+            <strong>
+              {(t("emergency.broadcastActive") !== "emergency.broadcastActive"
+                ? t("emergency.broadcastActive")
+                : "MANDATORY EMERGENCY BROADCAST ACTIVE: {type} detected at {location}! All train & siding movements are frozen immediately."
+              ).replace("{type}", t(`emergency.options.${emergencyType.toLowerCase().replace(/\s+/g, '')}`) || emergencyType)
+               .replace("{location}", emergencyLocation)}
+            </strong>
           </div>
           <div className="siren-controls">
             <button className="pm-siren-mute-btn" onClick={toggleAlarmMute}>
               {alarmMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
-              {alarmMuted ? "Unmute Alarm" : "Mute Sound"}
+              {alarmMuted ? t("buttons.unmute") || "Unmute Alarm" : t("buttons.mute") || "Mute Sound"}
             </button>
             <button className="pm-siren-clear-btn" onClick={clearEmergencyState}>
-              Clear & Safe Return
+              {t("buttons.clearEmergency") || "Clear & Safe Return"}
             </button>
           </div>
         </div>
@@ -957,8 +1224,8 @@ function PointsmanModule({ user, onLogout }) {
         <div className="pm-topbar-brand">
           <div className="pm-topbar-logo">IR</div>
           <div>
-            <h1>Indian Railway Evaluation Command</h1>
-            <p>Operations Workspace: Pointsman Module</p>
+            <h1>{t("layout.brandTitle") || "Indian Railway Evaluation Command"}</h1>
+            <p>{t("layout.pointsmanWorkspace") || "Operations Workspace: Pointsman Module"}</p>
           </div>
         </div>
 
@@ -966,38 +1233,13 @@ function PointsmanModule({ user, onLogout }) {
 
         <div className="pm-user-strip">
           {/* ── Real-Time Notifications Bell Dropdown ── */}
-          <div className="pm-notification-bell-container">
-            <button className="pm-bell-btn" onClick={() => setBellDropdownOpen(!bellDropdownOpen)}>
-              <Bell size={20} />
-              {unreadNotificationsCount > 0 && (
-                <span className="pm-bell-badge">{unreadNotificationsCount}</span>
-              )}
-            </button>
+          <div className="pm-notification-bell-container" style={{ marginRight: "12px" }}>
+            <NotificationBell />
+          </div>
 
-            {bellDropdownOpen && (
-              <div className="pm-bell-dropdown">
-                <div className="pm-bell-header">
-                  <h4>Operations Notifications</h4>
-                  {unreadNotificationsCount > 0 && (
-                    <button onClick={markAllNotificationsRead}>Mark read</button>
-                  )}
-                </div>
-                <div className="pm-bell-list">
-                  {notifications.map(n => (
-                    <div key={n.id} className={`pm-bell-item ${n.read ? 'read' : 'unread'} type-${n.type}`}>
-                      <div className="pm-bell-item-dot"></div>
-                      <div className="pm-bell-item-content">
-                        <p>{n.message}</p>
-                        <span>{n.time}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {notifications.length === 0 && (
-                    <p className="pm-bell-empty">No alerts received today.</p>
-                  )}
-                </div>
-              </div>
-            )}
+          {/* Language Selector Component */}
+          <div style={{ marginRight: "8px", display: "flex", alignItems: "center" }}>
+            <LanguageSwitcher />
           </div>
 
           <div className="pm-user-avatar">{fullName.charAt(0)}</div>
@@ -1006,7 +1248,7 @@ function PointsmanModule({ user, onLogout }) {
             <span>HRMS ID: {employeeId}</span>
           </div>
           <button className="pm-logout-btn" onClick={() => { stopAlarmSound(); onLogout(); }}>
-            <LogOut size={15} /> Logout
+            <LogOut size={15} /> {t("layout.logout") || "Logout"}
           </button>
         </div>
       </header>
@@ -1016,6 +1258,8 @@ function PointsmanModule({ user, onLogout }) {
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = activeNav === item.key && screenMode === "default";
+            const transKey = `sidebar.${item.key}`;
+            const labelText = t(transKey) !== transKey ? t(transKey) : item.label;
             return (
               <button
                 key={item.key}
@@ -1023,7 +1267,7 @@ function PointsmanModule({ user, onLogout }) {
                 onClick={() => { goToNavPage(item.key); setBellDropdownOpen(false); }}
               >
                 <Icon size={18} />
-                <span>{item.label}</span>
+                <span>{labelText}</span>
               </button>
             );
           })}
@@ -1034,25 +1278,25 @@ function PointsmanModule({ user, onLogout }) {
         <main className="pm-main-panel">
           <div className="pm-main-header-band">
             <div>
-              <p className="pm-hero-eyebrow">Nagpur Junction Operations</p>
+              <p className="pm-hero-eyebrow">{t("layout.nagpurOperations") || "Nagpur Junction Operations"}</p>
               <h2 className="pm-main-title">
-                {screenMode === "scorecard" ? "Detailed Evaluation scorecard"
-                  : screenMode === "attempt" ? "Competency Examination Attempt"
-                  : navItems.find(i => i.key === activeNav)?.label || "Workspace"}
+                {screenMode === "scorecard" ? t("assessment.detailedScorecard") || "Detailed Evaluation scorecard"
+                  : screenMode === "attempt" ? t("assessment.activeSession") || "Competency Examination Attempt"
+                  : t("sidebar." + activeNav) || navItems.find(i => i.key === activeNav)?.label || "Workspace"}
               </h2>
             </div>
             <div className="pm-header-kpis">
               <div className="pm-hkpi" onClick={() => goToNavPage("myAssessment")} style={{ cursor: "pointer" }}>
                 <Award size={14} />
-                <span>{history.length} Assessments</span>
+                <span>{history.length} {t("sidebar.assessments") || "Assessments"}</span>
               </div>
               <div className="pm-hkpi" onClick={() => goToNavPage("myAssessment")} style={{ cursor: "pointer" }}>
                 <Gauge size={14} />
-                <span>Avg {averageScore}</span>
+                <span>{t("dashboard.averageScore") || "Avg"} {averageScore}</span>
               </div>
               <div className="pm-hkpi" onClick={() => goToNavPage("myAssessment")} style={{ cursor: "pointer", color: getCategoryColor(latestCategory) }}>
                 <ShieldCheck size={14} />
-                <span>Cat. {latestCategory}</span>
+                <span>{t("dashboard.currentCategory") || "Cat."} {latestCategory}</span>
               </div>
             </div>
           </div>
@@ -1072,36 +1316,36 @@ function PointsmanModule({ user, onLogout }) {
         <div className="pm-emergency-modal-overlay">
           <div className="pm-emergency-modal">
             <div className="modal-header">
-              <h2>🚨 CONFIRM URGENT DIVISION-WIDE BROADCAST</h2>
+              <h2>🚨 {t("emergency.confirmBroadcast") || "CONFIRM URGENT DIVISION-WIDE BROADCAST"}</h2>
               <button onClick={() => setEmergencyModalOpen(false)}>×</button>
             </div>
             <div className="modal-body">
               <p className="danger-notice">
-                WARNING: Triggering this broadcast sends an audio warning signal and locks shunting/movement panels on all active Station Master & Superintendent terminals! Use for genuine safety emergencies only.
+                {t("emergency.warningText") || "WARNING: Triggering this broadcast sends an audio warning signal and locks shunting/movement panels on all active Station Master & Superintendent terminals! Use for genuine safety emergencies only."}
               </p>
               <div className="modal-fields">
-                <label>Emergency Category</label>
+                <label>{t("emergency.category") || "Emergency Category"}</label>
                 <select value={emergencyType} onChange={e => setEmergencyType(e.target.value)}>
-                  <option value="Obstruction on Track">Obstruction on Siding (Fouling Clearance)</option>
-                  <option value="Derailment Danger">Visible Rail Crack / Splitting Point</option>
-                  <option value="Signal Failure">Critical Signal Lock Failure</option>
-                  <option value="Hot Axle Fire Spark">Hot Axle / Spark Smoke in Incoming train</option>
-                  <option value="Other Danger">Other Major Track Danger</option>
+                  <option value="Obstruction on Track">{t("emergency.options.obstruction") || "Obstruction on Siding (Fouling Clearance)"}</option>
+                  <option value="Derailment Danger">{t("emergency.options.derailment") || "Visible Rail Crack / Splitting Point"}</option>
+                  <option value="Signal Failure">{t("emergency.options.signalFailure") || "Critical Signal Lock Failure"}</option>
+                  <option value="Hot Axle Fire Spark">{t("emergency.options.hotAxle") || "Hot Axle / Spark Smoke in Incoming train"}</option>
+                  <option value="Other Danger">{t("emergency.options.other") || "Other Major Track Danger"}</option>
                 </select>
                 
-                <label>Vulnerable Location / Track</label>
+                <label>{t("emergency.location") || "Vulnerable Location / Track"}</label>
                 <input 
                   type="text" 
                   value={emergencyLocation} 
                   onChange={e => setEmergencyLocation(e.target.value)} 
-                  placeholder="e.g. Line 2 Loop Siding, KM 102/4" 
+                  placeholder={t("emergency.locationPlaceholder") || "e.g. Line 2 Loop Siding, KM 102/4"} 
                 />
               </div>
             </div>
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setEmergencyModalOpen(false)}>Cancel</button>
+              <button className="cancel-btn" onClick={() => setEmergencyModalOpen(false)}>{t("buttons.cancel") || "Cancel"}</button>
               <button className="confirm-btn" onClick={triggerEmergencyBroadcast}>
-                CONFIRM & BROADCAST ALARM
+                {t("emergency.confirmAndBroadcast") || "CONFIRM & BROADCAST ALARM"}
               </button>
             </div>
           </div>

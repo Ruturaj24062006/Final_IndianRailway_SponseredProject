@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Search, HeartHandshake, Calendar, Plus, Clock, UserCheck, UserX, AlertTriangle } from "lucide-react";
+import { getCounsellingRecords, logCounselling, updateCounselling } from "../services/phase16Service";
 
 export default function CommonCounselling({
   users = [],
@@ -10,44 +11,58 @@ export default function CommonCounselling({
   const [schedules, setSchedules] = useState([]);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [targetPm, setTargetPm] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     dateTime: "",
     duration: "45 mins",
     topics: "Shunting safety guidelines, safety rules review, alertness briefing."
   });
 
+  const fetchRecords = async () => {
+    try {
+      setLoading(true);
+      const data = await getCounsellingRecords();
+      
+      // Map API records to local schedule structure
+      const mapped = data.map(r => ({
+        id: r.id,
+        employee_id: r.employee_id,
+        hrmsId: r.employee_hrms_id,
+        name: r.employee_name,
+        designation: r.employee_designation || "Pointsman",
+        station: r.station_name || r.station_code || "Unknown",
+        dateTime: r.counselling_date ? new Date(r.counselling_date).toLocaleDateString() : "",
+        duration: r.remarks && r.remarks.includes("Duration:") ? r.remarks.split("Updated:")[0].trim() : "45 mins",
+        topics: r.reason,
+        remarks: r.remarks,
+        status: r.status, // 'Open', 'Closed', etc.
+        attendance: r.status === "Closed" ? "Present" : (r.status === "Absent" ? "Absent" : "Pending")
+      }));
+      
+      setSchedules(mapped);
+    } catch (err) {
+      console.error("Error fetching counselling records:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load schedules on mount
   useEffect(() => {
-    const saved = localStorage.getItem("counselling_schedules");
-    if (saved) {
-      setSchedules(JSON.parse(saved));
-    } else {
-      // Seed initial data matching INIT_COUNSELLING
-      const initial = [
-        { id: "CL_101", hrmsId: "PM_1003", name: "D. Rane", designation: "Pointsman Grade II", station: "Amla Junction", dateTime: "2026-05-12T10:00", duration: "45 mins", topics: "Alcoholic rehabilitation counseling. Safety and alertness briefing.", status: "Completed", attendance: "Present" },
-        { id: "CL_102", hrmsId: "PM_1005", name: "A. Gade", designation: "Pointsman Grade II", station: "Akola Junction", dateTime: "2026-05-20T14:30", duration: "30 mins", topics: "Periodic medical exam preparation. Rest compliance counseling.", status: "Completed", attendance: "Present" }
-      ];
-      localStorage.setItem("counselling_schedules", JSON.stringify(initial));
-      setSchedules(initial);
-    }
+    fetchRecords();
   }, []);
-
-  const saveSchedules = (newSchedules) => {
-    setSchedules(newSchedules);
-    localStorage.setItem("counselling_schedules", JSON.stringify(newSchedules));
-  };
 
   // 1. Find Pointsmen in Category D
   const categoryDPointsmen = users.filter(u => {
-    const isPm = u.role === "Pointsman" || u.role === "pointsmen";
-    const matchesStation = !stationFilter || u.station === stationFilter || u.stationName === stationFilter;
-    const isCatD = (u.score || u.lastScore || 0) < 50 || u.cat === "D" || u.category === "D";
+    const isPm = u.role === "Pointsman" || u.role === "pointsmen" || (u.designation && u.designation.toLowerCase().includes("pointsman"));
+    const matchesStation = !stationFilter || u.station === stationFilter || u.stationName === stationFilter || u.station_code === stationFilter;
+    const isCatD = u.category_grade === "D" || u.cat === "D" || u.category === "D";
     return isPm && matchesStation && isCatD;
   });
 
   // 2. Filter schedules
   const filteredSchedules = schedules.filter(s => {
-    return !stationFilter || s.station === stationFilter;
+    return !stationFilter || s.station === stationFilter || s.station_code === stationFilter;
   });
 
   // Schedule handler
@@ -61,49 +76,53 @@ export default function CommonCounselling({
     setShowScheduleForm(true);
   };
 
-  const handleScheduleSubmit = (e) => {
+  const handleScheduleSubmit = async (e) => {
     e.preventDefault();
     if (!targetPm) return;
 
-    const newSession = {
-      id: "CL_" + Date.now(),
-      hrmsId: targetPm.id || targetPm.hrmsId,
-      name: targetPm.name,
-      designation: targetPm.designation || "Pointsman",
-      station: targetPm.station || targetPm.stationName,
-      dateTime: formData.dateTime,
-      duration: formData.duration,
-      topics: formData.topics,
-      status: "Scheduled",
-      attendance: "Pending"
-    };
-
-    const updated = [newSession, ...schedules];
-    saveSchedules(updated);
-    addAuditLog("Counselling Scheduled", `Scheduled safety counselling for ${targetPm.name} on ${formData.dateTime}`);
-    setShowScheduleForm(false);
-    setTargetPm(null);
-    alert(`Successfully scheduled session for ${targetPm.name}.`);
+    try {
+      const payload = {
+        employee_id: targetPm.id || targetPm.employee_id,
+        counselling_date: formData.dateTime.split("T")[0],
+        reason: formData.topics,
+        remarks: `Duration: ${formData.duration}`
+      };
+      
+      await logCounselling(payload);
+      addAuditLog("Counselling Scheduled", `Scheduled safety counselling for ${targetPm.name} on ${formData.dateTime}`);
+      
+      setShowScheduleForm(false);
+      setTargetPm(null);
+      alert(`Successfully scheduled counselling session for ${targetPm.name}.`);
+      fetchRecords();
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to schedule session: ${err.message}`);
+    }
   };
 
   // Attendance logger
-  const handleRecordAttendance = (scheduleId, attendanceStatus) => {
-    const updated = schedules.map(s => {
-      if (s.id === scheduleId) {
-        return {
-          ...s,
-          status: attendanceStatus === "Present" ? "Completed" : "Absent",
-          attendance: attendanceStatus
-        };
+  const handleRecordAttendance = async (scheduleId, attendanceStatus) => {
+    try {
+      const updatedStatus = attendanceStatus === "Present" ? "Closed" : "Open";
+      const remarksText = `Duration: 45 mins. Status: ${attendanceStatus}. Updated: ${new Date().toLocaleDateString()}`;
+      
+      await updateCounselling(scheduleId, {
+        status: updatedStatus,
+        remarks: remarksText
+      });
+      
+      const session = schedules.find(s => s.id === scheduleId);
+      if (session) {
+        addAuditLog("Counselling Attendance Logged", `Staff: ${session.name} marked ${attendanceStatus}`);
       }
-      return s;
-    });
-    saveSchedules(updated);
-    const session = schedules.find(s => s.id === scheduleId);
-    if (session) {
-      addAuditLog("Counselling Attendance Logged", `Staff: ${session.name} marked ${attendanceStatus}`);
+      
+      alert(`Attendance logged as: ${attendanceStatus}`);
+      fetchRecords();
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to update attendance: ${err.message}`);
     }
-    alert(`Attendance logged as: ${attendanceStatus}`);
   };
 
   return (
@@ -148,7 +167,7 @@ export default function CommonCounselling({
                   return (
                     <tr key={pm.id || pm.hrmsId} style={{ borderBottom: "1px solid #cbd5e1" }}>
                       <td style={{ padding: "12px 14px", fontWeight: "700", color: "#0f172a" }}>{pm.name}</td>
-                      <td style={{ padding: "12px 14px", fontFamily: "monospace", fontSize: "13px" }}>{pm.id || pm.hrmsId}</td>
+                      <td style={{ padding: "12px 14px", fontFamily: "monospace", fontSize: "13px" }}>{pm.hrmsId || pm.id}</td>
                       <td style={{ padding: "12px 14px" }}>{pm.station || pm.stationName}</td>
                       <td style={{ padding: "12px 14px", fontWeight: "700", color: "#dc2626" }}>{pmScore}%</td>
                       <td style={{ padding: "12px 14px" }}>

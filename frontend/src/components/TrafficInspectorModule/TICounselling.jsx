@@ -76,16 +76,24 @@ export default function TICounselling({
             <span>Progress Status</span>
           </div>
 
-          {counsellings.map(c => (
-            <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.4fr 1.2fr 2.5fr 1fr 1.2fr", padding: "12px 14px", borderBottom: "1px solid #f1f5f9", fontSize: "13px", alignItems: "center" }}>
-              <strong>{c.date}</strong>
-              <strong>{c.staffName}</strong>
-              <span><span className="ti2-pill-grey" style={{ fontSize: "10px", fontWeight: "700" }}>{c.designation}</span></span>
-              <span>{c.topics}</span>
-              <span>{c.duration}</span>
-              <span><span className="ti2-badge" style={{ background: c.progress === "Completed" ? "#d1fae5" : "#fef3c7", color: c.progress === "Completed" ? "#065f46" : "#92400e" }}>{c.progress}</span></span>
+          {counsellings.length === 0 ? (
+            <div style={{ padding: "48px 0", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+              <HeartHandshake size={40} color="#64748b" />
+              <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a", margin: 0 }}>No Data Available</h3>
+              <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>No counselling sessions have been logged yet.</p>
             </div>
-          ))}
+          ) : (
+            counsellings.map(c => (
+              <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.4fr 1.2fr 2.5fr 1fr 1.2fr", padding: "12px 14px", borderBottom: "1px solid #f1f5f9", fontSize: "13px", alignItems: "center" }}>
+                <strong>{c.date}</strong>
+                <strong>{c.staffName}</strong>
+                <span><span className="ti2-pill-grey" style={{ fontSize: "10px", fontWeight: "700" }}>{c.designation}</span></span>
+                <span>{c.topics}</span>
+                <span>{c.duration}</span>
+                <span><span className="ti2-badge" style={{ background: c.progress === "Completed" ? "#d1fae5" : "#fef3c7", color: c.progress === "Completed" ? "#065f46" : "#92400e" }}>{c.progress}</span></span>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

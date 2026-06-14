@@ -1319,3 +1319,13 @@
   }
 }
 
+/* Custom Wide and Compact Modal Overrides to prevent layout cutoffs */
+.sdom-modal--wide {
+  width: min(850px, calc(100vw - 32px)) !important;
+  max-width: 850px !important;
+}
+.sdom-modal--compact {
+  width: min(450px, calc(100vw - 32px)) !important;
+  max-width: 450px !important;
+}
+

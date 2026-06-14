@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Search, Plus, Trash2, Edit, CheckCircle, RefreshCw, Paperclip, ChevronLeft, ChevronRight, PlayCircle, Star, Target, ShieldCheck, Gauge, Award, ArrowLeft, UserPlus, ArrowRightLeft, TrendingUp, Activity } from "lucide-react";
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from "recharts";
 import CommonUserModal from "../CommonUserModal";
+import { useLanguage } from "../../utils/LanguageContext";
 
 export default function SMPointsmen({
   pointsmen,
@@ -28,8 +29,10 @@ export default function SMPointsmen({
   CAT_BG,
   CAT_COLOR,
   RISK_BG,
-  RISK_COLOR
+  RISK_COLOR,
+  onInitiateAssessment
 }) {
+  const { t } = useLanguage();
   const smProfile = stationMasterProfile;
   const smId = employeeId;
 
@@ -51,16 +54,16 @@ export default function SMPointsmen({
       <div className="sdom-fade">
         <div style={{ marginBottom: 24 }}>
           <button className="sdom-back-btn" onClick={() => setViewingPm(null)}>
-            <ArrowLeft size={16} /> Back to List
+            <ArrowLeft size={16} /> {t("buttons.backToList") || "Back to List"}
           </button>
         </div>
 
         {/* Hero header */}
         <div className="sdom-station-header" style={{ marginBottom: 24 }}>
           <div className="sdom-station-header-meta">
-            <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Staff Profile</div>
+            <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t("profile.title") || "Staff Profile"}</div>
             <div style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: 4 }}>{s.name}</div>
-            <div style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.7)" }}>Pointsman &bull; {s.station || smProfile.station} &bull; Central Railway</div>
+            <div style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.7)" }}>{t("sidebar.pointsmen") || "Pointsman"} &bull; {s.station || smProfile.station} &bull; Central Railway</div>
             <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
               <span className={`sdom-badge ${catMap[catVal] || "sdom-badge-neutral"}`}>{catVal}</span>
               <span className={`sdom-badge ${riskMap[pmRisk] || "sdom-badge-neutral"}`}>{pmRisk}</span>
@@ -70,17 +73,17 @@ export default function SMPointsmen({
           <div className="sdom-station-header-stats">
             <div className="sdom-station-header-stat">
               <span className="val">{s.lastScore || s.score || "–"}</span>
-              <span className="lbl">Latest Score</span>
+              <span className="lbl">{t("dashboard.latestScore") || "Latest Score"}</span>
             </div>
             <div style={{ width: 1, height: 60, background: "rgba(255,255,255,0.15)" }} />
             <div className="sdom-station-header-stat">
               <span className="val">{s.contact || "—"}</span>
-              <span className="lbl">Contact</span>
+              <span className="lbl">{t("profile.mobile") || "Contact"}</span>
             </div>
             <div style={{ width: 1, height: 60, background: "rgba(255,255,255,0.15)" }} />
             <div className="sdom-station-header-stat">
               <span className="val">{s.lastAssessDate || s.lastDate || "—"}</span>
-              <span className="lbl">Last Assessment</span>
+              <span className="lbl">{t("assessment.lastAssessment") || "Last Assessment"}</span>
             </div>
           </div>
         </div>
@@ -88,19 +91,19 @@ export default function SMPointsmen({
         {/* Info grid */}
         <div className="sdom-row-2">
           <div className="sdom-chart-card">
-            <div className="sdom-chart-title" style={{ marginBottom: 16 }}>Personal &amp; Professional Details</div>
+            <div className="sdom-chart-title" style={{ marginBottom: 16 }}>{t("profile.personalDetails") || "Personal & Professional Details"}</div>
             
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 15, paddingBottom: 20 }}>
               {[
-                ["Employee ID / HRMS ID", s.hrmsId],
-                ["Designation", s.designation || "Pointsman"],
-                ["Mobile Number", s.contact || "N/A"],
-                ["Email ID", `${s.hrmsId?.toLowerCase()}@rail.in`],
-                ["Account Status", "Active"],
-                ["Current Zone", "Central Railway"],
-                ["Current Division", "Nagpur"],
-                ["Current Station Placement", s.station || smProfile.station],
-                ["Reporting Officer", smProfile.name || "Station Master"]
+                [t("profile.hrmsId") || "Employee ID / HRMS ID", s.hrmsId],
+                [t("profile.designation") || "Designation", s.designation || "Pointsman"],
+                [t("profile.mobile") || "Mobile Number", s.contact || "N/A"],
+                [t("profile.email") || "Email ID", `${s.hrmsId?.toLowerCase()}@rail.in`],
+                [t("profile.status") || "Account Status", "Active"],
+                [t("profile.zone") || "Current Zone", "Central Railway"],
+                [t("profile.division") || "Current Division", "Nagpur"],
+                [t("profile.placement") || "Current Station Placement", s.station || smProfile.station],
+                [t("profile.reportingOfficer") || "Reporting Officer", smProfile.name || "Station Master"]
               ].map(([lbl, val]) => (
                 <div key={lbl} style={{ background: "#f8fafc", borderRadius: 8, padding: "12px 16px", border: "1px solid #e2e8f0" }}>
                   <div style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>{lbl}</div>
@@ -112,19 +115,19 @@ export default function SMPointsmen({
             {/* Operational Specifications */}
             <div style={{ background: "#f8fafc", padding: 16, borderRadius: 10, border: "1px solid #e2e8f0", marginTop: 10 }}>
               <h4 style={{ margin: "0 0 12px", fontSize: 14, color: "#0f172a", fontWeight: 800, borderBottom: "1px solid #cbd5e1", paddingBottom: 6 }}>
-                Operational Profile Specifications
+                {t("profile.operationalProfileSpecs") || "Operational Profile Specifications"}
               </h4>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, fontSize: 13 }}>
-                <div><strong>Reporting Station Master:</strong><div style={{ fontWeight: 700, color: "#1e3a5f", marginTop: 4 }}>{s.reportingSm || smProfile.name}</div></div>
-                <div><strong>Assigned Shift:</strong><div style={{ fontWeight: 700, color: "#1e3a5f", marginTop: 4 }}>{s.shift || "Morning Shift (06:00 - 14:00)"}</div></div>
-                <div><strong>Work Location Setup:</strong><div style={{ fontWeight: 700, color: "#1e3a5f", marginTop: 4 }}>{s.workLocation || "Yard Area"}</div></div>
+                <div><strong>{t("profile.reportingSM") || "Reporting Station Master"}:</strong><div style={{ fontWeight: 700, color: "#1e3a5f", marginTop: 4 }}>{s.reportingSm || smProfile.name}</div></div>
+                <div><strong>{t("profile.assignedShift") || "Assigned Shift"}:</strong><div style={{ fontWeight: 700, color: "#1e3a5f", marginTop: 4 }}>{s.shift || "Morning Shift (06:00 - 14:00)"}</div></div>
+                <div><strong>{t("profile.workLocation") || "Work Location Setup"}:</strong><div style={{ fontWeight: 700, color: "#1e3a5f", marginTop: 4 }}>{s.workLocation || "Yard Area"}</div></div>
               </div>
             </div>
           </div>
 
           <div className="sdom-chart-card">
-            <div className="sdom-chart-title">Score Trend</div>
-            <div className="sdom-chart-subtitle">Assessment score progression</div>
+            <div className="sdom-chart-title">{t("profile.scoreTrend") || "Score Trend"}</div>
+            <div className="sdom-chart-subtitle">{t("profile.scoreProgression") || "Assessment score progression"}</div>
             <div style={{ height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendScores}>
@@ -642,71 +645,71 @@ export default function SMPointsmen({
 
   if (viewingPm) return renderPointsmenDetail(viewingPm);
 
-    const catMap = { A: "sdom-badge-success", B: "sdom-badge-info", C: "sdom-badge-warning", D: "sdom-badge-danger" };
-    const riskMap = { Low: "sdom-badge-success", Medium: "sdom-badge-warning", High: "sdom-badge-danger" };
+  const catMap = { A: "sdom-badge-success", B: "sdom-badge-info", C: "sdom-badge-warning", D: "sdom-badge-danger" };
+  const riskMap = { Low: "sdom-badge-success", Medium: "sdom-badge-warning", High: "sdom-badge-danger" };
 
-    return (
-      <div className="sdom-fade">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-          <div>
-            <h1 className="sdom-page-title">Pointsman Management</h1>
-            <p className="sdom-page-subtitle">Search, filter and manage operational pointsmen in your station limits.</p>
-          </div>
-          <button className="sdom-btn-primary" onClick={openPmAdd}>
-            <Plus size={16} /> Add New Pointsman
-          </button>
+  return (
+    <div className="sdom-fade">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+        <div>
+          <h1 className="sdom-page-title">{t("sidebar.pointsmen") || "Pointsman"} {t("profile.management") || "Management"}</h1>
+          <p className="sdom-page-subtitle">{t("sidebar.pointsmenDesc") || "Search, filter and manage operational pointsmen in your station limits."}</p>
         </div>
+        <button className="sdom-btn-primary" onClick={openPmAdd}>
+          <Plus size={16} /> {t("buttons.registerPointsman") || "Register Pointsman"}
+        </button>
+      </div>
 
-        {/* Filters */}
-        <div className="sdom-filter-bar">
-          <div className="sdom-filter-field" style={{ minWidth: 200 }}>
-            <label>Name / ID</label>
-            <input 
-              value={pmF.name} 
-              onChange={e => setPmF(prev => ({ ...prev, name: e.target.value }))} 
-              placeholder="Search..." 
-            />
-          </div>
-          <div className="sdom-filter-field">
-            <label>Category</label>
-            <select value={pmF.cat} onChange={e => setPmF(prev => ({ ...prev, cat: e.target.value }))}>
-              <option>All</option><option>A</option><option>B</option><option>C</option><option>D</option>
-            </select>
-          </div>
-          <div className="sdom-filter-field">
-            <label>Risk Level</label>
-            <select value={pmF.risk} onChange={e => setPmF(prev => ({ ...prev, risk: e.target.value }))}>
-              <option>All</option><option>Low</option><option>Medium</option><option>High</option>
-            </select>
-          </div>
+      {/* Filters */}
+      <div className="sdom-filter-bar">
+        <div className="sdom-filter-field" style={{ minWidth: 200 }}>
+          <label>{t("login.hrmsId") || "HRMS ID"}</label>
+          <input 
+            value={pmF.name} 
+            onChange={e => setPmF(prev => ({ ...prev, name: e.target.value }))} 
+            placeholder={t("login.hrmsIdPlaceholder") || "Search..."} 
+          />
         </div>
+        <div className="sdom-filter-field">
+          <label>{t("assessment.categoryCol") || "Category"}</label>
+          <select value={pmF.cat} onChange={e => setPmF(prev => ({ ...prev, cat: e.target.value }))}>
+            <option>All</option><option>A</option><option>B</option><option>C</option><option>D</option>
+          </select>
+        </div>
+        <div className="sdom-filter-field">
+          <label>{t("workflow.priorityLabel") || "Risk Level"}</label>
+          <select value={pmF.risk} onChange={e => setPmF(prev => ({ ...prev, risk: e.target.value }))}>
+            <option>All</option><option>Low</option><option>Medium</option><option>High</option>
+          </select>
+        </div>
+      </div>
 
-        <div className="sdom-chart-card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <span style={{ fontWeight: 700, color: "#1e293b" }}>{filteredPm.length} pointsmen found</span>
-          </div>
-          <div className="sdom-table-wrap">
-            <table className="sdom-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Emp ID</th>
-                  <th>Station</th>
-                  <th>Category</th>
-                  <th>Risk</th>
-                  <th>Last Score</th>
-                  <th>PME Status</th>
-                  <th>REF Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPm.length === 0 && (
-                  <tr><td colSpan={9} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>No records found</td></tr>
-                )}
-                {filteredPm.map(s => {
-                  const riskVal = riskLevel(s);
-                  const catVal = getCat(s.lastScore);
+      <div className="sdom-chart-card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <span style={{ fontWeight: 700, color: "#1e293b" }}>{filteredPm.length} {t("sidebar.pointsmen") || "pointsmen"} {t("workflow.records") || "found"}</span>
+        </div>
+        <div className="sdom-table-wrap">
+          <table className="sdom-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>{t("assessment.hrms") || "Emp ID"}</th>
+                <th>{t("assessment.station") || "Station"}</th>
+                <th>{t("assessment.categoryCol") || "Category"}</th>
+                <th>{t("workflow.priorityLabel") || "Risk"}</th>
+                <th>{t("dashboard.latestScore") || "Last Score"}</th>
+                <th>{t("profile.pmeStatus") || "PME Status"}</th>
+                <th>{t("profile.refStatus") || "REF Status"}</th>
+                <th>{t("workflow.actions") || "Actions"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPm.length === 0 && (
+                <tr><td colSpan={9} style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>{t("dashboard.noPieData") || "No records found"}</td></tr>
+              )}
+              {filteredPm.map(s => {
+                const riskVal = riskLevel(s);
+                const catVal = getCat(s.lastScore);
                   return (
                     <tr key={s.id || s.hrmsId}>
                       <td style={{ fontWeight: 700 }}>{s.name}</td>
@@ -726,11 +729,20 @@ export default function SMPointsmen({
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: "flex", gap: 8 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                           <button className="sdom-btn-outline" style={{ padding: "5px 10px", fontSize: "0.8rem" }} onClick={() => setViewingPm(s)}>View</button>
                           <button className="sdom-icon-btn" title="Edit" onClick={() => openPmEdit(s)}><Edit size={15} color="#2563eb" /></button>
                           <button className="sdom-icon-btn" title="Shift" onClick={() => openPmShift(s)}><ArrowRightLeft size={15} color="#d97706" /></button>
                           <button className="sdom-icon-btn" title="Remove" onClick={() => removePm(s.hrmsId)}><Trash2 size={15} color="#dc2626" /></button>
+                          {["Not Started", "Approved", "Rejected"].includes(s.approvalStatus) && (
+                            <button 
+                              className="sdom-btn-outline" 
+                              style={{ padding: "5px 10px", fontSize: "0.8rem", color: "#16a34a", borderColor: "#16a34a" }} 
+                              onClick={() => onInitiateAssessment(s.id)}
+                            >
+                              Initiate
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
